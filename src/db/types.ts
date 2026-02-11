@@ -4,7 +4,11 @@ export type Bindings = {
     BUCKET: R2Bucket
     KV: KVNamespace
     ORDER_QUEUE: Queue
-    ENCRYPTION_KEY: string // Secret for AES-256
+}
+
+// ===== Hono Context Variables =====
+export type Variables = {
+    distributorId: number
 }
 
 // ===== Database Models =====

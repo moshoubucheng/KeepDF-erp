@@ -12,7 +12,7 @@ directory = "./public"
 [[d1_databases]]
 binding = "DB"
 database_name = "smart-erp-db"
-database_id = "xxxx-xxxx-xxxx-xxxx" # Placeholder
+database_id = "6b047efb-2f02-4e44-aee6-431341f7e23f"
 
 # Object Storage Binding (R2)
 [[r2_buckets]]
@@ -22,9 +22,13 @@ bucket_name = "smart-erp-disaster-recovery"
 # Key-Value Binding (KV)
 [[kv_namespaces]]
 binding = "KV"
-id = "xxxx-xxxx-xxxx-xxxx" # Placeholder for Token/Session storage
+id = "de84b4fd932a4f97a1cfeaf725cd3053"
 
 # Queue - Order Processing
+[[queues.producers]]
+binding = "ORDER_QUEUE"
+queue = "order-ingestion-queue"
+
 [[queues.consumers]]
 queue = "order-ingestion-queue"
 max_batch_size = 10

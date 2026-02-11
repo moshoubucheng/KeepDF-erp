@@ -1,11 +1,11 @@
 import { createMiddleware } from 'hono/factory'
-import type { Bindings } from '../db/types'
+import type { Bindings, Variables } from '../db/types'
 
 /**
  * Auth Middleware - 简单 Token 验证
  * 从 Header 中提取 Bearer Token，验证是否属于有效分销商
  */
-export const authMiddleware = createMiddleware<{ Bindings: Bindings }>(async (c, next) => {
+export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: Variables }>(async (c, next) => {
     const path = c.req.path
 
     // 跳过无需认证的路径
@@ -24,7 +24,7 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings }>(async (c,
     // 先查 KV 缓存
     const cached = await c.env.KV.get(`session:${token}`)
     if (cached) {
-        c.set('distributorId' as any, Number(cached))
+        c.set('distributorId', Number(cached))
         return next()
     }
 
@@ -39,7 +39,7 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings }>(async (c,
 
     // 写入 KV 缓存（1小时过期）
     await c.env.KV.put(`session:${token}`, String(distributor.id), { expirationTtl: 3600 })
-    c.set('distributorId' as any, distributor.id)
+    c.set('distributorId', distributor.id)
 
     return next()
 })
