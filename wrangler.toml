@@ -1,0 +1,31 @@
+name = "smart-erp-mvp"
+compatibility_date = "2024-02-11"
+
+# Main entry point
+main = "src/index.ts"
+
+# Static Assets (Frontend)
+[assets]
+directory = "./public"
+
+# Database Binding (D1)
+[[d1_databases]]
+binding = "DB"
+database_name = "smart-erp-db"
+database_id = "xxxx-xxxx-xxxx-xxxx" # Placeholder
+
+# Object Storage Binding (R2)
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "smart-erp-disaster-recovery"
+
+# Key-Value Binding (KV)
+[[kv_namespaces]]
+binding = "KV"
+id = "xxxx-xxxx-xxxx-xxxx" # Placeholder for Token/Session storage
+
+# Queue - Order Processing
+[[queues.consumers]]
+queue = "order-ingestion-queue"
+max_batch_size = 10
+max_batch_timeout = 5

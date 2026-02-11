@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart ERP | 跨境电商智能中台</title>
+  <meta name="description" content="Cross-border e-commerce smart middle platform ERP dashboard">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">⚡</div>
+      <span class="logo-text">SmartERP</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>ダッシュボード</span>
+      </a>
+      <a href="#" class="nav-item" data-page="orders">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+        <span>注文管理</span>
+      </a>
+      <a href="#" class="nav-item" data-page="inventory">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span>在庫管理</span>
+      </a>
+      <a href="#" class="nav-item" data-page="wallet">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>
+        <span>ウォレット</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="system-status" id="systemStatus">
+        <div class="status-dot"></div>
+        <span>System Online</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1 class="page-title" id="pageTitle">ダッシュボード</h1>
+        <p class="page-subtitle" id="pageSubtitle">Smart ERP Middle Platform v2.0</p>
+      </div>
+      <div class="header-right">
+        <div class="header-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="検索..." id="searchInput">
+        </div>
+        <div class="header-avatar">
+          <span>管理者</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Container -->
+    <div class="page-container" id="pageContainer">
+      <!-- Dashboard Page -->
+      <div class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card" data-accent="purple">
+            <div class="stat-icon">💴</div>
+            <div class="stat-info">
+              <span class="stat-label">今月売上</span>
+              <span class="stat-value" id="stat-revenue">¥0</span>
+            </div>
+            <div class="stat-trend up">+12.5%</div>
+          </div>
+          <div class="stat-card" data-accent="blue">
+            <div class="stat-icon">📦</div>
+            <div class="stat-info">
+              <span class="stat-label">アクティブ注文</span>
+              <span class="stat-value" id="stat-orders">0</span>
+            </div>
+            <div class="stat-trend up">+8.2%</div>
+          </div>
+          <div class="stat-card" data-accent="emerald">
+            <div class="stat-icon">🏪</div>
+            <div class="stat-info">
+              <span class="stat-label">商品数</span>
+              <span class="stat-value" id="stat-products">0</span>
+            </div>
+            <div class="stat-trend neutral">—</div>
+          </div>
+          <div class="stat-card" data-accent="amber">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <span class="stat-label">ディストリビューター</span>
+              <span class="stat-value" id="stat-distributors">0</span>
+            </div>
+            <div class="stat-trend up">+2</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card chart-card">
+            <div class="card-header">
+              <h3>注文トレンド</h3>
+              <div class="card-actions">
+                <button class="btn-ghost active" data-range="7d">7日</button>
+                <button class="btn-ghost" data-range="30d">30日</button>
+                <button class="btn-ghost" data-range="90d">90日</button>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="ordersChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card platform-card">
+            <div class="card-header">
+              <h3>プラットフォーム別</h3>
+            </div>
+            <div class="platform-list">
+              <div class="platform-item">
+                <div class="platform-icon tiktok">TK</div>
+                <div class="platform-info">
+                  <span class="platform-name">TikTok Shop</span>
+                  <div class="platform-bar"><div class="bar-fill" style="width:45%"></div></div>
+                </div>
+                <span class="platform-pct">45%</span>
+              </div>
+              <div class="platform-item">
+                <div class="platform-icon temu">TM</div>
+                <div class="platform-info">
+                  <span class="platform-name">Temu</span>
+                  <div class="platform-bar"><div class="bar-fill" style="width:35%"></div></div>
+                </div>
+                <span class="platform-pct">35%</span>
+              </div>
+              <div class="platform-item">
+                <div class="platform-icon rakuten">RK</div>
+                <div class="platform-info">
+                  <span class="platform-name">Rakuten</span>
+                  <div class="platform-bar"><div class="bar-fill" style="width:20%"></div></div>
+                </div>
+                <span class="platform-pct">20%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>最近の注文</h3>
+            <a href="#" class="btn-link" data-page="orders">すべて表示 →</a>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>注文ID</th>
+                  <th>プラットフォーム</th>
+                  <th>ステータス</th>
+                  <th>金額</th>
+                  <th>日時</th>
+                </tr>
+              </thead>
+              <tbody id="recentOrdersBody">
+                <tr class="empty-row"><td colspan="5">注文データがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Orders Page -->
+      <div class="page" id="page-orders">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="orderPlatformFilter" class="select-input">
+              <option value="">全プラットフォーム</option>
+              <option value="TIKTOK">TikTok</option>
+              <option value="TEMU">Temu</option>
+              <option value="RAKUTEN">Rakuten</option>
+            </select>
+            <select id="orderStatusFilter" class="select-input">
+              <option value="">全ステータス</option>
+              <option value="PENDING">Pending</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="SHIPPED">Shipped</option>
+              <option value="DELIVERED">Delivered</option>
+            </select>
+          </div>
+          <button class="btn-primary" id="syncOrdersBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            同期
+          </button>
+        </div>
+        <div class="card">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>プラットフォーム</th>
+                  <th>注文番号</th>
+                  <th>ステータス</th>
+                  <th>金額</th>
+                  <th>税額</th>
+                  <th>日時</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <tr class="empty-row"><td colspan="8">注文データがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Page -->
+      <div class="page" id="page-inventory">
+        <div class="page-actions">
+          <button class="btn-primary" id="addProductBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            商品追加
+          </button>
+          <button class="btn-secondary" id="inboundBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            入庫登録
+          </button>
+        </div>
+        <div class="card">
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>商品名 (JP)</th>
+                  <th>商品名 (CN)</th>
+                  <th>原価</th>
+                  <th>税区分</th>
+                  <th>在庫数</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryTableBody">
+                <tr class="empty-row"><td colspan="6">商品データを読み込み中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Add Product Modal -->
+        <div class="modal-overlay" id="addProductModal">
+          <div class="modal">
+            <div class="modal-header">
+              <h3>商品追加</h3>
+              <button class="modal-close" data-close="addProductModal">✕</button>
+            </div>
+            <form id="addProductForm">
+              <div class="form-group">
+                <label>SKU</label>
+                <input type="text" name="sku" required placeholder="例: CARROT-500ML">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>商品名 (日本語)</label>
+                  <input type="text" name="name_jp" placeholder="にんじんジュース">
+                </div>
+                <div class="form-group">
+                  <label>商品名 (中文)</label>
+                  <input type="text" name="name_cn" placeholder="胡萝卜汁">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>原価 (¥)</label>
+                  <input type="number" name="cost_price" required placeholder="1200">
+                </div>
+                <div class="form-group">
+                  <label>税区分</label>
+                  <select name="tax_category">
+                    <option value="standard">標準税率 (10%)</option>
+                    <option value="reduced">軽減税率 (8%)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn-secondary" data-close="addProductModal">キャンセル</button>
+                <button type="submit" class="btn-primary">追加</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wallet Page -->
+      <div class="page" id="page-wallet">
+        <div class="wallet-overview">
+          <div class="wallet-card balance">
+            <div class="wallet-label">利用可能残高</div>
+            <div class="wallet-amount" id="walletBalance">¥0</div>
+            <div class="wallet-sub">Available Balance</div>
+          </div>
+          <div class="wallet-card frozen">
+            <div class="wallet-label">凍結中</div>
+            <div class="wallet-amount" id="walletFrozen">¥0</div>
+            <div class="wallet-sub">Frozen for Orders</div>
+          </div>
+          <div class="wallet-card total">
+            <div class="wallet-label">合計資産</div>
+            <div class="wallet-amount" id="walletTotal">¥0</div>
+            <div class="wallet-sub">Total Assets</div>
+          </div>
+        </div>
+
+        <div class="page-actions">
+          <button class="btn-primary" id="depositBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            入金申請
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>取引履歴</h3>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>タイプ</th>
+                  <th>金額</th>
+                  <th>関連注文</th>
+                  <th>残高スナップショット</th>
+                  <th>日時</th>
+                </tr>
+              </thead>
+              <tbody id="walletTransBody">
+                <tr class="empty-row"><td colspan="6">取引履歴がありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
