@@ -33,3 +33,11 @@ queue = "order-ingestion-queue"
 queue = "order-ingestion-queue"
 max_batch_size = 10
 max_batch_timeout = 5
+
+# Module rules (for importing .sql as text in tests)
+[[rules]]
+type = "Text"
+globs = ["**/*.sql"]
+
+[triggers]
+crons = ["0 2 * * *"]

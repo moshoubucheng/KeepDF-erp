@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { Bindings, Product } from '../db/types'
+import { NotificationService } from '../services/notification.service'
 
 const inventory = new Hono<{ Bindings: Bindings }>()
 
@@ -74,9 +75,18 @@ inventory.post('/inbound', async (c) => {
 
     await c.env.DB.batch(batch)
 
-    // 入库数量异常告警
+    // 入库数量异常告警（不影响入库结果）
     if (body.actual_qty !== body.expected_qty) {
-        console.warn(`Inbound mismatch: ${body.sku} expected ${body.expected_qty}, actual ${body.actual_qty}`)
+        try {
+            const notification = new NotificationService(c.env.DB)
+            await notification.send({
+                type: 'WARNING',
+                channel: 'SLACK',
+                message: `入庫数量不一致: ${body.sku} 予定 ${body.expected_qty} 件 / 実際 ${body.actual_qty} 件`,
+            })
+        } catch (e) {
+            console.error('Notification failed:', e)
+        }
     }
 
     return c.json({ status: 'inbound_recorded', sku: body.sku, actual: body.actual_qty })

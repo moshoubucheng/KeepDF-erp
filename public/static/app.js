@@ -3,6 +3,7 @@
    ============================================= */
 
 const API_BASE = window.location.origin;
+const AUTH_TOKEN = localStorage.getItem('erp_token') || 'tok_dev_abc123';
 
 // ===== SPA Router =====
 const pageTitles = {
@@ -31,12 +32,27 @@ function navigateTo(pageName) {
     loadPageData(pageName);
 }
 
+// ===== Security Helpers =====
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // ===== API Helpers =====
 async function apiFetch(path, options = {}) {
     try {
         const res = await fetch(`${API_BASE}${path}`, {
-            headers: { 'Content-Type': 'application/json', ...options.headers },
             ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${AUTH_TOKEN}`,
+                ...options.headers,
+            },
         });
         return await res.json();
     } catch (e) {
@@ -81,10 +97,10 @@ function renderRecentOrders(orders) {
     }
     tbody.innerHTML = orders.map(o => `
     <tr>
-      <td><strong>#${o.id}</strong></td>
+      <td><strong>#${escapeHtml(o.id)}</strong></td>
       <td>${platformBadge(o.platform)}</td>
       <td>${statusBadge(o.status)}</td>
-      <td>¥${(o.total_amount || 0).toLocaleString()}</td>
+      <td>¥${(Number(o.total_amount) || 0).toLocaleString()}</td>
       <td>${formatDate(o.created_at)}</td>
     </tr>
   `).join('');
@@ -174,8 +190,8 @@ async function loadOrders() {
     const platform = document.getElementById('orderPlatformFilter')?.value || '';
     const status = document.getElementById('orderStatusFilter')?.value || '';
     let url = '/api/v1/orders?limit=50';
-    if (platform) url += `&platform=${platform}`;
-    if (status) url += `&status=${status}`;
+    if (platform) url += `&platform=${encodeURIComponent(platform)}`;
+    if (status) url += `&status=${encodeURIComponent(status)}`;
 
     const data = await apiFetch(url);
     const tbody = document.getElementById('ordersTableBody');
@@ -187,14 +203,14 @@ async function loadOrders() {
 
     tbody.innerHTML = data.orders.map(o => `
     <tr>
-      <td><strong>#${o.id}</strong></td>
+      <td><strong>#${escapeHtml(o.id)}</strong></td>
       <td>${platformBadge(o.platform)}</td>
-      <td>${o.platform_order_id}</td>
+      <td>${escapeHtml(o.platform_order_id)}</td>
       <td>${statusBadge(o.status)}</td>
-      <td>¥${(o.total_amount || 0).toLocaleString()}</td>
-      <td>¥${(o.tax_total || 0).toLocaleString()}</td>
+      <td>¥${(Number(o.total_amount) || 0).toLocaleString()}</td>
+      <td>¥${(Number(o.tax_total) || 0).toLocaleString()}</td>
       <td>${formatDate(o.created_at)}</td>
-      <td>${o.status === 'PROCESSING' ? `<button class="btn-sm" onclick="shipOrder(${o.id})">発送</button>` : '—'}</td>
+      <td>${o.status === 'PROCESSING' ? `<button class="btn-sm" onclick="shipOrder(${Number(o.id)})">発送</button>` : '—'}</td>
     </tr>
   `).join('');
 }
@@ -211,12 +227,12 @@ async function loadInventory() {
 
     tbody.innerHTML = data.products.map(p => `
     <tr>
-      <td><strong>${p.sku}</strong></td>
-      <td>${p.name_jp || '—'}</td>
-      <td>${p.name_cn || '—'}</td>
-      <td>¥${(p.cost_price || 0).toLocaleString()}</td>
+      <td><strong>${escapeHtml(p.sku)}</strong></td>
+      <td>${escapeHtml(p.name_jp) || '—'}</td>
+      <td>${escapeHtml(p.name_cn) || '—'}</td>
+      <td>¥${(Number(p.cost_price) || 0).toLocaleString()}</td>
       <td>${taxBadge(p.tax_category)}</td>
-      <td><strong>${p.total_stock || 0}</strong></td>
+      <td><strong>${Number(p.total_stock) || 0}</strong></td>
     </tr>
   `).join('');
 }
@@ -226,8 +242,8 @@ async function loadWallet(distributorId = 1) {
     const balanceData = await apiFetch(`/api/v1/wallet/balance/${distributorId}`);
 
     if (balanceData && !balanceData.error) {
-        const balance = balanceData.balance || 0;
-        const frozen = balanceData.frozen || 0;
+        const balance = Number(balanceData.balance) || 0;
+        const frozen = Number(balanceData.frozen) || 0;
         document.getElementById('walletBalance').textContent = `¥${balance.toLocaleString()}`;
         document.getElementById('walletFrozen').textContent = `¥${frozen.toLocaleString()}`;
         document.getElementById('walletTotal').textContent = `¥${(balance + frozen).toLocaleString()}`;
@@ -243,13 +259,13 @@ async function loadWallet(distributorId = 1) {
 
     tbody.innerHTML = txData.transactions.map(t => `
     <tr>
-      <td>#${t.id}</td>
+      <td>#${escapeHtml(t.id)}</td>
       <td>${txTypeBadge(t.type)}</td>
       <td class="${t.type === 'DEPOSIT' || t.type === 'REFUND' ? 'text-green' : 'text-red'}">
-        ${t.type === 'DEPOSIT' || t.type === 'REFUND' ? '+' : '-'}¥${Math.abs(t.amount).toLocaleString()}
+        ${t.type === 'DEPOSIT' || t.type === 'REFUND' ? '+' : '-'}¥${Math.abs(Number(t.amount) || 0).toLocaleString()}
       </td>
-      <td>${t.related_order_id || '—'}</td>
-      <td>¥${(t.balance_snapshot || 0).toLocaleString()}</td>
+      <td>${escapeHtml(t.related_order_id) || '—'}</td>
+      <td>¥${(Number(t.balance_snapshot) || 0).toLocaleString()}</td>
       <td>${formatDate(t.created_at)}</td>
     </tr>
   `).join('');
@@ -259,31 +275,146 @@ async function loadWallet(distributorId = 1) {
 async function shipOrder(orderId) {
     const tracking = prompt('トラッキング番号を入力してください:');
     if (!tracking) return;
-    await apiFetch(`/api/v1/orders/${orderId}/ship`, {
+    const result = await apiFetch(`/api/v1/orders/${Number(orderId)}/ship`, {
         method: 'PATCH', body: JSON.stringify({ tracking_number: tracking }),
     });
+    if (result?.error) {
+        alert(`発送エラー: ${result.error}`);
+        return;
+    }
     loadOrders();
 }
 
 async function addProduct(formData) {
     const payload = Object.fromEntries(formData);
     payload.cost_price = Number(payload.cost_price);
-    await apiFetch('/api/v1/inventory/products', {
+    const result = await apiFetch('/api/v1/inventory/products', {
         method: 'POST', body: JSON.stringify(payload),
     });
+    if (result?.error) {
+        alert(`商品追加エラー: ${result.error}`);
+        return;
+    }
     closeModal('addProductModal');
     loadInventory();
 }
 
+async function inboundStock(formData) {
+    const payload = Object.fromEntries(formData);
+    payload.quantity = Number(payload.quantity);
+    const result = await apiFetch('/api/v1/inventory/inbound', {
+        method: 'POST', body: JSON.stringify(payload),
+    });
+    if (result?.error) {
+        alert(`入庫エラー: ${result.error}`);
+        return;
+    }
+    closeModal('inboundModal');
+    loadInventory();
+}
+
+async function deposit(formData) {
+    const payload = Object.fromEntries(formData);
+    payload.distributor_id = Number(payload.distributor_id);
+    payload.amount = Number(payload.amount);
+    const result = await apiFetch('/api/v1/wallet/deposit', {
+        method: 'POST', body: JSON.stringify(payload),
+    });
+    if (result?.error) {
+        alert(`入金エラー: ${result.error}`);
+        return;
+    }
+    closeModal('depositModal');
+    loadWallet(payload.distributor_id);
+}
+
+// ===== Dynamic Modal Creation =====
+function createInboundModal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'inboundModal';
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h3>入庫登録</h3>
+          <button class="modal-close" data-close="inboundModal">&#10005;</button>
+        </div>
+        <form id="inboundForm">
+          <div class="form-group">
+            <label>SKU</label>
+            <input type="text" name="sku" required placeholder="例: CARROT-500ML">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>数量</label>
+              <input type="number" name="quantity" required min="1" placeholder="100">
+            </div>
+            <div class="form-group">
+              <label>倉庫</label>
+              <input type="text" name="warehouse" value="JP-MAIN" placeholder="JP-MAIN">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" data-close="inboundModal">キャンセル</button>
+            <button type="submit" class="btn-primary">入庫</button>
+          </div>
+        </form>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('[data-close="inboundModal"]').addEventListener('click', () => closeModal('inboundModal'));
+    overlay.querySelector('.btn-secondary').addEventListener('click', () => closeModal('inboundModal'));
+    overlay.querySelector('#inboundForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        inboundStock(new FormData(e.target));
+        e.target.reset();
+    });
+}
+
+function createDepositModal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'depositModal';
+    overlay.innerHTML = `
+      <div class="modal">
+        <div class="modal-header">
+          <h3>入金申請</h3>
+          <button class="modal-close" data-close="depositModal">&#10005;</button>
+        </div>
+        <form id="depositForm">
+          <input type="hidden" name="distributor_id" value="1">
+          <div class="form-group">
+            <label>入金額 (&#165;)</label>
+            <input type="number" name="amount" required min="1" placeholder="10000">
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" data-close="depositModal">キャンセル</button>
+            <button type="submit" class="btn-primary">入金</button>
+          </div>
+        </form>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('[data-close="depositModal"]').addEventListener('click', () => closeModal('depositModal'));
+    overlay.querySelector('.btn-secondary').addEventListener('click', () => closeModal('depositModal'));
+    overlay.querySelector('#depositForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        deposit(new FormData(e.target));
+        e.target.reset();
+    });
+}
+
 // ===== UI Helpers =====
 function platformBadge(platform) {
+    const safe = escapeHtml(platform);
     const colors = { TIKTOK: '#25f4ee', TEMU: '#fb6f20', RAKUTEN: '#bf0000' };
-    return `<span style="color:${colors[platform] || '#94a3b8'};font-weight:600">${platform}</span>`;
+    return `<span style="color:${colors[platform] || '#94a3b8'};font-weight:600">${safe}</span>`;
 }
 
 function statusBadge(status) {
+    const safe = escapeHtml(status);
     const cls = { PENDING: 'pending', PROCESSING: 'processing', SHIPPED: 'shipped', DELIVERED: 'delivered' };
-    return `<span class="badge badge-${cls[status] || 'pending'}">${status}</span>`;
+    return `<span class="badge badge-${cls[status] || 'pending'}">${safe}</span>`;
 }
 
 function taxBadge(category) {
@@ -298,7 +429,7 @@ function txTypeBadge(type) {
         DEDUCT: { cls: 'pending', label: '決済' },
         REFUND: { cls: 'shipped', label: '返金' },
     };
-    const info = map[type] || { cls: 'pending', label: type };
+    const info = map[type] || { cls: 'pending', label: escapeHtml(type) };
     return `<span class="badge badge-${info.cls}">${info.label}</span>`;
 }
 
@@ -313,6 +444,10 @@ function closeModal(id) { document.getElementById(id)?.classList.remove('active'
 
 // ===== Event Listeners =====
 document.addEventListener('DOMContentLoaded', () => {
+    // Create dynamic modals
+    createInboundModal();
+    createDepositModal();
+
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
@@ -338,6 +473,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('addProductForm')?.addEventListener('submit', (e) => {
         e.preventDefault(); addProduct(new FormData(e.target)); e.target.reset();
     });
+
+    // Inbound button
+    document.getElementById('inboundBtn')?.addEventListener('click', () => openModal('inboundModal'));
+
+    // Deposit button
+    document.getElementById('depositBtn')?.addEventListener('click', () => openModal('depositModal'));
 
     // Sync button
     document.getElementById('syncOrdersBtn')?.addEventListener('click', loadOrders);

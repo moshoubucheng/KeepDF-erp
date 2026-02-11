@@ -83,7 +83,7 @@ export default {
   // Cron Trigger - 灾备快照
   async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
     console.log('[CRON] Disaster Recovery Snapshot triggered')
-    const drService = new DisasterRecoveryService(env.DB, env.BUCKET)
+    const drService = new DisasterRecoveryService(env.DB, env.BUCKET, env.ENCRYPTION_KEY)
     const result = await drService.performDailySnapshot()
     console.log(`[CRON] Backup complete: ${result.rowCount} rows -> ${result.r2Path}`)
   },

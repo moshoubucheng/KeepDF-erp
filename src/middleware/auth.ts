@@ -8,9 +8,10 @@ import type { Bindings, Variables } from '../db/types'
 export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: Variables }>(async (c, next) => {
     const path = c.req.path
 
-    // 跳过无需认证的路径
-    const publicPaths = ['/', '/health', '/api/webhooks']
-    if (publicPaths.some((p) => path.startsWith(p))) {
+    // 跳过无需认证的路径（精确匹配或前缀匹配）
+    const exactPaths = ['/', '/health']
+    const prefixPaths = ['/api/webhooks', '/api/v1/orders/webhook']
+    if (exactPaths.includes(path) || prefixPaths.some((p) => path.startsWith(p))) {
         return next()
     }
 

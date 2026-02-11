@@ -1,16 +1,18 @@
 import { Hono } from 'hono'
-import type { Bindings, Order } from '../db/types'
+import type { Bindings, Variables, Order } from '../db/types'
+import { NotificationService } from '../services/notification.service'
 
-const orders = new Hono<{ Bindings: Bindings }>()
+const orders = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 /** GET /orders - 订单列表 */
 orders.get('/', async (c) => {
+    const distributorId = c.get('distributorId')
     const platform = c.req.query('platform')
     const status = c.req.query('status')
     const limit = Number(c.req.query('limit') || 50)
 
-    let sql = 'SELECT * FROM orders WHERE 1=1'
-    const params: any[] = []
+    let sql = 'SELECT * FROM orders WHERE distributor_id = ?'
+    const params: any[] = [distributorId]
 
     if (platform) {
         sql += ' AND platform = ?'
@@ -25,7 +27,7 @@ orders.get('/', async (c) => {
     params.push(limit)
 
     const stmt = c.env.DB.prepare(sql)
-    const { results } = await (params.length > 0 ? stmt.bind(...params) : stmt).all<Order>()
+    const { results } = await stmt.bind(...params).all<Order>()
 
     return c.json({ orders: results, count: results.length })
 })
@@ -33,11 +35,16 @@ orders.get('/', async (c) => {
 /** GET /orders/:id - 订单详情（含 items） */
 orders.get('/:id', async (c) => {
     const id = Number(c.req.param('id'))
+    const distributorId = c.get('distributorId')
 
     const order = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
         .bind(id).first<Order>()
 
     if (!order) return c.json({ error: 'Order not found' }, 404)
+
+    if (order.distributor_id !== distributorId) {
+        return c.json({ error: 'Forbidden: order does not belong to you' }, 403)
+    }
 
     const { results: items } = await c.env.DB.prepare(
         'SELECT * FROM order_items WHERE order_id = ?'
@@ -63,12 +70,17 @@ orders.post('/webhook/:platform', async (c) => {
 /** PATCH /orders/:id/ship - 发货确认 */
 orders.patch('/:id/ship', async (c) => {
     const id = Number(c.req.param('id'))
+    const distributorId = c.get('distributorId')
     const body = await c.req.json<{ tracking_number: string }>()
 
     const order = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
         .bind(id).first<Order>()
 
     if (!order) return c.json({ error: 'Order not found' }, 404)
+
+    if (order.distributor_id !== distributorId) {
+        return c.json({ error: 'Forbidden: order does not belong to you' }, 403)
+    }
 
     const batch = [
         c.env.DB.prepare("UPDATE orders SET status = 'SHIPPED' WHERE id = ?").bind(id),
@@ -78,6 +90,19 @@ orders.patch('/:id/ship', async (c) => {
     ]
 
     await c.env.DB.batch(batch)
+
+    // 发货通知（不影响发货结果）
+    try {
+        const notification = new NotificationService(c.env.DB)
+        await notification.send({
+            type: 'INFO',
+            channel: 'LARK',
+            message: `訂単 #${id} (${order.platform}) 発送完了 - 追跡番号: ${body.tracking_number}`,
+        })
+    } catch (e) {
+        console.error('Notification failed:', e)
+    }
+
     return c.json({ status: 'shipped', orderId: id, tracking: body.tracking_number })
 })
 
