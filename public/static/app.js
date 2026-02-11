@@ -439,6 +439,12 @@ function formatDate(dateStr) {
     return d.toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+async function logout() {
+    await apiFetch('/api/v1/auth/logout', { method: 'POST' });
+    localStorage.removeItem('erp_token');
+    window.location.href = '/login.html';
+}
+
 function openModal(id) { document.getElementById(id)?.classList.add('active'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
 

@@ -9,7 +9,7 @@ const TOKEN_2 = 'tok_dev_def456' // 分销商 2 的 token
 
 const TABLE_NAMES = [
     'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
-    'commissions', 'wallet_transactions', 'outbound_records',
+    'commission_settlements', 'commissions', 'wallet_transactions', 'outbound_records',
     'inbound_records', 'warehouse_locations', 'order_items', 'orders',
     'platform_mappings', 'product_variants', 'products', 'distributors',
 ]

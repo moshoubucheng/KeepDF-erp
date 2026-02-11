@@ -89,6 +89,7 @@ export interface WarehouseLocation {
 export interface Invoice {
     id: number
     order_id: number
+    invoice_number: string | null
     pdf_url: string | null
     tax_details: string // JSON string
     created_at: string
@@ -117,6 +118,29 @@ export interface BackupSnapshot {
     date: string
     r2_path: string
     checksum: string
+    created_at: string
+}
+
+export interface Commission {
+    id: number
+    sku: string
+    platform: string
+    rate: number
+}
+
+export interface CommissionSettlement {
+    id: number
+    distributor_id: number
+    order_id: number
+    sku: string
+    platform: string
+    qty: number
+    unit_price: number
+    commission_rate: number
+    commission_amount: number
+    status: 'PENDING' | 'SETTLED' | 'FAILED'
+    settled_at: string | null
+    wallet_tx_id: number | null
     created_at: string
 }
 

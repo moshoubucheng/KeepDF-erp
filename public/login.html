@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart ERP | ログイン</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f23;
+      font-family: 'Inter', sans-serif;
+    }
+    .login-card {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .login-logo .logo-icon { font-size: 40px; margin-bottom: 12px; }
+    .login-logo h1 { color: #f1f5f9; font-size: 24px; font-weight: 700; margin: 0 0 4px 0; }
+    .login-logo p { color: #64748b; font-size: 14px; }
+    .form-group { margin-bottom: 24px; }
+    .form-group label { display: block; color: #94a3b8; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+    .form-group input {
+      width: 100%; padding: 12px 16px; background: #16213e;
+      border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px;
+      color: #f1f5f9; font-size: 14px; font-family: 'Inter', sans-serif; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: #8b5cf6; }
+    .form-group input::placeholder { color: #475569; }
+    .login-btn {
+      width: 100%; padding: 12px;
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      color: #fff; border: none; border-radius: 8px;
+      font-size: 15px; font-weight: 600; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .login-btn:hover { opacity: 0.9; }
+    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-error { color: #ef4444; font-size: 13px; text-align: center; margin-top: 16px; min-height: 20px; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">&#9889;</div>
+      <h1>SmartERP</h1>
+      <p>Cross-border E-commerce Platform</p>
+    </div>
+    <form id="loginForm">
+      <div class="form-group">
+        <label>API Token</label>
+        <input type="text" id="tokenInput" placeholder="tok_xxxxxxxx" autocomplete="off" required>
+      </div>
+      <button type="submit" class="login-btn" id="loginBtn">ログイン</button>
+      <div class="login-error" id="loginError"></div>
+    </form>
+  </div>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const token = document.getElementById('tokenInput').value.trim();
+        const errorEl = document.getElementById('loginError');
+        const btn = document.getElementById('loginBtn');
+        if (!token) { errorEl.textContent = 'トークンを入力してください'; return; }
+        btn.disabled = true; btn.textContent = 'ログイン中...'; errorEl.textContent = '';
+        try {
+            const res = await fetch('/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                localStorage.setItem('erp_token', token);
+                window.location.href = '/index.html';
+            } else {
+                errorEl.textContent = data.error || 'ログインに失敗しました';
+            }
+        } catch (err) { errorEl.textContent = 'サーバーに接続できません'; }
+        finally { btn.disabled = false; btn.textContent = 'ログイン'; }
+    });
+  </script>
+</body>
+</html>

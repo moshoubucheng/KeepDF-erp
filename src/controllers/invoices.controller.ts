@@ -1,0 +1,68 @@
+import { Hono } from 'hono'
+import type { Bindings, Variables } from '../db/types'
+import { InvoiceService } from '../services/invoice.service'
+
+const invoices = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+/** POST /invoices/generate/:orderId - 生成适格请求书 */
+invoices.post('/generate/:orderId', async (c) => {
+    const orderId = Number(c.req.param('orderId'))
+    const distributorId = c.get('distributorId')
+    const body = await c.req.json<{ buyerName: string; invoiceDate?: string }>()
+
+    if (!body.buyerName) {
+        return c.json({ error: 'Buyer name is required' }, 400)
+    }
+
+    const service = new InvoiceService(c.env.DB)
+    try {
+        const invoice = await service.generateInvoice(orderId, distributorId, body.buyerName, body.invoiceDate)
+        return c.json({
+            success: true,
+            invoice: {
+                ...invoice,
+                tax_details: JSON.parse(invoice.tax_details),
+            },
+        }, 201)
+    } catch (e: any) {
+        if (e.message === 'Order not found') return c.json({ error: e.message }, 404)
+        if (e.message === 'Order does not belong to you') return c.json({ error: e.message }, 403)
+        return c.json({ error: e.message }, 400)
+    }
+})
+
+/** GET /invoices/:id - Invoice 详情 */
+invoices.get('/:id', async (c) => {
+    const id = Number(c.req.param('id'))
+    const distributorId = c.get('distributorId')
+
+    const service = new InvoiceService(c.env.DB)
+    try {
+        const result = await service.getInvoice(id, distributorId)
+        if (!result) return c.json({ error: 'Invoice not found' }, 404)
+        return c.json(result)
+    } catch (e: any) {
+        if (e.message === 'Forbidden') return c.json({ error: 'Invoice does not belong to you' }, 403)
+        return c.json({ error: e.message }, 500)
+    }
+})
+
+/** GET /invoices - Invoice 列表 */
+invoices.get('/', async (c) => {
+    const distributorId = c.get('distributorId')
+    const orderId = c.req.query('orderId') ? Number(c.req.query('orderId')) : undefined
+    const limit = Number(c.req.query('limit') || 50)
+    const offset = Number(c.req.query('offset') || 0)
+
+    const service = new InvoiceService(c.env.DB)
+    const { invoices: list, total } = await service.listInvoices(distributorId, { orderId, limit, offset })
+
+    return c.json({
+        invoices: list,
+        total,
+        count: list.length,
+        hasMore: offset + list.length < total,
+    })
+})
+
+export { invoices }

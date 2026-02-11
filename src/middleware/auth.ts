@@ -10,7 +10,7 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: 
 
     // 跳过无需认证的路径（精确匹配或前缀匹配）
     const exactPaths = ['/', '/health']
-    const prefixPaths = ['/api/webhooks', '/api/v1/orders/webhook']
+    const prefixPaths = ['/api/webhooks', '/api/v1/orders/webhook', '/api/v1/auth/login']
     if (exactPaths.includes(path) || prefixPaths.some((p) => path.startsWith(p))) {
         return next()
     }

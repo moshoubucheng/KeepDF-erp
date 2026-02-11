@@ -5,8 +5,13 @@ import { authMiddleware, loggerMiddleware } from './middleware/auth'
 import { wallet } from './controllers/wallet.controller'
 import { orders } from './controllers/orders.controller'
 import { inventory } from './controllers/inventory.controller'
+import { auth } from './controllers/auth.controller'
+import { commissions } from './controllers/commissions.controller'
+import { invoices } from './controllers/invoices.controller'
+import { dashboard } from './controllers/dashboard.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
+import { LowStockChecker } from './services/lowstock-checker'
 
 const app = new Hono<{ Bindings: Bindings }>()
 
@@ -28,6 +33,10 @@ app.get('/health', async (c) => {
 app.route('/api/v1/wallet', wallet)
 app.route('/api/v1/orders', orders)
 app.route('/api/v1/inventory', inventory)
+app.route('/api/v1/auth', auth)
+app.route('/api/v1/commissions', commissions)
+app.route('/api/v1/invoices', invoices)
+app.route('/api/v1/dashboard', dashboard)
 
 // ===== Error Handler =====
 app.onError((err, c) => {
@@ -80,11 +89,26 @@ export default {
     }
   },
 
-  // Cron Trigger - 灾备快照
+  // Cron Trigger - 灾备快照 + 低库存检查
   async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
-    console.log('[CRON] Disaster Recovery Snapshot triggered')
-    const drService = new DisasterRecoveryService(env.DB, env.BUCKET, env.ENCRYPTION_KEY)
-    const result = await drService.performDailySnapshot()
-    console.log(`[CRON] Backup complete: ${result.rowCount} rows -> ${result.r2Path}`)
+    console.log('[CRON] Daily tasks triggered')
+
+    // 1. 灾备快照
+    try {
+      const drService = new DisasterRecoveryService(env.DB, env.BUCKET, env.ENCRYPTION_KEY)
+      const result = await drService.performDailySnapshot()
+      console.log(`[CRON] Backup complete: ${result.rowCount} rows -> ${result.r2Path}`)
+    } catch (e) {
+      console.error('[CRON] Backup failed:', e)
+    }
+
+    // 2. 低库存检查
+    try {
+      const checker = new LowStockChecker(env.DB)
+      const stockResult = await checker.check()
+      console.log(`[CRON] Low stock check: ${stockResult.alertsSent} alerts sent`)
+    } catch (e) {
+      console.error('[CRON] Low stock check failed:', e)
+    }
   },
 }

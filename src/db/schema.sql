@@ -120,6 +120,25 @@ CREATE TABLE IF NOT EXISTS invoices (
   FOREIGN KEY (order_id) REFERENCES orders(id)
 );
 
+-- ===== Commission Settlements =====
+CREATE TABLE IF NOT EXISTS commission_settlements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  distributor_id INTEGER NOT NULL,
+  order_id INTEGER NOT NULL,
+  sku TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  qty INTEGER NOT NULL,
+  unit_price REAL NOT NULL,
+  commission_rate REAL NOT NULL,
+  commission_amount REAL NOT NULL,
+  status TEXT DEFAULT 'PENDING' CHECK(status IN ('PENDING', 'SETTLED', 'FAILED')),
+  settled_at DATETIME,
+  wallet_tx_id INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (distributor_id) REFERENCES distributors(id),
+  FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+
 -- ===== V2.0 新增 =====
 CREATE TABLE IF NOT EXISTS api_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -155,3 +174,8 @@ CREATE INDEX IF NOT EXISTS idx_wallet_created ON wallet_transactions(created_at)
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
 CREATE INDEX IF NOT EXISTS idx_api_logs_platform ON api_logs(platform, created_at);
 CREATE INDEX IF NOT EXISTS idx_platform_map ON platform_mappings(local_sku);
+CREATE INDEX IF NOT EXISTS idx_commission_distributor ON commission_settlements(distributor_id);
+CREATE INDEX IF NOT EXISTS idx_commission_order ON commission_settlements(order_id);
+CREATE INDEX IF NOT EXISTS idx_commission_status ON commission_settlements(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_invoice_order ON invoices(order_id);
+CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(distributor_id, created_at);
