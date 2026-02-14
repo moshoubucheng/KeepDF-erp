@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS distributors (
   balance REAL DEFAULT 0.0,
   frozen_balance REAL DEFAULT 0.0,
   tax_reg_number TEXT,
+  role TEXT DEFAULT 'distributor' CHECK(role IN ('admin', 'distributor')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -179,3 +180,17 @@ CREATE INDEX IF NOT EXISTS idx_commission_order ON commission_settlements(order_
 CREATE INDEX IF NOT EXISTS idx_commission_status ON commission_settlements(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_invoice_order ON invoices(order_id);
 CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(distributor_id, created_at);
+
+-- ===== Platform Sync Logs =====
+CREATE TABLE IF NOT EXISTS platform_sync_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform TEXT NOT NULL CHECK(platform IN ('TIKTOK', 'TEMU', 'RAKUTEN')),
+  sync_type TEXT NOT NULL CHECK(sync_type IN ('MANUAL', 'CRON')),
+  orders_fetched INTEGER DEFAULT 0,
+  orders_queued INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'RUNNING' CHECK(status IN ('RUNNING', 'COMPLETED', 'FAILED')),
+  error_message TEXT,
+  started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  completed_at DATETIME
+);
+CREATE INDEX IF NOT EXISTS idx_sync_logs_platform ON platform_sync_logs(platform, started_at);

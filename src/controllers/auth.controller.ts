@@ -11,15 +11,17 @@ auth.post('/login', async (c) => {
     }
 
     const distributor = await c.env.DB.prepare(
-        'SELECT id, name, balance, frozen_balance, tax_reg_number FROM distributors WHERE token = ?'
+        'SELECT id, name, balance, frozen_balance, tax_reg_number, role FROM distributors WHERE token = ?'
     ).bind(body.token).first<Distributor>()
 
     if (!distributor) {
         return c.json({ error: 'Invalid token' }, 401)
     }
 
-    // 写入 KV session（1小时过期）
-    await c.env.KV.put(`session:${body.token}`, String(distributor.id), { expirationTtl: 3600 })
+    const role = distributor.role || 'distributor'
+
+    // 写入 KV session（1小时过期，格式: "id:role"）
+    await c.env.KV.put(`session:${body.token}`, `${distributor.id}:${role}`, { expirationTtl: 3600 })
 
     return c.json({
         success: true,
@@ -29,6 +31,7 @@ auth.post('/login', async (c) => {
             balance: distributor.balance,
             frozen_balance: distributor.frozen_balance,
             tax_reg_number: distributor.tax_reg_number,
+            role,
         },
         expiresIn: 3600,
     })
@@ -48,7 +51,7 @@ auth.post('/logout', async (c) => {
 auth.get('/me', async (c) => {
     const distributorId = c.get('distributorId')
     const distributor = await c.env.DB.prepare(
-        'SELECT id, name, balance, frozen_balance, tax_reg_number, created_at FROM distributors WHERE id = ?'
+        'SELECT id, name, balance, frozen_balance, tax_reg_number, role, created_at FROM distributors WHERE id = ?'
     ).bind(distributorId).first<Distributor>()
 
     if (!distributor) {
@@ -62,6 +65,7 @@ auth.get('/me', async (c) => {
             balance: distributor.balance,
             frozen_balance: distributor.frozen_balance,
             tax_reg_number: distributor.tax_reg_number,
+            role: distributor.role || 'distributor',
             created_at: distributor.created_at,
         },
     })

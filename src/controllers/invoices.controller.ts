@@ -1,8 +1,34 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
 import { InvoiceService } from '../services/invoice.service'
+import { toCSV, csvResponse } from '../utils/csv'
 
 const invoices = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+/** GET /invoices/export - CSV 导出 */
+invoices.get('/export', async (c) => {
+    const distributorId = c.get('distributorId')
+
+    const { results } = await c.env.DB.prepare(`
+        SELECT i.id, i.invoice_number, i.order_id, o.platform, o.total_amount, i.created_at
+        FROM invoices i
+        JOIN orders o ON o.id = i.order_id
+        WHERE o.distributor_id = ?
+        ORDER BY i.created_at DESC
+        LIMIT 5000
+    `).bind(distributorId).all()
+
+    const csv = toCSV(results as Record<string, unknown>[], [
+        { key: 'id', header: 'ID' },
+        { key: 'invoice_number', header: '請求書番号' },
+        { key: 'order_id', header: '注文ID' },
+        { key: 'platform', header: 'プラットフォーム' },
+        { key: 'total_amount', header: '金額' },
+        { key: 'created_at', header: '発行日' },
+    ])
+
+    return csvResponse(csv, 'invoices.csv')
+})
 
 /** POST /invoices/generate/:orderId - 生成适格请求书 */
 invoices.post('/generate/:orderId', async (c) => {

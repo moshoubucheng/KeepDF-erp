@@ -8,7 +8,7 @@ const TOKEN = 'tok_dev_abc123'
 const TOKEN_2 = 'tok_dev_def456'
 
 const TABLE_NAMES = [
-    'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
+    'platform_sync_logs', 'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
     'commission_settlements', 'commissions', 'wallet_transactions', 'outbound_records',
     'inbound_records', 'warehouse_locations', 'order_items', 'orders',
     'platform_mappings', 'product_variants', 'products', 'distributors',
@@ -100,7 +100,7 @@ describe('Auth Controller', () => {
             })
 
             const cached = await env.KV.get(`session:${TOKEN}`)
-            expect(cached).toBe('1')
+            expect(cached).toBe('1:admin')
 
             // ログアウト
             const res = await SELF.fetch('http://localhost/api/v1/auth/logout', {

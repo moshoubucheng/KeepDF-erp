@@ -943,6 +943,31 @@ body {
     border-top: 1px solid var(--border);
 }
 
+/* --- Pagination --- */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+}
+
+.pagination .btn-ghost.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: default;
+}
+
+/* --- Utility Classes --- */
+.text-green {
+    color: var(--accent-emerald);
+}
+
+.text-red {
+    color: var(--accent-red);
+}
+
 /* --- Responsive --- */
 @media (max-width: 1200px) {
     .stats-grid {

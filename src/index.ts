@@ -12,9 +12,11 @@ import { auth } from './controllers/auth.controller'
 import { commissions } from './controllers/commissions.controller'
 import { invoices } from './controllers/invoices.controller'
 import { dashboard } from './controllers/dashboard.controller'
+import { platformSync } from './controllers/platform-sync.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
+import { PlatformSyncService } from './services/platform-sync.service'
 
 const ALLOWED_ORIGINS = [
     'http://localhost:8787',
@@ -52,6 +54,7 @@ app.route('/api/v1/auth', auth)
 app.route('/api/v1/commissions', commissions)
 app.route('/api/v1/invoices', invoices)
 app.route('/api/v1/dashboard', dashboard)
+app.route('/api/v1/platform-sync', platformSync)
 
 // ===== Error Handler =====
 app.onError((err, c) => {
@@ -140,6 +143,18 @@ export default {
       console.log(`[CRON] Low stock check: ${stockResult.alertsSent} alerts sent`)
     } catch (e) {
       console.error('[CRON] Low stock check failed:', e)
+    }
+
+    // 3. 三平台自动同步
+    const platforms = ['TIKTOK', 'TEMU', 'RAKUTEN'] as const
+    const syncService = new PlatformSyncService(env.DB, env.ORDER_QUEUE)
+    for (const platform of platforms) {
+      try {
+        const result = await syncService.syncPlatform(platform, 'CRON')
+        console.log(`[CRON] ${platform} sync: fetched=${result.ordersFetched}, queued=${result.ordersQueued}`)
+      } catch (e) {
+        console.error(`[CRON] ${platform} sync failed:`, e)
+      }
     }
   },
 }

@@ -15,6 +15,8 @@ const pageTitles = {
     orders: { title: '注文管理', sub: 'Orders Management' },
     inventory: { title: '在庫管理', sub: 'Inventory & Products' },
     wallet: { title: 'ウォレット', sub: 'Distributor Wallet' },
+    commissions: { title: '佣金管理', sub: 'Commission Management' },
+    invoices: { title: '請求書', sub: 'Invoice Management' },
 };
 
 function navigateTo(pageName) {
@@ -65,6 +67,31 @@ async function apiFetch(path, options = {}) {
     }
 }
 
+async function apiFetchBlob(path) {
+    try {
+        const res = await fetch(`${API_BASE}${path}`, {
+            headers: { 'Authorization': `Bearer ${AUTH_TOKEN}` },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.blob();
+    } catch (e) {
+        console.error(`API Blob Error (${path}):`, e);
+        return null;
+    }
+}
+
+function downloadCSV(url) {
+    apiFetchBlob(url).then(blob => {
+        if (!blob) return alert('CSV出力に失敗しました');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        const match = url.match(/\/([^/]+)\/export/);
+        a.download = (match ? match[1] : 'export') + '.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+}
+
 // ===== Page Data Loaders =====
 async function loadPageData(page) {
     switch (page) {
@@ -72,25 +99,65 @@ async function loadPageData(page) {
         case 'orders': return loadOrders();
         case 'inventory': return loadInventory();
         case 'wallet': return loadWallet();
+        case 'commissions': return loadCommissions();
+        case 'invoices': return loadInvoices();
     }
 }
 
 // --- Dashboard ---
+let currentChartPeriod = '7d';
+
 async function loadDashboard() {
-    const [ordersData, inventoryData] = await Promise.all([
-        apiFetch('/api/v1/orders'),
-        apiFetch('/api/v1/inventory'),
+    loadDashboardStats();
+    loadPlatformStats();
+    renderChart(currentChartPeriod);
+}
+
+async function loadDashboardStats() {
+    const [statsData, ordersData] = await Promise.all([
+        apiFetch('/api/v1/dashboard/stats'),
+        apiFetch('/api/v1/orders?limit=5'),
     ]);
 
-    if (ordersData) {
-        document.getElementById('stat-orders').textContent = ordersData.count || 0;
-        renderRecentOrders(ordersData.orders?.slice(0, 5) || []);
-    }
-    if (inventoryData) {
-        document.getElementById('stat-products').textContent = inventoryData.products?.length || 0;
+    if (statsData?.overview) {
+        document.getElementById('stat-revenue').textContent =
+            `¥${(statsData.overview.totalRevenue || 0).toLocaleString()}`;
+        document.getElementById('stat-orders').textContent =
+            statsData.overview.totalOrders || 0;
+        document.getElementById('stat-products').textContent =
+            statsData.overview.totalProducts || 0;
     }
 
-    renderChart();
+    if (ordersData) {
+        renderRecentOrders(ordersData.orders?.slice(0, 5) || []);
+    }
+}
+
+async function loadPlatformStats() {
+    const data = await apiFetch('/api/v1/dashboard/orders-by-platform?period=all');
+    if (!data?.platforms) return;
+
+    const container = document.querySelector('.platform-list');
+    if (!container) return;
+
+    const platformMeta = {
+        TIKTOK: { cls: 'tiktok', abbr: 'TK', name: 'TikTok Shop' },
+        TEMU: { cls: 'temu', abbr: 'TM', name: 'Temu' },
+        RAKUTEN: { cls: 'rakuten', abbr: 'RK', name: 'Rakuten' },
+    };
+
+    container.innerHTML = data.platforms.map(p => {
+        const meta = platformMeta[p.platform] || { cls: '', abbr: '??', name: p.platform };
+        return `
+        <div class="platform-item">
+          <div class="platform-icon ${meta.cls}">${meta.abbr}</div>
+          <div class="platform-info">
+            <span class="platform-name">${escapeHtml(meta.name)}</span>
+            <div class="platform-bar"><div class="bar-fill" style="width:${p.percentage}%"></div></div>
+          </div>
+          <span class="platform-pct">${p.percentage}%</span>
+        </div>`;
+    }).join('');
 }
 
 function renderRecentOrders(orders) {
@@ -110,7 +177,10 @@ function renderRecentOrders(orders) {
   `).join('');
 }
 
-function renderChart() {
+async function renderChart(period) {
+    if (!period) period = currentChartPeriod;
+    currentChartPeriod = period;
+
     const canvas = document.getElementById('ordersChart');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -118,10 +188,24 @@ function renderChart() {
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
-    // Simulated data for visual effect
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const data = [12, 19, 8, 25, 15, 22, 18];
-    const max = Math.max(...data) * 1.2;
+    // Fetch real data
+    const trendData = await apiFetch(`/api/v1/dashboard/revenue-trend?period=${period}`);
+    const items = trendData?.data || [];
+
+    const labels = items.map(d => d.date);
+    const data = items.map(d => d.orderCount);
+
+    // Fallback if no data
+    if (!data.length) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '13px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText('データがありません', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    const max = Math.max(...data) * 1.2 || 1;
 
     const padding = { top: 20, right: 20, bottom: 40, left: 50 };
     const chartW = canvas.width - padding.left - padding.right;
@@ -142,8 +226,9 @@ function renderChart() {
     }
 
     // Data points & line
+    const step = data.length > 1 ? chartW / (data.length - 1) : 0;
     const points = data.map((v, i) => ({
-        x: padding.left + (chartW / (data.length - 1)) * i,
+        x: padding.left + step * i,
         y: padding.top + chartH - (v / max) * chartH
     }));
 
@@ -180,12 +265,16 @@ function renderChart() {
         ctx.fill();
     });
 
-    // X labels
+    // X labels (show subset to avoid overlap)
     ctx.fillStyle = '#64748b';
     ctx.font = '11px Inter';
     ctx.textAlign = 'center';
+    const labelStep = Math.max(1, Math.floor(labels.length / 7));
     points.forEach((p, i) => {
-        ctx.fillText(days[i], p.x, canvas.height - padding.bottom + 20);
+        if (i % labelStep === 0 || i === points.length - 1) {
+            const label = labels[i] ? labels[i].slice(5) : '';
+            ctx.fillText(label, p.x, canvas.height - padding.bottom + 20);
+        }
     });
 }
 
@@ -273,6 +362,166 @@ async function loadWallet(distributorId = 1) {
       <td>${formatDate(t.created_at)}</td>
     </tr>
   `).join('');
+}
+
+// --- Commissions ---
+async function loadCommissions() {
+    // Load rates table
+    const ratesData = await apiFetch('/api/v1/commissions/rates');
+    const ratesBody = document.getElementById('commRatesBody');
+
+    if (ratesData?.rates?.length) {
+        ratesBody.innerHTML = ratesData.rates.map(r => `
+        <tr>
+          <td><strong>${escapeHtml(r.sku)}</strong></td>
+          <td>${platformBadge(r.platform)}</td>
+          <td>${(r.rate * 100).toFixed(1)}%</td>
+        </tr>`).join('');
+    } else {
+        ratesBody.innerHTML = '<tr class="empty-row"><td colspan="3">手数料率データがありません</td></tr>';
+    }
+
+    // Load settlement history
+    loadCommissionHistory(0);
+}
+
+async function loadCommissionHistory(offset) {
+    const status = document.getElementById('commStatusFilter')?.value || '';
+    let url = `/api/v1/commissions/history?limit=20&offset=${offset}`;
+    if (status) url += `&status=${encodeURIComponent(status)}`;
+
+    const data = await apiFetch(url);
+    const tbody = document.getElementById('commHistoryBody');
+
+    if (!data?.settlements?.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="9">決済履歴がありません</td></tr>';
+        document.getElementById('commPagination').innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = data.settlements.map(s => `
+    <tr>
+      <td>#${escapeHtml(s.id)}</td>
+      <td>#${escapeHtml(s.order_id)}</td>
+      <td>${escapeHtml(s.sku)}</td>
+      <td>${platformBadge(s.platform)}</td>
+      <td>${s.qty}</td>
+      <td>¥${(Number(s.unit_price) || 0).toLocaleString()}</td>
+      <td>¥${(Number(s.commission_amount) || 0).toLocaleString()}</td>
+      <td>${commStatusBadge(s.status)}</td>
+      <td>${formatDate(s.created_at)}</td>
+    </tr>`).join('');
+
+    renderPagination('commPagination', offset, 20, data.total, (newOffset) => loadCommissionHistory(newOffset));
+}
+
+// --- Invoices ---
+async function loadInvoices(offset = 0) {
+    const data = await apiFetch(`/api/v1/invoices?limit=20&offset=${offset}`);
+    const tbody = document.getElementById('invoicesTableBody');
+
+    if (!data?.invoices?.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="7">請求書がありません</td></tr>';
+        document.getElementById('invoicesPagination').innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = data.invoices.map(inv => `
+    <tr>
+      <td>#${escapeHtml(inv.id)}</td>
+      <td>${escapeHtml(inv.invoice_number) || '—'}</td>
+      <td>#${escapeHtml(inv.order_id)}</td>
+      <td>${platformBadge(inv.platform || '')}</td>
+      <td>¥${(Number(inv.total_amount || inv.amount) || 0).toLocaleString()}</td>
+      <td>${formatDate(inv.created_at)}</td>
+      <td><button class="btn-sm" onclick="viewInvoiceDetail(${Number(inv.id)})">詳細</button></td>
+    </tr>`).join('');
+
+    renderPagination('invoicesPagination', offset, 20, data.total, (newOffset) => loadInvoices(newOffset));
+}
+
+async function viewInvoiceDetail(id) {
+    openModal('invoiceDetailModal');
+    const content = document.getElementById('invoiceDetailContent');
+    content.innerHTML = '<p style="color:var(--text-muted)">読み込み中...</p>';
+
+    const data = await apiFetch(`/api/v1/invoices/${id}`);
+    if (!data || data.error) {
+        content.innerHTML = `<p style="color:var(--accent-red)">エラー: ${escapeHtml(data?.error || '読み込みに失敗')}</p>`;
+        return;
+    }
+
+    const inv = data.invoice || data;
+    const taxDetails = typeof inv.tax_details === 'string' ? JSON.parse(inv.tax_details) : inv.tax_details;
+
+    let taxItemsHtml = '';
+    if (taxDetails?.items?.length) {
+        taxItemsHtml = `
+        <table class="data-table" style="margin-top:12px">
+          <thead><tr><th>SKU</th><th>数量</th><th>単価</th><th>税率</th><th>税額</th></tr></thead>
+          <tbody>${taxDetails.items.map(it => `
+            <tr>
+              <td>${escapeHtml(it.sku)}</td>
+              <td>${it.qty}</td>
+              <td>¥${(it.unit_price || 0).toLocaleString()}</td>
+              <td>${((it.tax_rate || 0) * 100).toFixed(0)}%</td>
+              <td>¥${(it.tax_amount || 0).toLocaleString()}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    content.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div>
+          <span style="color:var(--text-muted);font-size:0.8rem">請求書番号</span>
+          <p style="font-weight:600;margin-top:4px">${escapeHtml(inv.invoice_number)}</p>
+        </div>
+        <div>
+          <span style="color:var(--text-muted);font-size:0.8rem">発行日</span>
+          <p style="font-weight:600;margin-top:4px">${formatDate(inv.created_at)}</p>
+        </div>
+        <div>
+          <span style="color:var(--text-muted);font-size:0.8rem">販売者</span>
+          <p style="font-weight:600;margin-top:4px">${escapeHtml(taxDetails?.seller?.name || '—')}</p>
+          <p style="font-size:0.8rem;color:var(--text-secondary)">${escapeHtml(taxDetails?.seller?.registration_number || '')}</p>
+        </div>
+        <div>
+          <span style="color:var(--text-muted);font-size:0.8rem">購入者</span>
+          <p style="font-weight:600;margin-top:4px">${escapeHtml(taxDetails?.buyer?.name || '—')}</p>
+        </div>
+      </div>
+      <h4 style="margin-bottom:8px">品目・税明細</h4>
+      ${taxItemsHtml}
+      <div style="text-align:right;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+        <span style="color:var(--text-muted)">合計 (税込):</span>
+        <strong style="font-size:1.2rem;margin-left:8px">¥${(Number(taxDetails?.total_with_tax) || 0).toLocaleString()}</strong>
+      </div>`;
+}
+
+// ===== Pagination =====
+function renderPagination(containerId, offset, limit, total, onNavigate) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (total <= limit) { container.innerHTML = ''; return; }
+
+    const currentPage = Math.floor(offset / limit) + 1;
+    const totalPages = Math.ceil(total / limit);
+
+    const prevDisabled = currentPage <= 1 ? 'disabled' : '';
+    const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+
+    container.innerHTML = `
+      <button class="btn-ghost ${prevDisabled}" id="${containerId}-prev">前へ</button>
+      <span style="color:var(--text-secondary);font-size:0.85rem">${currentPage} / ${totalPages}</span>
+      <button class="btn-ghost ${nextDisabled}" id="${containerId}-next">次へ</button>`;
+
+    if (!prevDisabled) {
+        container.querySelector(`#${containerId}-prev`).addEventListener('click', () => onNavigate(offset - limit));
+    }
+    if (!nextDisabled) {
+        container.querySelector(`#${containerId}-next`).addEventListener('click', () => onNavigate(offset + limit));
+    }
 }
 
 // ===== Actions =====
@@ -421,6 +670,16 @@ function statusBadge(status) {
     return `<span class="badge badge-${cls[status] || 'pending'}">${safe}</span>`;
 }
 
+function commStatusBadge(status) {
+    const map = {
+        PENDING: { cls: 'pending', label: '未決済' },
+        SETTLED: { cls: 'delivered', label: '決済済' },
+        FAILED: { cls: 'pending', label: '失敗' },
+    };
+    const info = map[status] || { cls: 'pending', label: escapeHtml(status) };
+    return `<span class="badge badge-${info.cls}">${info.label}</span>`;
+}
+
 function taxBadge(category) {
     if (category === 'reduced') return '<span class="badge badge-processing">軽減 8%</span>';
     return '<span class="badge badge-pending">標準 10%</span>';
@@ -474,6 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filters
     document.getElementById('orderPlatformFilter')?.addEventListener('change', loadOrders);
     document.getElementById('orderStatusFilter')?.addEventListener('change', loadOrders);
+    document.getElementById('commStatusFilter')?.addEventListener('change', () => loadCommissionHistory(0));
 
     // Add Product Modal
     document.getElementById('addProductBtn')?.addEventListener('click', () => openModal('addProductModal'));
@@ -492,6 +752,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Sync button
     document.getElementById('syncOrdersBtn')?.addEventListener('click', loadOrders);
+
+    // CSV export buttons
+    document.getElementById('exportOrdersBtn')?.addEventListener('click', () => downloadCSV('/api/v1/orders/export'));
+    document.getElementById('exportCommissionsBtn')?.addEventListener('click', () => downloadCSV('/api/v1/commissions/export'));
+    document.getElementById('exportInvoicesBtn')?.addEventListener('click', () => downloadCSV('/api/v1/invoices/export'));
+
+    // Chart period buttons
+    document.querySelectorAll('[data-range]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderChart(btn.dataset.range);
+        });
+    });
 
     // Health check for status dot
     apiFetch('/health').then(data => {

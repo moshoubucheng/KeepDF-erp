@@ -10,6 +10,7 @@ export type Bindings = {
 // ===== Hono Context Variables =====
 export type Variables = {
     distributorId: number
+    role: 'admin' | 'distributor'
 }
 
 // ===== Database Models =====
@@ -21,6 +22,7 @@ export interface Distributor {
     balance: number
     frozen_balance: number
     tax_reg_number: string | null
+    role: 'admin' | 'distributor'
     created_at: string
 }
 
@@ -150,6 +152,18 @@ export interface RechargeRequest {
     distributor_id: number
     amount: number
     note?: string
+}
+
+export interface PlatformSyncLog {
+    id: number
+    platform: 'TIKTOK' | 'TEMU' | 'RAKUTEN'
+    sync_type: 'MANUAL' | 'CRON'
+    orders_fetched: number
+    orders_queued: number
+    status: 'RUNNING' | 'COMPLETED' | 'FAILED'
+    error_message: string | null
+    started_at: string
+    completed_at: string | null
 }
 
 export interface OrderSyncMessage {

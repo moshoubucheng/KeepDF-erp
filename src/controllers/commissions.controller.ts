@@ -1,9 +1,34 @@
 import { Hono } from 'hono'
-import type { Bindings, Variables } from '../db/types'
+import type { Bindings, Variables, CommissionSettlement } from '../db/types'
 import { CommissionService } from '../services/commission.service'
 import { getAuthorizedOrder } from '../utils/auth-helpers'
+import { toCSV, csvResponse } from '../utils/csv'
 
 const commissions = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+/** GET /commissions/export - CSV 导出 */
+commissions.get('/export', async (c) => {
+    const distributorId = c.get('distributorId')
+
+    const { results } = await c.env.DB.prepare(
+        'SELECT * FROM commission_settlements WHERE distributor_id = ? ORDER BY created_at DESC LIMIT 5000'
+    ).bind(distributorId).all<CommissionSettlement>()
+
+    const csv = toCSV(results as unknown as Record<string, unknown>[], [
+        { key: 'id', header: 'ID' },
+        { key: 'order_id', header: '注文ID' },
+        { key: 'sku', header: 'SKU' },
+        { key: 'platform', header: 'プラットフォーム' },
+        { key: 'qty', header: '数量' },
+        { key: 'unit_price', header: '単価' },
+        { key: 'commission_rate', header: '手数料率' },
+        { key: 'commission_amount', header: '手数料' },
+        { key: 'status', header: 'ステータス' },
+        { key: 'created_at', header: '日時' },
+    ])
+
+    return csvResponse(csv, 'commissions.csv')
+})
 
 /** GET /commissions/rates - 佣金费率表 */
 commissions.get('/rates', async (c) => {

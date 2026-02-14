@@ -2,11 +2,47 @@ import { Hono } from 'hono'
 import type { Bindings, Variables, Order } from '../db/types'
 import { NotificationService } from '../services/notification.service'
 import { getAuthorizedOrder } from '../utils/auth-helpers'
+import { toCSV, csvResponse } from '../utils/csv'
 
 const orders = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 const VALID_PLATFORMS = ['TIKTOK', 'TEMU', 'RAKUTEN'] as const
 const VALID_STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'] as const
+
+/** GET /orders/export - CSV 导出 */
+orders.get('/export', async (c) => {
+    const distributorId = c.get('distributorId')
+    const platform = c.req.query('platform')
+    const status = c.req.query('status')
+
+    let sql = 'SELECT * FROM orders WHERE distributor_id = ?'
+    const params: (string | number)[] = [distributorId]
+
+    if (platform) {
+        sql += ' AND platform = ?'
+        params.push(platform.toUpperCase())
+    }
+    if (status) {
+        sql += ' AND status = ?'
+        params.push(status.toUpperCase())
+    }
+
+    sql += ' ORDER BY created_at DESC LIMIT 5000'
+
+    const { results } = await c.env.DB.prepare(sql).bind(...params).all<Order>()
+
+    const csv = toCSV(results as unknown as Record<string, unknown>[], [
+        { key: 'id', header: '注文ID' },
+        { key: 'platform', header: 'プラットフォーム' },
+        { key: 'platform_order_id', header: '注文番号' },
+        { key: 'status', header: 'ステータス' },
+        { key: 'total_amount', header: '金額' },
+        { key: 'tax_total', header: '税額' },
+        { key: 'created_at', header: '日時' },
+    ])
+
+    return csvResponse(csv, 'orders.csv')
+})
 
 /** GET /orders - 订单列表 */
 orders.get('/', async (c) => {

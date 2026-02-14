@@ -5,7 +5,7 @@ import schemaSQL from '../db/schema.sql'
 import seedSQL from '../db/seed.sql'
 
 const TABLE_NAMES = [
-    'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
+    'platform_sync_logs', 'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
     'commission_settlements', 'commissions', 'wallet_transactions', 'outbound_records',
     'inbound_records', 'warehouse_locations', 'order_items', 'orders',
     'platform_mappings', 'product_variants', 'products', 'distributors',

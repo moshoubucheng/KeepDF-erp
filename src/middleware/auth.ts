@@ -22,25 +22,30 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: 
 
     const token = authHeader.slice(7)
 
-    // 先查 KV 缓存
+    // 先查 KV 缓存（格式: "id:role" 或旧格式 "id"）
     const cached = await c.env.KV.get(`session:${token}`)
     if (cached) {
-        c.set('distributorId', Number(cached))
+        const parts = cached.split(':')
+        c.set('distributorId', Number(parts[0]))
+        c.set('role', (parts[1] as 'admin' | 'distributor') || 'distributor')
         return next()
     }
 
     // 查 D1
     const distributor = await c.env.DB.prepare(
-        'SELECT id FROM distributors WHERE token = ?'
-    ).bind(token).first<{ id: number }>()
+        'SELECT id, role FROM distributors WHERE token = ?'
+    ).bind(token).first<{ id: number; role: string }>()
 
     if (!distributor) {
         return c.json({ error: 'Invalid token' }, 403)
     }
 
-    // 写入 KV 缓存（1小时过期）
-    await c.env.KV.put(`session:${token}`, String(distributor.id), { expirationTtl: 3600 })
+    const role = (distributor.role as 'admin' | 'distributor') || 'distributor'
+
+    // 写入 KV 缓存（1小时过期，格式: "id:role"）
+    await c.env.KV.put(`session:${token}`, `${distributor.id}:${role}`, { expirationTtl: 3600 })
     c.set('distributorId', distributor.id)
+    c.set('role', role)
 
     return next()
 })

@@ -33,6 +33,14 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1"/></svg>
         <span>ウォレット</span>
       </a>
+      <a href="#" class="nav-item" data-page="commissions">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span>佣金管理</span>
+      </a>
+      <a href="#" class="nav-item" data-page="invoices">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span>請求書</span>
+      </a>
     </nav>
     <div class="sidebar-footer">
       <button class="nav-item" onclick="logout()" style="width:100%;border:none;cursor:pointer;background:transparent;color:#94a3b8;padding:12px 20px;display:flex;align-items:center;gap:12px;font-size:14px;">
@@ -194,10 +202,16 @@
               <option value="DELIVERED">Delivered</option>
             </select>
           </div>
-          <button class="btn-primary" id="syncOrdersBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            同期
-          </button>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" id="exportOrdersBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              CSV出力
+            </button>
+            <button class="btn-primary" id="syncOrdersBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              同期
+            </button>
+          </div>
         </div>
         <div class="card">
           <div class="table-container">
@@ -345,6 +359,120 @@
                 <tr class="empty-row"><td colspan="6">取引履歴がありません</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Commissions Page -->
+      <div class="page" id="page-commissions">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="commStatusFilter" class="select-input">
+              <option value="">全ステータス</option>
+              <option value="PENDING">Pending</option>
+              <option value="SETTLED">Settled</option>
+              <option value="FAILED">Failed</option>
+            </select>
+          </div>
+          <button class="btn-secondary" id="exportCommissionsBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            CSV出力
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>手数料率一覧</h3>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  <th>プラットフォーム</th>
+                  <th>手数料率</th>
+                </tr>
+              </thead>
+              <tbody id="commRatesBody">
+                <tr class="empty-row"><td colspan="3">データを読み込み中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>決済履歴</h3>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>注文ID</th>
+                  <th>SKU</th>
+                  <th>プラットフォーム</th>
+                  <th>数量</th>
+                  <th>単価</th>
+                  <th>手数料</th>
+                  <th>ステータス</th>
+                  <th>日時</th>
+                </tr>
+              </thead>
+              <tbody id="commHistoryBody">
+                <tr class="empty-row"><td colspan="9">決済履歴がありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="commPagination"></div>
+        </div>
+      </div>
+
+      <!-- Invoices Page -->
+      <div class="page" id="page-invoices">
+        <div class="page-actions">
+          <div class="filter-group"></div>
+          <button class="btn-secondary" id="exportInvoicesBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            CSV出力
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>請求書一覧</h3>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>請求書番号</th>
+                  <th>注文ID</th>
+                  <th>プラットフォーム</th>
+                  <th>金額</th>
+                  <th>発行日</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="invoicesTableBody">
+                <tr class="empty-row"><td colspan="7">請求書がありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="invoicesPagination"></div>
+        </div>
+      </div>
+
+      <!-- Invoice Detail Modal -->
+      <div class="modal-overlay" id="invoiceDetailModal">
+        <div class="modal" style="max-width:640px">
+          <div class="modal-header">
+            <h3>請求書詳細</h3>
+            <button class="modal-close" data-close="invoiceDetailModal">&#10005;</button>
+          </div>
+          <div id="invoiceDetailContent" style="padding:24px">
+            <p style="color:var(--text-muted)">読み込み中...</p>
           </div>
         </div>
       </div>
