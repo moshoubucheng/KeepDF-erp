@@ -21,6 +21,7 @@ import { PlatformSyncService } from './services/platform-sync.service'
 const ALLOWED_ORIGINS = [
     'http://localhost:8787',
     'http://127.0.0.1:8787',
+    'https://erp.keepdf.com',
 ]
 
 const app = new Hono<{ Bindings: Bindings }>()

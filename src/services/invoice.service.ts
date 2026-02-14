@@ -38,7 +38,7 @@ export class InvoiceService {
         // 5. 生成 Invoice 数据
         const date = invoiceDate || new Date().toISOString().split('T')[0]
         const taxDetails = TaxService.generateInvoiceData({
-            sellerName: distributor?.name || 'Smart ERP',
+            sellerName: distributor?.name || 'KeepDF',
             sellerTaxRegNumber: distributor?.tax_reg_number || 'T0000000000000',
             buyerName,
             items: items.map((item: any) => ({

@@ -1,5 +1,5 @@
 /* =============================================
-   Smart ERP - Frontend Application Logic
+   KeepDF - Frontend Application Logic
    ============================================= */
 
 const API_BASE = window.location.origin;
@@ -11,7 +11,7 @@ if (!AUTH_TOKEN) {
 
 // ===== SPA Router =====
 const pageTitles = {
-    dashboard: { title: 'ダッシュボード', sub: 'Smart ERP Middle Platform v2.0' },
+    dashboard: { title: 'ダッシュボード', sub: 'Keep Data Flow Platform' },
     orders: { title: '注文管理', sub: 'Orders Management' },
     inventory: { title: '在庫管理', sub: 'Inventory & Products' },
     wallet: { title: 'ウォレット', sub: 'Distributor Wallet' },
