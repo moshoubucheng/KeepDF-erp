@@ -15,6 +15,7 @@ import { dashboard } from './controllers/dashboard.controller'
 import { platformSync } from './controllers/platform-sync.controller'
 import { distributors } from './controllers/distributors.controller'
 import { auditLogs } from './controllers/audit.controller'
+import { reports } from './controllers/reports.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
@@ -61,6 +62,7 @@ app.route('/api/v1/dashboard', dashboard)
 app.route('/api/v1/platform-sync', platformSync)
 app.route('/api/v1/distributors', distributors)
 app.route('/api/v1/audit-logs', auditLogs)
+app.route('/api/v1/reports', reports)
 
 // ===== Error Handler =====
 app.onError((err, c) => {

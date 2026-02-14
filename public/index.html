@@ -45,6 +45,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         <span data-i18n="nav.invoices">請求書</span>
       </a>
+      <a href="#" class="nav-item" data-page="reports">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V11"/><path d="M12 17V7"/><path d="M16 17V13"/></svg>
+        <span data-i18n="nav.reports">レポート</span>
+      </a>
       <a href="#" class="nav-item admin-only" data-page="distributors" style="display:none">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span data-i18n="nav.distributors">販売者管理</span>
@@ -623,6 +627,187 @@
               <button type="submit" class="btn-primary" data-i18n="common.save">保存</button>
             </div>
           </form>
+        </div>
+      </div>
+
+      <!-- Reports Page -->
+      <div class="page" id="page-reports">
+        <div class="page-actions">
+          <div class="card-actions">
+            <button class="btn-ghost active" data-report-period="7d" data-i18n="dashboard.7d">7日</button>
+            <button class="btn-ghost" data-report-period="30d" data-i18n="dashboard.30d">30日</button>
+            <button class="btn-ghost" data-report-period="90d" data-i18n="dashboard.90d">90日</button>
+            <button class="btn-ghost" data-report-period="all">All</button>
+          </div>
+        </div>
+
+        <!-- KPI Summary Cards -->
+        <div class="report-kpi-grid">
+          <div class="stat-card" data-accent="purple">
+            <div class="stat-icon">&#128176;</div>
+            <div class="stat-info">
+              <span class="stat-label" data-i18n="reports.revenue">売上</span>
+              <span class="stat-value" id="report-revenue">&yen;0</span>
+            </div>
+          </div>
+          <div class="stat-card" data-accent="emerald">
+            <div class="stat-icon">&#128200;</div>
+            <div class="stat-info">
+              <span class="stat-label" data-i18n="reports.profit">利益</span>
+              <span class="stat-value" id="report-profit">&yen;0</span>
+            </div>
+          </div>
+          <div class="stat-card" data-accent="blue">
+            <div class="stat-icon">&#128176;</div>
+            <div class="stat-info">
+              <span class="stat-label" data-i18n="reports.commission">手数料</span>
+              <span class="stat-value" id="report-commission">&yen;0</span>
+            </div>
+          </div>
+          <div class="stat-card" data-accent="amber">
+            <div class="stat-icon">&#128722;</div>
+            <div class="stat-info">
+              <span class="stat-label" data-i18n="reports.avg_order">平均注文額</span>
+              <span class="stat-value" id="report-avg">&yen;0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profit Analysis -->
+        <div class="report-section">
+          <div class="card">
+            <div class="card-header">
+              <h3 data-i18n="reports.profit_analysis">利益分析</h3>
+              <div class="card-actions">
+                <button class="btn-ghost active" id="profitByProduct" data-i18n="reports.by_product">商品別</button>
+                <button class="btn-ghost" id="profitByPlatform" data-i18n="reports.by_platform">プラットフォーム別</button>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>SKU / Platform</th>
+                      <th data-i18n="reports.revenue">売上</th>
+                      <th data-i18n="reports.cost">原価</th>
+                      <th data-i18n="reports.profit">利益</th>
+                      <th data-i18n="reports.margin">利益率</th>
+                    </tr>
+                  </thead>
+                  <tbody id="profitTableBody">
+                    <tr class="empty-row"><td colspan="5" data-i18n="reports.no_data">データがありません</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="chart-container" style="height:260px">
+                <canvas id="profitChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Platform Comparison -->
+        <div class="report-section">
+          <div class="card">
+            <div class="card-header">
+              <h3 data-i18n="reports.platform_comparison">プラットフォーム比較</h3>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th data-i18n="orders.platform">プラットフォーム</th>
+                      <th data-i18n="reports.order_count">注文数</th>
+                      <th data-i18n="reports.delivered_count">配達完了</th>
+                      <th data-i18n="reports.cancel_rate">キャンセル率</th>
+                      <th data-i18n="reports.revenue">売上</th>
+                    </tr>
+                  </thead>
+                  <tbody id="platformTableBody">
+                    <tr class="empty-row"><td colspan="5" data-i18n="reports.no_data">データがありません</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="chart-container" style="height:260px">
+                <canvas id="platformChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trend Comparison -->
+        <div class="report-section">
+          <div class="card">
+            <div class="card-header">
+              <h3 data-i18n="reports.trend_comparison">トレンド比較</h3>
+              <div id="trendSummary" style="display:flex;gap:16px;font-size:0.85rem;color:var(--text-secondary)"></div>
+            </div>
+            <div class="chart-container" style="height:300px">
+              <canvas id="trendChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Report Builder -->
+        <div class="report-section">
+          <div class="card">
+            <div class="card-header">
+              <h3 data-i18n="reports.custom_report">カスタムレポート</h3>
+            </div>
+            <div class="custom-report-form">
+              <div class="form-row" style="padding:20px 24px 0">
+                <div class="form-group">
+                  <label data-i18n="reports.start_date">開始日</label>
+                  <input type="date" id="customStartDate" class="select-input">
+                </div>
+                <div class="form-group">
+                  <label data-i18n="reports.end_date">終了日</label>
+                  <input type="date" id="customEndDate" class="select-input">
+                </div>
+              </div>
+              <div class="form-row" style="padding:0 24px">
+                <div class="form-group">
+                  <label data-i18n="reports.dimensions">ディメンション</label>
+                  <div class="checkbox-group">
+                    <label><input type="checkbox" name="dim" value="platform" checked> Platform</label>
+                    <label><input type="checkbox" name="dim" value="sku"> SKU</label>
+                    <label><input type="checkbox" name="dim" value="status"> Status</label>
+                    <label><input type="checkbox" name="dim" value="date"> Date</label>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label data-i18n="reports.metrics">指標</label>
+                  <div class="checkbox-group">
+                    <label><input type="checkbox" name="metric" value="orders" checked> Orders</label>
+                    <label><input type="checkbox" name="metric" value="revenue" checked> Revenue</label>
+                    <label><input type="checkbox" name="metric" value="cost"> Cost</label>
+                    <label><input type="checkbox" name="metric" value="profit"> Profit</label>
+                    <label><input type="checkbox" name="metric" value="commission"> Commission</label>
+                    <label><input type="checkbox" name="metric" value="avg_value"> Avg Value</label>
+                  </div>
+                </div>
+              </div>
+              <div style="padding:0 24px 20px;display:flex;gap:8px">
+                <button class="btn-primary" id="generateReportBtn">
+                  <span data-i18n="reports.generate">生成</span>
+                </button>
+                <button class="btn-secondary" id="exportReportBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span data-i18n="reports.export_csv">CSV出力</span>
+                </button>
+              </div>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead id="customReportHead"><tr></tr></thead>
+                <tbody id="customReportBody">
+                  <tr class="empty-row"><td data-i18n="reports.no_data">データがありません</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 

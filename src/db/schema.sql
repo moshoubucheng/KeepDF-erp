@@ -188,6 +188,8 @@ CREATE INDEX IF NOT EXISTS idx_commission_order ON commission_settlements(order_
 CREATE INDEX IF NOT EXISTS idx_commission_status ON commission_settlements(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_invoice_order ON invoices(order_id);
 CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(distributor_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_delivered ON orders(status, distributor_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_order_items_sku ON order_items(order_id, sku);
 
 -- ===== Platform Sync Logs =====
 CREATE TABLE IF NOT EXISTS platform_sync_logs (

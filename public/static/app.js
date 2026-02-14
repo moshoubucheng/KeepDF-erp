@@ -19,6 +19,7 @@ const pageTitles = {
     invoices: { title: 'invoices.title', sub: 'invoices.subtitle' },
     distributors: { title: 'distributors.title', sub: 'distributors.subtitle' },
     audit: { title: 'audit.title', sub: 'audit.subtitle' },
+    reports: { title: 'reports.title', sub: 'reports.subtitle' },
 };
 
 function navigateTo(pageName) {
@@ -158,6 +159,7 @@ async function loadPageData(page) {
         case 'invoices': return loadInvoices();
         case 'distributors': return loadDistributors();
         case 'audit': return loadAuditLogs();
+        case 'reports': return loadReports();
     }
 }
 
@@ -969,6 +971,304 @@ async function disable2FA() {
     load2FAStatus();
 }
 
+// ===== Reports =====
+let currentReportPeriod = '7d';
+
+async function loadReports() {
+    loadReportSummary(currentReportPeriod);
+    loadProfitAnalysis(currentReportPeriod);
+    loadPlatformComparison(currentReportPeriod);
+    loadTrendComparison(currentReportPeriod);
+}
+
+async function loadReportSummary(period) {
+    const data = await apiFetch(`/api/v1/reports/summary?period=${period}`);
+    if (!data || data.error) return;
+    document.getElementById('report-revenue').textContent = `\u00a5${(data.revenue || 0).toLocaleString()}`;
+    document.getElementById('report-profit').textContent = `\u00a5${(data.profit || 0).toLocaleString()}`;
+    document.getElementById('report-commission').textContent = `\u00a5${(data.commission || 0).toLocaleString()}`;
+    document.getElementById('report-avg').textContent = `\u00a5${(data.avgValue || 0).toLocaleString()}`;
+}
+
+let currentProfitGroupBy = 'product';
+
+async function loadProfitAnalysis(period) {
+    const data = await apiFetch(`/api/v1/reports/profit-analysis?period=${period}&group_by=${currentProfitGroupBy}`);
+    const tbody = document.getElementById('profitTableBody');
+    if (!data?.data?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${t('reports.no_data')}</td></tr>`;
+        clearCanvas('profitChart');
+        return;
+    }
+    const keyField = currentProfitGroupBy === 'platform' ? 'platform' : 'sku';
+    tbody.innerHTML = data.data.map(r => `
+    <tr>
+      <td><strong>${escapeHtml(r[keyField])}</strong></td>
+      <td>\u00a5${(r.revenue || 0).toLocaleString()}</td>
+      <td>\u00a5${(r.cost || 0).toLocaleString()}</td>
+      <td>\u00a5${(r.profit || 0).toLocaleString()}</td>
+      <td>${r.margin}%</td>
+    </tr>`).join('');
+
+    renderBarChart('profitChart', data.data.map(r => r[keyField]), [
+        { label: t('reports.revenue'), values: data.data.map(r => r.revenue), color: '#8b5cf6' },
+        { label: t('reports.cost'), values: data.data.map(r => r.cost), color: '#3b82f6' },
+        { label: t('reports.profit'), values: data.data.map(r => r.profit), color: '#10b981' },
+    ]);
+}
+
+async function loadPlatformComparison(period) {
+    const data = await apiFetch(`/api/v1/reports/platform-comparison?period=${period}`);
+    const tbody = document.getElementById('platformTableBody');
+    if (!data?.platforms?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${t('reports.no_data')}</td></tr>`;
+        clearCanvas('platformChart');
+        return;
+    }
+    tbody.innerHTML = data.platforms.map(p => `
+    <tr>
+      <td>${platformBadge(p.platform)}</td>
+      <td>${p.orderCount}</td>
+      <td>${p.deliveredCount}</td>
+      <td>${p.cancelRate}%</td>
+      <td>\u00a5${(p.revenue || 0).toLocaleString()}</td>
+    </tr>`).join('');
+
+    renderBarChart('platformChart', data.platforms.map(p => p.platform), [
+        { label: t('reports.order_count'), values: data.platforms.map(p => p.orderCount), color: '#8b5cf6' },
+        { label: t('reports.delivered_count'), values: data.platforms.map(p => p.deliveredCount), color: '#10b981' },
+        { label: t('reports.cancelled_count'), values: data.platforms.map(p => p.cancelledCount), color: '#ef4444' },
+    ]);
+}
+
+async function loadTrendComparison(period) {
+    if (period === 'all') {
+        clearCanvas('trendChart');
+        document.getElementById('trendSummary').innerHTML = '';
+        return;
+    }
+    const data = await apiFetch(`/api/v1/reports/trend-comparison?period=${period}`);
+    if (!data) return;
+
+    const summary = data.summary || {};
+    const growthText = summary.revenueGrowth != null ? `${summary.revenueGrowth > 0 ? '+' : ''}${summary.revenueGrowth}%` : 'N/A';
+    document.getElementById('trendSummary').innerHTML = `
+        <span>${t('reports.current_period')}: \u00a5${(summary.currentRevenue || 0).toLocaleString()}</span>
+        <span>${t('reports.previous_period')}: \u00a5${(summary.previousRevenue || 0).toLocaleString()}</span>
+        <span>${t('reports.growth')}: ${growthText}</span>`;
+
+    renderDualLineChart('trendChart', data.current || [], data.previous || []);
+}
+
+function clearCanvas(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '13px Inter';
+    ctx.textAlign = 'center';
+    ctx.fillText(t('reports.no_data'), canvas.width / 2, canvas.height / 2);
+}
+
+function renderBarChart(canvasId, labels, datasets) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!labels.length) { clearCanvas(canvasId); return; }
+
+    const padding = { top: 20, right: 20, bottom: 50, left: 60 };
+    const chartW = canvas.width - padding.left - padding.right;
+    const chartH = canvas.height - padding.top - padding.bottom;
+
+    const allValues = datasets.flatMap(d => d.values);
+    const max = Math.max(...allValues, 1) * 1.2;
+    const groupCount = labels.length;
+    const barCount = datasets.length;
+    const groupWidth = chartW / groupCount;
+    const barWidth = Math.min(groupWidth / (barCount + 1), 30);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartH / 4) * i;
+        ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(canvas.width - padding.right, y); ctx.stroke();
+        ctx.fillStyle = '#64748b'; ctx.font = '11px Inter'; ctx.textAlign = 'right';
+        ctx.fillText(formatChartValue(max - (max / 4) * i), padding.left - 8, y + 4);
+    }
+
+    // Bars
+    for (let g = 0; g < groupCount; g++) {
+        for (let b = 0; b < barCount; b++) {
+            const val = datasets[b].values[g] || 0;
+            const barH = (val / max) * chartH;
+            const x = padding.left + g * groupWidth + (groupWidth - barCount * barWidth) / 2 + b * barWidth;
+            const y = padding.top + chartH - barH;
+
+            ctx.fillStyle = datasets[b].color;
+            ctx.globalAlpha = 0.85;
+            ctx.fillRect(x, y, barWidth - 2, barH);
+            ctx.globalAlpha = 1;
+        }
+        // Label
+        ctx.fillStyle = '#64748b'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
+        const labelX = padding.left + g * groupWidth + groupWidth / 2;
+        const label = labels[g].length > 10 ? labels[g].slice(0, 10) + '..' : labels[g];
+        ctx.fillText(label, labelX, canvas.height - padding.bottom + 16);
+    }
+
+    // Legend
+    let legendX = padding.left;
+    ctx.font = '10px Inter';
+    datasets.forEach(d => {
+        ctx.fillStyle = d.color;
+        ctx.fillRect(legendX, canvas.height - 12, 10, 10);
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'left';
+        ctx.fillText(d.label, legendX + 14, canvas.height - 3);
+        legendX += ctx.measureText(d.label).width + 28;
+    });
+}
+
+function renderDualLineChart(canvasId, current, previous) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const container = canvas.parentElement;
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!current.length && !previous.length) { clearCanvas(canvasId); return; }
+
+    const padding = { top: 20, right: 20, bottom: 50, left: 60 };
+    const chartW = canvas.width - padding.left - padding.right;
+    const chartH = canvas.height - padding.top - padding.bottom;
+
+    const allRev = [...current.map(d => d.revenue), ...previous.map(d => d.revenue)];
+    const max = Math.max(...allRev, 1) * 1.2;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartH / 4) * i;
+        ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(canvas.width - padding.right, y); ctx.stroke();
+        ctx.fillStyle = '#64748b'; ctx.font = '11px Inter'; ctx.textAlign = 'right';
+        ctx.fillText(formatChartValue(max - (max / 4) * i), padding.left - 8, y + 4);
+    }
+
+    function drawLine(data, color, dashed) {
+        if (!data.length) return;
+        const step = data.length > 1 ? chartW / (data.length - 1) : 0;
+        const points = data.map((d, i) => ({
+            x: padding.left + step * i,
+            y: padding.top + chartH - (d.revenue / max) * chartH,
+        }));
+
+        ctx.beginPath();
+        ctx.setLineDash(dashed ? [6, 4] : []);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        points.forEach(p => {
+            ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = color; ctx.fill();
+        });
+    }
+
+    drawLine(current, '#8b5cf6', false);
+    drawLine(previous, '#64748b', true);
+
+    // X-axis labels for current period
+    if (current.length) {
+        ctx.fillStyle = '#64748b'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
+        const step = current.length > 1 ? chartW / (current.length - 1) : 0;
+        const labelStep = Math.max(1, Math.floor(current.length / 7));
+        current.forEach((d, i) => {
+            if (i % labelStep === 0 || i === current.length - 1) {
+                const x = padding.left + step * i;
+                ctx.fillText(d.date ? d.date.slice(5) : '', x, canvas.height - padding.bottom + 16);
+            }
+        });
+    }
+
+    // Legend
+    ctx.fillStyle = '#8b5cf6'; ctx.fillRect(padding.left, canvas.height - 12, 16, 3);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '10px Inter'; ctx.textAlign = 'left';
+    ctx.fillText(t('reports.current_period'), padding.left + 20, canvas.height - 3);
+    ctx.fillStyle = '#64748b'; ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(padding.left + 120, canvas.height - 10); ctx.lineTo(padding.left + 136, canvas.height - 10); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(t('reports.previous_period'), padding.left + 140, canvas.height - 3);
+}
+
+function formatChartValue(val) {
+    if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
+    if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
+    return Math.round(val).toString();
+}
+
+async function buildCustomReport() {
+    const startDate = document.getElementById('customStartDate').value;
+    const endDate = document.getElementById('customEndDate').value;
+    if (!startDate || !endDate) { alert('Select date range'); return; }
+
+    const dims = Array.from(document.querySelectorAll('input[name="dim"]:checked')).map(cb => cb.value);
+    const metrics = Array.from(document.querySelectorAll('input[name="metric"]:checked')).map(cb => cb.value);
+    if (!dims.length || !metrics.length) { alert('Select dimensions and metrics'); return; }
+
+    const params = `start_date=${startDate}&end_date=${endDate}&dimensions=${dims.join(',')}&metrics=${metrics.join(',')}`;
+    const data = await apiFetch(`/api/v1/reports/custom?${params}`);
+    if (!data || data.error) {
+        alert(data?.error || t('common.error'));
+        return;
+    }
+
+    const allCols = [...dims, ...metrics];
+    const thead = document.getElementById('customReportHead');
+    thead.innerHTML = `<tr>${allCols.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr>`;
+
+    const tbody = document.getElementById('customReportBody');
+    if (!data.data?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="${allCols.length}">${t('reports.no_data')}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = data.data.map(row =>
+        `<tr>${allCols.map(c => {
+            const val = row[c];
+            const isNum = typeof val === 'number' && !dims.includes(c);
+            return `<td>${isNum ? '\u00a5' + val.toLocaleString() : escapeHtml(val)}</td>`;
+        }).join('')}</tr>`
+    ).join('');
+}
+
+function exportCustomReport() {
+    const startDate = document.getElementById('customStartDate').value;
+    const endDate = document.getElementById('customEndDate').value;
+    if (!startDate || !endDate) { alert('Select date range'); return; }
+
+    const dims = Array.from(document.querySelectorAll('input[name="dim"]:checked')).map(cb => cb.value);
+    const metrics = Array.from(document.querySelectorAll('input[name="metric"]:checked')).map(cb => cb.value);
+    if (!dims.length || !metrics.length) { alert('Select dimensions and metrics'); return; }
+
+    const params = `start_date=${startDate}&end_date=${endDate}&dimensions=${dims.join(',')}&metrics=${metrics.join(',')}`;
+    downloadCSV(`/api/v1/reports/custom/export?${params}`);
+}
+
 // ===== Dynamic Modal Creation =====
 function createInboundModal() {
     const overlay = document.createElement('div');
@@ -1218,6 +1518,44 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         changePassword();
     });
+
+    // Report period buttons
+    document.querySelectorAll('[data-report-period]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-report-period]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentReportPeriod = btn.dataset.reportPeriod;
+            loadReports();
+        });
+    });
+
+    // Profit analysis group toggle
+    document.getElementById('profitByProduct')?.addEventListener('click', () => {
+        currentProfitGroupBy = 'product';
+        document.getElementById('profitByProduct').classList.add('active');
+        document.getElementById('profitByPlatform').classList.remove('active');
+        loadProfitAnalysis(currentReportPeriod);
+    });
+    document.getElementById('profitByPlatform')?.addEventListener('click', () => {
+        currentProfitGroupBy = 'platform';
+        document.getElementById('profitByPlatform').classList.add('active');
+        document.getElementById('profitByProduct').classList.remove('active');
+        loadProfitAnalysis(currentReportPeriod);
+    });
+
+    // Custom report buttons
+    document.getElementById('generateReportBtn')?.addEventListener('click', buildCustomReport);
+    document.getElementById('exportReportBtn')?.addEventListener('click', exportCustomReport);
+
+    // Set default date range for custom report
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const dateStr = d => d.toISOString().slice(0, 10);
+    if (document.getElementById('customEndDate')) {
+        document.getElementById('customEndDate').value = dateStr(today);
+        document.getElementById('customStartDate').value = dateStr(thirtyDaysAgo);
+    }
 
     // Initial load
     navigateTo('dashboard');

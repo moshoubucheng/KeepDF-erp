@@ -194,3 +194,20 @@ export interface OrderSyncMessage {
     }
     receivedAt: string
 }
+
+// ===== Report Types =====
+
+export interface ReportParams {
+    distributorId: number
+    role: 'admin' | 'distributor'
+    period: string
+}
+
+export interface CustomReportParams {
+    distributorId: number
+    role: 'admin' | 'distributor'
+    startDate: string
+    endDate: string
+    dimensions: string[]
+    metrics: string[]
+}
