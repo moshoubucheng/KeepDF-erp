@@ -69,6 +69,22 @@ async function apiFetch(path, options = {}) {
     }
 }
 
+async function apiFetchRaw(path, options = {}) {
+    try {
+        const res = await fetch(`${API_BASE}${path}`, {
+            ...options,
+            headers: {
+                'Authorization': `Bearer ${AUTH_TOKEN}`,
+                ...options.headers,
+            },
+        });
+        return res;
+    } catch (e) {
+        console.error(`API Raw Error (${path}):`, e);
+        return null;
+    }
+}
+
 async function apiFetchBlob(path) {
     try {
         const res = await fetch(`${API_BASE}${path}`, {
@@ -307,7 +323,7 @@ async function loadOrders() {
       <td>¥${(Number(o.total_amount) || 0).toLocaleString()}</td>
       <td>¥${(Number(o.tax_total) || 0).toLocaleString()}</td>
       <td>${formatDate(o.created_at)}</td>
-      <td>${o.status === 'PROCESSING' ? `<button class="btn-sm" onclick="shipOrder(${Number(o.id)})">発送</button>` : '—'}</td>
+      <td>${orderActions(o)}</td>
     </tr>
   `).join('');
 }
@@ -330,8 +346,16 @@ async function loadInventory() {
       <td>¥${(Number(p.cost_price) || 0).toLocaleString()}</td>
       <td>${taxBadge(p.tax_category)}</td>
       <td><strong>${Number(p.total_stock) || 0}</strong></td>
+      <td class="admin-only" style="display:none">
+        <button class="btn-sm" onclick="openEditProductModal(${Number(p.id)}, '${escapeHtml(p.name_jp || '')}', '${escapeHtml(p.name_cn || '')}', ${Number(p.cost_price)}, '${escapeHtml(p.tax_category)}')">編集</button>
+        <button class="btn-danger" onclick="deleteProduct(${Number(p.id)}, '${escapeHtml(p.sku)}')" style="margin-left:4px">削除</button>
+      </td>
     </tr>
   `).join('');
+    // Show admin columns if admin
+    if (window._isAdmin) {
+        document.querySelectorAll('#page-inventory .admin-only').forEach(el => el.style.display = '');
+    }
 }
 
 // --- Wallet ---
@@ -737,6 +761,104 @@ async function deposit(formData) {
     loadWallet(payload.distributor_id);
 }
 
+// ===== Order Actions =====
+function orderActions(o) {
+    const btns = [];
+    if (o.status === 'PROCESSING') {
+        btns.push(`<button class="btn-sm" onclick="shipOrder(${Number(o.id)})">発送</button>`);
+    }
+    if (o.status === 'SHIPPED' && window._isAdmin) {
+        btns.push(`<button class="btn-sm" onclick="deliverOrder(${Number(o.id)})">配達完了</button>`);
+    }
+    if ((o.status === 'PENDING' || o.status === 'PROCESSING')) {
+        btns.push(`<button class="btn-danger" onclick="cancelOrder(${Number(o.id)})" style="margin-left:4px">キャンセル</button>`);
+    }
+    return btns.length ? btns.join('') : '—';
+}
+
+async function deliverOrder(orderId) {
+    if (!confirm('この注文を配達完了にしますか？')) return;
+    const result = await apiFetch(`/api/v1/orders/${Number(orderId)}/deliver`, { method: 'PATCH' });
+    if (result?.error) {
+        alert(`配達完了エラー: ${result.error}`);
+        return;
+    }
+    loadOrders();
+}
+
+async function cancelOrder(orderId) {
+    if (!confirm('この注文をキャンセルしますか？')) return;
+    const result = await apiFetch(`/api/v1/orders/${Number(orderId)}/cancel`, { method: 'PATCH' });
+    if (result?.error) {
+        alert(`キャンセルエラー: ${result.error}`);
+        return;
+    }
+    loadOrders();
+}
+
+// ===== Product Management =====
+function openEditProductModal(id, nameJp, nameCn, costPrice, taxCategory) {
+    document.getElementById('editProductId').value = id;
+    document.getElementById('editProductNameJp').value = nameJp;
+    document.getElementById('editProductNameCn').value = nameCn;
+    document.getElementById('editProductPrice').value = costPrice;
+    document.getElementById('editProductTax').value = taxCategory;
+    document.getElementById('editProductImage').value = '';
+    openModal('editProductModal');
+}
+
+async function saveProduct() {
+    const id = document.getElementById('editProductId').value;
+    const payload = {
+        name_jp: document.getElementById('editProductNameJp').value.trim() || undefined,
+        name_cn: document.getElementById('editProductNameCn').value.trim() || undefined,
+        cost_price: Number(document.getElementById('editProductPrice').value),
+        tax_category: document.getElementById('editProductTax').value,
+    };
+
+    if (!payload.cost_price || payload.cost_price <= 0) {
+        alert('原価は0より大きい値を入力してください');
+        return;
+    }
+
+    const result = await apiFetch(`/api/v1/inventory/products/${Number(id)}`, {
+        method: 'PUT', body: JSON.stringify(payload),
+    });
+    if (result?.error) { alert(`更新エラー: ${result.error}`); return; }
+
+    // Upload image if selected
+    const fileInput = document.getElementById('editProductImage');
+    if (fileInput.files.length > 0) {
+        await uploadProductImage(Number(id), fileInput.files[0]);
+    }
+
+    closeModal('editProductModal');
+    loadInventory();
+}
+
+async function deleteProduct(id, sku) {
+    if (!confirm(`商品 ${sku} を削除しますか？この操作は取り消せません。`)) return;
+    const result = await apiFetch(`/api/v1/inventory/products/${Number(id)}`, { method: 'DELETE' });
+    if (result?.error) {
+        alert(`削除エラー: ${result.error}`);
+        return;
+    }
+    loadInventory();
+}
+
+async function uploadProductImage(id, file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await apiFetchRaw(`/api/v1/inventory/products/${Number(id)}/image`, {
+        method: 'POST',
+        body: formData,
+    });
+    if (!res || !res.ok) {
+        const errData = res ? await res.json().catch(() => null) : null;
+        alert(`画像アップロードエラー: ${errData?.error || 'Unknown error'}`);
+    }
+}
+
 // ===== Dynamic Modal Creation =====
 function createInboundModal() {
     const overlay = document.createElement('div');
@@ -822,7 +944,7 @@ function platformBadge(platform) {
 
 function statusBadge(status) {
     const safe = escapeHtml(status);
-    const cls = { PENDING: 'pending', PROCESSING: 'processing', SHIPPED: 'shipped', DELIVERED: 'delivered' };
+    const cls = { PENDING: 'pending', PROCESSING: 'processing', SHIPPED: 'shipped', DELIVERED: 'delivered', CANCELLED: 'cancelled' };
     return `<span class="badge badge-${cls[status] || 'pending'}">${safe}</span>`;
 }
 
@@ -933,8 +1055,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Check admin role to show admin-only nav items
+    window._isAdmin = false;
     apiFetch('/api/v1/auth/me').then(data => {
         if (data?.distributor?.role === 'admin') {
+            window._isAdmin = true;
             document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
         }
     });
@@ -948,6 +1072,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.querySelectorAll('[data-close="distributorModal"]').forEach(btn => {
         btn.addEventListener('click', () => closeModal('distributorModal'));
+    });
+
+    // Edit Product Modal
+    document.getElementById('editProductForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveProduct();
+    });
+    document.querySelectorAll('[data-close="editProductModal"]').forEach(btn => {
+        btn.addEventListener('click', () => closeModal('editProductModal'));
     });
 
     // Audit logs

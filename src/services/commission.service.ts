@@ -138,6 +138,49 @@ export class CommissionService {
         }
     }
 
+    /** Auto-settle commissions for a delivered order (fire-and-forget) */
+    async autoSettleOrder(orderId: number): Promise<void> {
+        try {
+            // 1. Get order info
+            const order = await this.db.prepare('SELECT * FROM orders WHERE id = ?')
+                .bind(orderId).first<Order>()
+            if (!order) return
+
+            // 2. Check if already settled
+            const existing = await this.db.prepare(
+                "SELECT id FROM commission_settlements WHERE order_id = ? AND status = 'SETTLED'"
+            ).bind(orderId).first()
+            if (existing) return
+
+            // 3. Calculate commissions
+            const { items, totalCommission } = await this.calculateOrderCommission(orderId, order.platform)
+            if (totalCommission === 0) return
+
+            // 4. Create settlement records
+            const stmts: D1PreparedStatement[] = []
+            for (const item of items) {
+                if (item.commission_amount > 0) {
+                    stmts.push(
+                        this.db.prepare(`
+                            INSERT INTO commission_settlements
+                            (distributor_id, order_id, sku, platform, qty, unit_price, commission_rate, commission_amount, status, settled_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'SETTLED', datetime('now'))
+                        `).bind(
+                            order.distributor_id, orderId, item.sku, order.platform,
+                            item.qty, item.unit_price, item.commission_rate, item.commission_amount
+                        )
+                    )
+                }
+            }
+
+            if (stmts.length > 0) {
+                await this.db.batch(stmts)
+            }
+        } catch (e) {
+            console.error('Auto-settle failed:', e)
+        }
+    }
+
     /** 结算历史 */
     async getHistory(distributorId: number, filters?: {
         status?: string

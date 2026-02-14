@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS products (
   name_cn TEXT,
   name_jp TEXT,
   cost_price REAL NOT NULL,
-  tax_category TEXT DEFAULT 'standard' CHECK(tax_category IN ('standard', 'reduced'))
+  tax_category TEXT DEFAULT 'standard' CHECK(tax_category IN ('standard', 'reduced')),
+  image_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS product_variants (
@@ -54,6 +55,8 @@ CREATE TABLE IF NOT EXISTS orders (
   tax_total REAL,
   distributor_id INTEGER,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  delivered_at DATETIME,
+  cancelled_at DATETIME,
   FOREIGN KEY (distributor_id) REFERENCES distributors(id)
 );
 

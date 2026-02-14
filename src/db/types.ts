@@ -33,6 +33,7 @@ export interface Product {
     name_jp: string | null
     cost_price: number
     tax_category: 'standard' | 'reduced'
+    image_url: string | null
 }
 
 export interface ProductVariant {
@@ -60,6 +61,8 @@ export interface Order {
     tax_total: number
     distributor_id: number
     created_at: string
+    delivered_at: string | null
+    cancelled_at: string | null
 }
 
 export interface OrderItem {

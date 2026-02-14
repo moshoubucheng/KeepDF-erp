@@ -658,6 +658,65 @@ body {
     background: var(--accent-emerald);
 }
 
+.badge-cancelled {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-red);
+}
+
+.badge-cancelled::before {
+    background: var(--accent-red);
+}
+
+.btn-danger {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-red);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-danger:hover {
+    background: rgba(239, 68, 68, 0.25);
+}
+
+.variant-section {
+    padding: 12px 24px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+}
+
+.variant-section .data-table td {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+}
+
+.image-preview {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    border: 1px solid var(--border);
+}
+
+.image-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.image-upload-area:hover {
+    border-color: var(--accent-purple);
+    background: var(--accent-purple-glow);
+}
+
 /* --- Wallet Cards --- */
 .wallet-overview {
     display: grid;

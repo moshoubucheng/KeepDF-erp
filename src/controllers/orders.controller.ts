@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 import type { Bindings, Variables, Order } from '../db/types'
 import { NotificationService } from '../services/notification.service'
 import { AuditService } from '../services/audit.service'
+import { WalletService } from '../services/wallet.service'
+import { CommissionService } from '../services/commission.service'
 import { getAuthorizedOrder } from '../utils/auth-helpers'
 import { toCSV, csvResponse } from '../utils/csv'
 
@@ -152,6 +154,119 @@ orders.patch('/:id/ship', async (c) => {
     })
 
     return c.json({ status: 'shipped', orderId: id, tracking: body.tracking_number })
+})
+
+/** PATCH /orders/:id/deliver - 配送完了（管理者のみ） */
+orders.patch('/:id/deliver', async (c) => {
+    const id = Number(c.req.param('id'))
+    const role = c.get('role')
+
+    if (role !== 'admin') {
+        return c.json({ error: 'Admin access required' }, 403)
+    }
+
+    const order = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
+        .bind(id).first<Order>()
+
+    if (!order) {
+        return c.json({ error: 'Order not found' }, 404)
+    }
+
+    if (order.status !== 'SHIPPED') {
+        return c.json({ error: 'Only SHIPPED orders can be delivered' }, 400)
+    }
+
+    await c.env.DB.prepare(
+        "UPDATE orders SET status = 'DELIVERED', delivered_at = CURRENT_TIMESTAMP WHERE id = ?"
+    ).bind(id).run()
+
+    // Find frozen amount and deduct
+    const freezeTx = await c.env.DB.prepare(
+        "SELECT amount FROM wallet_transactions WHERE distributor_id = ? AND type = 'FREEZE' AND related_order_id = ?"
+    ).bind(order.distributor_id, String(id)).first<{ amount: number }>()
+
+    if (freezeTx) {
+        const walletService = new WalletService(c.env.DB)
+        await walletService.deduct(order.distributor_id, freezeTx.amount, String(id))
+    }
+
+    // Commission auto-settle (best-effort, does not affect delivery result)
+    try {
+        const commissionService = new CommissionService(c.env.DB)
+        await commissionService.autoSettleOrder(id)
+    } catch (e) {
+        console.error('[DELIVER] Commission auto-settle failed:', e)
+    }
+
+    const audit = new AuditService(c.env.DB)
+    audit.log({
+        distributorId: c.get('distributorId'),
+        action: 'DELIVER_ORDER',
+        resourceType: 'order',
+        resourceId: String(id),
+        details: `order delivered, distributor=${order.distributor_id}`,
+        ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+    })
+
+    const updated = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
+        .bind(id).first<Order>()
+
+    return c.json({ order: updated })
+})
+
+/** PATCH /orders/:id/cancel - 注文キャンセル */
+orders.patch('/:id/cancel', async (c) => {
+    const id = Number(c.req.param('id'))
+    const distributorId = c.get('distributorId')
+    const role = c.get('role')
+
+    let order: Order | null
+
+    if (role === 'admin') {
+        order = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
+            .bind(id).first<Order>()
+    } else {
+        const result = await getAuthorizedOrder(c.env.DB, id, distributorId)
+        if ('error' in result) return c.json({ error: result.error }, result.status)
+        order = result.order
+    }
+
+    if (!order) {
+        return c.json({ error: 'Order not found' }, 404)
+    }
+
+    if (order.status !== 'PENDING' && order.status !== 'PROCESSING') {
+        return c.json({ error: 'Only PENDING or PROCESSING orders can be cancelled' }, 400)
+    }
+
+    await c.env.DB.prepare(
+        "UPDATE orders SET status = 'CANCELLED', cancelled_at = CURRENT_TIMESTAMP WHERE id = ?"
+    ).bind(id).run()
+
+    // Find frozen amount and refund if exists
+    const freezeTx = await c.env.DB.prepare(
+        "SELECT amount FROM wallet_transactions WHERE distributor_id = ? AND type = 'FREEZE' AND related_order_id = ?"
+    ).bind(order.distributor_id, String(id)).first<{ amount: number }>()
+
+    if (freezeTx) {
+        const walletService = new WalletService(c.env.DB)
+        await walletService.refund(order.distributor_id, freezeTx.amount, String(id))
+    }
+
+    const audit = new AuditService(c.env.DB)
+    audit.log({
+        distributorId: c.get('distributorId'),
+        action: 'CANCEL_ORDER',
+        resourceType: 'order',
+        resourceId: String(id),
+        details: `order cancelled from ${order.status}`,
+        ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+    })
+
+    const updated = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
+        .bind(id).first<Order>()
+
+    return c.json({ order: updated })
 })
 
 export { orders }

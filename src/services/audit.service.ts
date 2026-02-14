@@ -5,16 +5,21 @@ export type AuditAction =
     | 'CREATE_ORDER'
     | 'UPDATE_ORDER'
     | 'SHIP_ORDER'
+    | 'DELIVER_ORDER'
+    | 'CANCEL_ORDER'
     | 'GENERATE_INVOICE'
     | 'GENERATE_PDF'
     | 'DEPOSIT'
     | 'FREEZE'
     | 'DEDUCT'
+    | 'REFUND'
     | 'CREATE_DISTRIBUTOR'
     | 'UPDATE_DISTRIBUTOR'
     | 'RESET_TOKEN'
     | 'SYNC_PLATFORM'
     | 'EXPORT_CSV'
+    | 'UPDATE_PRODUCT'
+    | 'DELETE_PRODUCT'
 
 export type ResourceType =
     | 'order'
@@ -22,6 +27,7 @@ export type ResourceType =
     | 'wallet'
     | 'distributor'
     | 'platform_sync'
+    | 'product'
 
 export interface AuditLogParams {
     distributorId?: number | null

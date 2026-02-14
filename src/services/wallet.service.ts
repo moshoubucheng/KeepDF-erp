@@ -100,6 +100,30 @@ export class WalletService {
         await this.db.batch(batch)
     }
 
+    /** 退款（订单取消时调用） */
+    async refund(distributorId: number, amount: number, orderId: string): Promise<void> {
+        const distributor = await this.db.prepare(
+            'SELECT * FROM distributors WHERE id = ?'
+        ).bind(distributorId).first<Distributor>()
+
+        if (!distributor) throw new Error('Distributor not found')
+
+        const newBalance = distributor.balance + amount
+        const newFrozen = distributor.frozen_balance - amount
+
+        const batch = [
+            this.db.prepare(
+                'UPDATE distributors SET balance = ?, frozen_balance = ? WHERE id = ?'
+            ).bind(newBalance, newFrozen, distributorId),
+            this.db.prepare(
+                `INSERT INTO wallet_transactions (distributor_id, type, amount, related_order_id, balance_snapshot)
+         VALUES (?, 'REFUND', ?, ?, ?)`
+            ).bind(distributorId, amount, orderId, newBalance),
+        ]
+
+        await this.db.batch(batch)
+    }
+
     /** 获取交易流水 */
     async getTransactions(distributorId: number, limit = 50): Promise<WalletTransaction[]> {
         const { results } = await this.db.prepare(
