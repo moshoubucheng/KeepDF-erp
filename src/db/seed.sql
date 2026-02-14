@@ -3,10 +3,10 @@
 -- ============================================================
 
 -- ===== 分销商 =====
-INSERT INTO distributors (name, token, balance, frozen_balance, tax_reg_number, role) VALUES
-  ('東京物産株式会社', 'tok_dev_abc123', 500000, 0, 'T1234567890123', 'admin'),
-  ('大阪商事有限会社', 'tok_dev_def456', 300000, 50000, 'T9876543210987', 'distributor'),
-  ('福岡貿易合同会社', 'tok_dev_ghi789', 100000, 10000, 'T5555666677778', 'distributor');
+INSERT INTO distributors (name, token, username, balance, frozen_balance, tax_reg_number, role) VALUES
+  ('東京物産株式会社', 'tok_dev_abc123', 'admin', 500000, 0, 'T1234567890123', 'admin'),
+  ('大阪商事有限会社', 'tok_dev_def456', 'dist2', 300000, 50000, 'T9876543210987', 'distributor'),
+  ('福岡貿易合同会社', 'tok_dev_ghi789', 'dist3', 100000, 10000, 'T5555666677778', 'distributor');
 
 -- ===== 商品 (PIM) =====
 INSERT INTO products (sku, name_cn, name_jp, cost_price, tax_category) VALUES

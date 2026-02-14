@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KeepDF | ログイン</title>
+  <title>KeepDF | Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
@@ -23,6 +23,29 @@
       width: 100%;
       max-width: 400px;
       box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+    .login-lang {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      gap: 4px;
+    }
+    .login-lang button {
+      background: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #64748b;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .login-lang button:hover, .login-lang button.active {
+      color: #f1f5f9;
+      border-color: #8b5cf6;
+      background: rgba(139,92,246,0.15);
     }
     .login-logo {
       text-align: center;
@@ -31,7 +54,7 @@
     .login-logo .logo-icon { font-size: 40px; margin-bottom: 12px; }
     .login-logo h1 { color: #f1f5f9; font-size: 24px; font-weight: 700; margin: 0 0 4px 0; }
     .login-logo p { color: #64748b; font-size: 14px; }
-    .form-group { margin-bottom: 24px; }
+    .form-group { margin-bottom: 20px; }
     .form-group label { display: block; color: #94a3b8; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
     .form-group input {
       width: 100%; padding: 12px 16px; background: #16213e;
@@ -47,52 +70,203 @@
       color: #fff; border: none; border-radius: 8px;
       font-size: 15px; font-weight: 600; font-family: 'Inter', sans-serif;
       cursor: pointer; transition: opacity 0.2s;
+      min-height: 44px;
     }
     .login-btn:hover { opacity: 0.9; }
     .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .login-error { color: #ef4444; font-size: 13px; text-align: center; margin-top: 16px; min-height: 20px; }
+    .login-toggle {
+      text-align: center; margin-top: 16px;
+    }
+    .login-toggle a {
+      color: #8b5cf6; font-size: 13px; cursor: pointer; text-decoration: none;
+    }
+    .login-toggle a:hover { text-decoration: underline; }
+    .hidden { display: none !important; }
+    .step-2fa { margin-top: 20px; }
+    @media (max-width: 480px) {
+      .login-card { padding: 32px 24px; margin: 16px; }
+    }
   </style>
 </head>
 <body>
   <div class="login-card">
+    <div class="login-lang">
+      <button data-lang="ja" class="active" onclick="switchLoginLang('ja')">JP</button>
+      <button data-lang="en" onclick="switchLoginLang('en')">EN</button>
+      <button data-lang="zh" onclick="switchLoginLang('zh')">CN</button>
+    </div>
     <div class="login-logo">
       <div class="logo-icon">&#9889;</div>
       <h1>KeepDF</h1>
       <p>Keep Data Flow</p>
     </div>
-    <form id="loginForm">
+
+    <!-- Password login (default) -->
+    <form id="passwordForm">
       <div class="form-group">
-        <label>API Token</label>
+        <label data-i18n="auth.username">ユーザー名</label>
+        <input type="text" id="usernameInput" placeholder="admin" autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label data-i18n="auth.password">パスワード</label>
+        <input type="password" id="passwordInput" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="login-btn" id="passwordLoginBtn" data-i18n="auth.login">ログイン</button>
+      <div class="login-error" id="passwordError"></div>
+      <div class="login-toggle">
+        <a onclick="showTokenLogin()" data-i18n="auth.token_login">トークンでログイン</a>
+      </div>
+    </form>
+
+    <!-- Token login (hidden by default) -->
+    <form id="tokenForm" class="hidden">
+      <div class="form-group">
+        <label data-i18n="auth.token">API Token</label>
         <input type="text" id="tokenInput" placeholder="tok_xxxxxxxx" autocomplete="off" required>
       </div>
-      <button type="submit" class="login-btn" id="loginBtn">ログイン</button>
-      <div class="login-error" id="loginError"></div>
+      <button type="submit" class="login-btn" id="tokenLoginBtn" data-i18n="auth.login">ログイン</button>
+      <div class="login-error" id="tokenError"></div>
+      <div class="login-toggle">
+        <a onclick="showPasswordLogin()" data-i18n="auth.password_login">パスワードでログイン</a>
+      </div>
     </form>
+
+    <!-- 2FA step (hidden) -->
+    <div id="twoFactorStep" class="step-2fa hidden">
+      <h3 style="color:#f1f5f9;font-size:16px;margin-bottom:16px;text-align:center" data-i18n="auth.2fa_title">2段階認証</h3>
+      <div class="form-group">
+        <label data-i18n="auth.2fa_code">認証コード (6桁)</label>
+        <input type="text" id="totpCodeInput" placeholder="000000" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" inputmode="numeric" required>
+      </div>
+      <button type="button" class="login-btn" id="verify2faBtn" onclick="verify2FA()" data-i18n="auth.2fa_verify">認証</button>
+      <div class="login-error" id="twoFactorError"></div>
+    </div>
   </div>
+
+  <script src="/static/i18n.js"></script>
   <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const token = document.getElementById('tokenInput').value.trim();
-        const errorEl = document.getElementById('loginError');
-        const btn = document.getElementById('loginBtn');
-        if (!token) { errorEl.textContent = 'トークンを入力してください'; return; }
-        btn.disabled = true; btn.textContent = 'ログイン中...'; errorEl.textContent = '';
-        try {
-            const res = await fetch('/api/v1/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token }),
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                localStorage.setItem('erp_token', token);
-                window.location.href = '/index.html';
-            } else {
-                errorEl.textContent = data.error || 'ログインに失敗しました';
-            }
-        } catch (err) { errorEl.textContent = 'サーバーに接続できません'; }
-        finally { btn.disabled = false; btn.textContent = 'ログイン'; }
+    let tempToken = null;
+
+    // Language switcher
+    function switchLoginLang(lang) {
+      setLanguage(lang);
+      document.querySelectorAll('.login-lang button').forEach(b => {
+        b.classList.toggle('active', b.dataset.lang === lang);
+      });
+    }
+
+    function showTokenLogin() {
+      document.getElementById('passwordForm').classList.add('hidden');
+      document.getElementById('tokenForm').classList.remove('hidden');
+      document.getElementById('twoFactorStep').classList.add('hidden');
+    }
+    function showPasswordLogin() {
+      document.getElementById('tokenForm').classList.add('hidden');
+      document.getElementById('passwordForm').classList.remove('hidden');
+      document.getElementById('twoFactorStep').classList.add('hidden');
+    }
+
+    // Password login
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('usernameInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+      const errorEl = document.getElementById('passwordError');
+      const btn = document.getElementById('passwordLoginBtn');
+
+      if (!username || !password) { errorEl.textContent = t('error.login_failed'); return; }
+      btn.disabled = true; btn.textContent = t('auth.logging_in'); errorEl.textContent = '';
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+
+        if (data.requires_2fa) {
+          tempToken = data.temp_token;
+          document.getElementById('passwordForm').classList.add('hidden');
+          document.getElementById('twoFactorStep').classList.remove('hidden');
+          document.getElementById('totpCodeInput').focus();
+          return;
+        }
+
+        if (res.ok && data.success) {
+          localStorage.setItem('erp_token', data.token);
+          if (data.distributor?.language) localStorage.setItem('erp_lang', data.distributor.language);
+          window.location.href = '/index.html';
+        } else {
+          errorEl.textContent = data.error || t('error.login_failed');
+        }
+      } catch (err) { errorEl.textContent = t('error.connection'); }
+      finally { btn.disabled = false; btn.textContent = t('auth.login'); }
     });
+
+    // Token login
+    document.getElementById('tokenForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = document.getElementById('tokenInput').value.trim();
+      const errorEl = document.getElementById('tokenError');
+      const btn = document.getElementById('tokenLoginBtn');
+
+      if (!token) { errorEl.textContent = t('error.invalid_token'); return; }
+      btn.disabled = true; btn.textContent = t('auth.logging_in'); errorEl.textContent = '';
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          localStorage.setItem('erp_token', data.token || token);
+          if (data.distributor?.language) localStorage.setItem('erp_lang', data.distributor.language);
+          window.location.href = '/index.html';
+        } else {
+          errorEl.textContent = data.error || t('error.login_failed');
+        }
+      } catch (err) { errorEl.textContent = t('error.connection'); }
+      finally { btn.disabled = false; btn.textContent = t('auth.login'); }
+    });
+
+    // 2FA verification
+    async function verify2FA() {
+      const code = document.getElementById('totpCodeInput').value.trim();
+      const errorEl = document.getElementById('twoFactorError');
+      const btn = document.getElementById('verify2faBtn');
+
+      if (!code || code.length !== 6) { errorEl.textContent = t('error.login_failed'); return; }
+      btn.disabled = true; btn.textContent = t('auth.2fa_verifying'); errorEl.textContent = '';
+
+      try {
+        const res = await fetch('/api/v1/auth/verify-2fa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ temp_token: tempToken, code }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          localStorage.setItem('erp_token', data.token);
+          if (data.distributor?.language) localStorage.setItem('erp_lang', data.distributor.language);
+          window.location.href = '/index.html';
+        } else {
+          errorEl.textContent = data.error || t('error.login_failed');
+        }
+      } catch (err) { errorEl.textContent = t('error.connection'); }
+      finally { btn.disabled = false; btn.textContent = t('auth.2fa_verify'); }
+    }
+
+    // Enter key on TOTP input
+    document.getElementById('totpCodeInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); verify2FA(); }
+    });
+
+    // Apply initial translations
+    applyTranslations();
   </script>
 </body>
 </html>

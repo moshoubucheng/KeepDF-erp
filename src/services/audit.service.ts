@@ -2,6 +2,7 @@ import { toCSV, csvResponse } from '../utils/csv'
 
 export type AuditAction =
     | 'LOGIN'
+    | 'LOGIN_PASSWORD'
     | 'CREATE_ORDER'
     | 'UPDATE_ORDER'
     | 'SHIP_ORDER'
@@ -20,6 +21,9 @@ export type AuditAction =
     | 'EXPORT_CSV'
     | 'UPDATE_PRODUCT'
     | 'DELETE_PRODUCT'
+    | 'CHANGE_PASSWORD'
+    | 'ENABLE_2FA'
+    | 'DISABLE_2FA'
 
 export type ResourceType =
     | 'order'

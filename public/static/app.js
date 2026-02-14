@@ -11,34 +11,71 @@ if (!AUTH_TOKEN) {
 
 // ===== SPA Router =====
 const pageTitles = {
-    dashboard: { title: 'ダッシュボード', sub: 'Keep Data Flow Platform' },
-    orders: { title: '注文管理', sub: 'Orders Management' },
-    inventory: { title: '在庫管理', sub: 'Inventory & Products' },
-    wallet: { title: 'ウォレット', sub: 'Distributor Wallet' },
-    commissions: { title: '佣金管理', sub: 'Commission Management' },
-    invoices: { title: '請求書', sub: 'Invoice Management' },
-    distributors: { title: '販売者管理', sub: 'Distributor Management' },
-    audit: { title: '監査ログ', sub: 'Audit Logs' },
+    dashboard: { title: 'dashboard.title', sub: 'dashboard.subtitle' },
+    orders: { title: 'orders.title', sub: 'orders.subtitle' },
+    inventory: { title: 'inventory.title', sub: 'inventory.subtitle' },
+    wallet: { title: 'wallet.title', sub: 'wallet.subtitle' },
+    commissions: { title: 'commissions.title', sub: 'commissions.subtitle' },
+    invoices: { title: 'invoices.title', sub: 'invoices.subtitle' },
+    distributors: { title: 'distributors.title', sub: 'distributors.subtitle' },
+    audit: { title: 'audit.title', sub: 'audit.subtitle' },
 };
 
 function navigateTo(pageName) {
-    // Update nav
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.querySelector(`.nav-item[data-page="${pageName}"]`)?.classList.add('active');
 
-    // Update pages
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const targetPage = document.getElementById(`page-${pageName}`);
     if (targetPage) targetPage.classList.add('active');
 
-    // Update header
     const info = pageTitles[pageName] || pageTitles.dashboard;
-    document.getElementById('pageTitle').textContent = info.title;
-    document.getElementById('pageSubtitle').textContent = info.sub;
+    document.getElementById('pageTitle').textContent = t(info.title);
+    document.getElementById('pageSubtitle').textContent = t(info.sub);
 
-    // Load data for the page
+    // Close sidebar on mobile after navigation
+    closeSidebar();
+
     loadPageData(pageName);
 }
+
+// ===== Sidebar Toggle =====
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('active');
+}
+
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+}
+
+// Auto-expand sidebar on desktop resize
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) {
+        closeSidebar();
+    }
+    if (document.getElementById('page-dashboard').classList.contains('active')) {
+        renderChart();
+    }
+});
+
+// ===== User Menu =====
+function toggleUserMenu() {
+    document.getElementById('userMenuDropdown').classList.toggle('active');
+}
+
+function closeUserMenu() {
+    document.getElementById('userMenuDropdown').classList.remove('active');
+}
+
+// Close user menu on outside click
+document.addEventListener('click', (e) => {
+    const menu = document.querySelector('.user-menu');
+    if (menu && !menu.contains(e.target)) {
+        closeUserMenu();
+    }
+});
 
 // ===== Security Helpers =====
 function escapeHtml(str) {
@@ -100,7 +137,7 @@ async function apiFetchBlob(path) {
 
 function downloadCSV(url) {
     apiFetchBlob(url).then(blob => {
-        if (!blob) return alert('CSV出力に失敗しました');
+        if (!blob) return alert(t('error.csv_failed'));
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         const match = url.match(/\/([^/]+)\/export/);
@@ -141,7 +178,7 @@ async function loadDashboardStats() {
 
     if (statsData?.overview) {
         document.getElementById('stat-revenue').textContent =
-            `¥${(statsData.overview.totalRevenue || 0).toLocaleString()}`;
+            `\u00a5${(statsData.overview.totalRevenue || 0).toLocaleString()}`;
         document.getElementById('stat-orders').textContent =
             statsData.overview.totalOrders || 0;
         document.getElementById('stat-products').textContent =
@@ -183,7 +220,7 @@ async function loadPlatformStats() {
 function renderRecentOrders(orders) {
     const tbody = document.getElementById('recentOrdersBody');
     if (!orders.length) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">注文データがありません</td></tr>';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${t('orders.empty')}</td></tr>`;
         return;
     }
     tbody.innerHTML = orders.map(o => `
@@ -191,7 +228,7 @@ function renderRecentOrders(orders) {
       <td><strong>#${escapeHtml(o.id)}</strong></td>
       <td>${platformBadge(o.platform)}</td>
       <td>${statusBadge(o.status)}</td>
-      <td>¥${(Number(o.total_amount) || 0).toLocaleString()}</td>
+      <td>\u00a5${(Number(o.total_amount) || 0).toLocaleString()}</td>
       <td>${formatDate(o.created_at)}</td>
     </tr>
   `).join('');
@@ -208,32 +245,28 @@ async function renderChart(period) {
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
 
-    // Fetch real data
     const trendData = await apiFetch(`/api/v1/dashboard/revenue-trend?period=${period}`);
     const items = trendData?.data || [];
 
     const labels = items.map(d => d.date);
     const data = items.map(d => d.orderCount);
 
-    // Fallback if no data
     if (!data.length) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#64748b';
         ctx.font = '13px Inter';
         ctx.textAlign = 'center';
-        ctx.fillText('データがありません', canvas.width / 2, canvas.height / 2);
+        ctx.fillText(t('dashboard.no_data'), canvas.width / 2, canvas.height / 2);
         return;
     }
 
     const max = Math.max(...data) * 1.2 || 1;
-
     const padding = { top: 20, right: 20, bottom: 40, left: 50 };
     const chartW = canvas.width - padding.left - padding.right;
     const chartH = canvas.height - padding.top - padding.bottom;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Grid lines
     ctx.strokeStyle = 'rgba(255,255,255,0.04)';
     ctx.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
@@ -245,14 +278,12 @@ async function renderChart(period) {
         ctx.fillText(Math.round(max - (max / 4) * i), padding.left - 10, y + 4);
     }
 
-    // Data points & line
     const step = data.length > 1 ? chartW / (data.length - 1) : 0;
     const points = data.map((v, i) => ({
         x: padding.left + step * i,
         y: padding.top + chartH - (v / max) * chartH
     }));
 
-    // Gradient area
     const gradient = ctx.createLinearGradient(0, padding.top, 0, canvas.height - padding.bottom);
     gradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
     gradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
@@ -264,7 +295,6 @@ async function renderChart(period) {
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // Line
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     points.forEach(p => ctx.lineTo(p.x, p.y));
@@ -273,7 +303,6 @@ async function renderChart(period) {
     ctx.lineJoin = 'round';
     ctx.stroke();
 
-    // Dots
     points.forEach(p => {
         ctx.beginPath();
         ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
@@ -285,7 +314,6 @@ async function renderChart(period) {
         ctx.fill();
     });
 
-    // X labels (show subset to avoid overlap)
     ctx.fillStyle = '#64748b';
     ctx.font = '11px Inter';
     ctx.textAlign = 'center';
@@ -310,7 +338,7 @@ async function loadOrders() {
     const tbody = document.getElementById('ordersTableBody');
 
     if (!data?.orders?.length) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">注文データがありません</td></tr>';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${t('orders.empty')}</td></tr>`;
         return;
     }
 
@@ -320,9 +348,9 @@ async function loadOrders() {
       <td>${platformBadge(o.platform)}</td>
       <td>${escapeHtml(o.platform_order_id)}</td>
       <td>${statusBadge(o.status)}</td>
-      <td>¥${(Number(o.total_amount) || 0).toLocaleString()}</td>
-      <td>¥${(Number(o.tax_total) || 0).toLocaleString()}</td>
-      <td>${formatDate(o.created_at)}</td>
+      <td>\u00a5${(Number(o.total_amount) || 0).toLocaleString()}</td>
+      <td>\u00a5${(Number(o.tax_total) || 0).toLocaleString()}</td>
+      <td class="col-hide-mobile">${formatDate(o.created_at)}</td>
       <td>${orderActions(o)}</td>
     </tr>
   `).join('');
@@ -334,25 +362,24 @@ async function loadInventory() {
     const tbody = document.getElementById('inventoryTableBody');
 
     if (!data?.products?.length) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="6">商品データがありません</td></tr>';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('inventory.empty')}</td></tr>`;
         return;
     }
 
     tbody.innerHTML = data.products.map(p => `
     <tr>
       <td><strong>${escapeHtml(p.sku)}</strong></td>
-      <td>${escapeHtml(p.name_jp) || '—'}</td>
-      <td>${escapeHtml(p.name_cn) || '—'}</td>
-      <td>¥${(Number(p.cost_price) || 0).toLocaleString()}</td>
+      <td>${escapeHtml(p.name_jp) || '\u2014'}</td>
+      <td class="col-hide-mobile">${escapeHtml(p.name_cn) || '\u2014'}</td>
+      <td>\u00a5${(Number(p.cost_price) || 0).toLocaleString()}</td>
       <td>${taxBadge(p.tax_category)}</td>
       <td><strong>${Number(p.total_stock) || 0}</strong></td>
       <td class="admin-only" style="display:none">
-        <button class="btn-sm" onclick="openEditProductModal(${Number(p.id)}, '${escapeHtml(p.name_jp || '')}', '${escapeHtml(p.name_cn || '')}', ${Number(p.cost_price)}, '${escapeHtml(p.tax_category)}')">編集</button>
-        <button class="btn-danger" onclick="deleteProduct(${Number(p.id)}, '${escapeHtml(p.sku)}')" style="margin-left:4px">削除</button>
+        <button class="btn-sm" onclick="openEditProductModal(${Number(p.id)}, '${escapeHtml(p.name_jp || '')}', '${escapeHtml(p.name_cn || '')}', ${Number(p.cost_price)}, '${escapeHtml(p.tax_category)}')">${t('inventory.edit')}</button>
+        <button class="btn-danger" onclick="deleteProduct(${Number(p.id)}, '${escapeHtml(p.sku)}')" style="margin-left:4px">${t('inventory.delete')}</button>
       </td>
     </tr>
   `).join('');
-    // Show admin columns if admin
     if (window._isAdmin) {
         document.querySelectorAll('#page-inventory .admin-only').forEach(el => el.style.display = '');
     }
@@ -365,36 +392,35 @@ async function loadWallet(distributorId = 1) {
     if (balanceData && !balanceData.error) {
         const balance = Number(balanceData.balance) || 0;
         const frozen = Number(balanceData.frozen) || 0;
-        document.getElementById('walletBalance').textContent = `¥${balance.toLocaleString()}`;
-        document.getElementById('walletFrozen').textContent = `¥${frozen.toLocaleString()}`;
-        document.getElementById('walletTotal').textContent = `¥${(balance + frozen).toLocaleString()}`;
+        document.getElementById('walletBalance').textContent = `\u00a5${balance.toLocaleString()}`;
+        document.getElementById('walletFrozen').textContent = `\u00a5${frozen.toLocaleString()}`;
+        document.getElementById('walletTotal').textContent = `\u00a5${(balance + frozen).toLocaleString()}`;
     }
 
     const txData = await apiFetch(`/api/v1/wallet/transactions/${distributorId}`);
     const tbody = document.getElementById('walletTransBody');
 
     if (!txData?.transactions?.length) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="6">取引履歴がありません</td></tr>';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('wallet.empty')}</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = txData.transactions.map(t => `
+    tbody.innerHTML = txData.transactions.map(tx => `
     <tr>
-      <td>#${escapeHtml(t.id)}</td>
-      <td>${txTypeBadge(t.type)}</td>
-      <td class="${t.type === 'DEPOSIT' || t.type === 'REFUND' ? 'text-green' : 'text-red'}">
-        ${t.type === 'DEPOSIT' || t.type === 'REFUND' ? '+' : '-'}¥${Math.abs(Number(t.amount) || 0).toLocaleString()}
+      <td>#${escapeHtml(tx.id)}</td>
+      <td>${txTypeBadge(tx.type)}</td>
+      <td class="${tx.type === 'DEPOSIT' || tx.type === 'REFUND' ? 'text-green' : 'text-red'}">
+        ${tx.type === 'DEPOSIT' || tx.type === 'REFUND' ? '+' : '-'}\u00a5${Math.abs(Number(tx.amount) || 0).toLocaleString()}
       </td>
-      <td>${escapeHtml(t.related_order_id) || '—'}</td>
-      <td>¥${(Number(t.balance_snapshot) || 0).toLocaleString()}</td>
-      <td>${formatDate(t.created_at)}</td>
+      <td class="col-hide-mobile">${escapeHtml(tx.related_order_id) || '\u2014'}</td>
+      <td class="col-hide-mobile">\u00a5${(Number(tx.balance_snapshot) || 0).toLocaleString()}</td>
+      <td>${formatDate(tx.created_at)}</td>
     </tr>
   `).join('');
 }
 
 // --- Commissions ---
 async function loadCommissions() {
-    // Load rates table
     const ratesData = await apiFetch('/api/v1/commissions/rates');
     const ratesBody = document.getElementById('commRatesBody');
 
@@ -406,10 +432,9 @@ async function loadCommissions() {
           <td>${(r.rate * 100).toFixed(1)}%</td>
         </tr>`).join('');
     } else {
-        ratesBody.innerHTML = '<tr class="empty-row"><td colspan="3">手数料率データがありません</td></tr>';
+        ratesBody.innerHTML = `<tr class="empty-row"><td colspan="3">${t('commissions.rates_empty')}</td></tr>`;
     }
 
-    // Load settlement history
     loadCommissionHistory(0);
 }
 
@@ -422,7 +447,7 @@ async function loadCommissionHistory(offset) {
     const tbody = document.getElementById('commHistoryBody');
 
     if (!data?.settlements?.length) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="9">決済履歴がありません</td></tr>';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${t('commissions.empty')}</td></tr>`;
         document.getElementById('commPagination').innerHTML = '';
         return;
     }
@@ -432,12 +457,12 @@ async function loadCommissionHistory(offset) {
       <td>#${escapeHtml(s.id)}</td>
       <td>#${escapeHtml(s.order_id)}</td>
       <td>${escapeHtml(s.sku)}</td>
-      <td>${platformBadge(s.platform)}</td>
+      <td class="col-hide-mobile">${platformBadge(s.platform)}</td>
       <td>${s.qty}</td>
-      <td>¥${(Number(s.unit_price) || 0).toLocaleString()}</td>
-      <td>¥${(Number(s.commission_amount) || 0).toLocaleString()}</td>
+      <td>\u00a5${(Number(s.unit_price) || 0).toLocaleString()}</td>
+      <td>\u00a5${(Number(s.commission_amount) || 0).toLocaleString()}</td>
       <td>${commStatusBadge(s.status)}</td>
-      <td>${formatDate(s.created_at)}</td>
+      <td class="col-hide-mobile">${formatDate(s.created_at)}</td>
     </tr>`).join('');
 
     renderPagination('commPagination', offset, 20, data.total, (newOffset) => loadCommissionHistory(newOffset));
@@ -449,7 +474,7 @@ async function loadInvoices(offset = 0) {
     const tbody = document.getElementById('invoicesTableBody');
 
     if (!data?.invoices?.length) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="7">請求書がありません</td></tr>';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('invoices.empty')}</td></tr>`;
         document.getElementById('invoicesPagination').innerHTML = '';
         return;
     }
@@ -457,13 +482,13 @@ async function loadInvoices(offset = 0) {
     tbody.innerHTML = data.invoices.map(inv => `
     <tr>
       <td>#${escapeHtml(inv.id)}</td>
-      <td>${escapeHtml(inv.invoice_number) || '—'}</td>
+      <td>${escapeHtml(inv.invoice_number) || '\u2014'}</td>
       <td>#${escapeHtml(inv.order_id)}</td>
-      <td>${platformBadge(inv.platform || '')}</td>
-      <td>¥${(Number(inv.total_amount || inv.amount) || 0).toLocaleString()}</td>
+      <td class="col-hide-mobile">${platformBadge(inv.platform || '')}</td>
+      <td>\u00a5${(Number(inv.total_amount || inv.amount) || 0).toLocaleString()}</td>
       <td>${formatDate(inv.created_at)}</td>
       <td>
-        <button class="btn-sm" onclick="viewInvoiceDetail(${Number(inv.id)})">詳細</button>
+        <button class="btn-sm" onclick="viewInvoiceDetail(${Number(inv.id)})">${t('invoices.detail')}</button>
         ${inv.pdf_url ? `<a href="/api/v1/invoices/${Number(inv.id)}/pdf" target="_blank" class="btn-sm" style="margin-left:4px;text-decoration:none">PDF</a>` : ''}
       </td>
     </tr>`).join('');
@@ -474,11 +499,11 @@ async function loadInvoices(offset = 0) {
 async function viewInvoiceDetail(id) {
     openModal('invoiceDetailModal');
     const content = document.getElementById('invoiceDetailContent');
-    content.innerHTML = '<p style="color:var(--text-muted)">読み込み中...</p>';
+    content.innerHTML = `<p style="color:var(--text-muted)">${t('invoices.loading')}</p>`;
 
     const data = await apiFetch(`/api/v1/invoices/${id}`);
     if (!data || data.error) {
-        content.innerHTML = `<p style="color:var(--accent-red)">エラー: ${escapeHtml(data?.error || '読み込みに失敗')}</p>`;
+        content.innerHTML = `<p style="color:var(--accent-red)">${t('common.error')}: ${escapeHtml(data?.error || '')}</p>`;
         return;
     }
 
@@ -489,14 +514,14 @@ async function viewInvoiceDetail(id) {
     if (taxDetails?.items?.length) {
         taxItemsHtml = `
         <table class="data-table" style="margin-top:12px">
-          <thead><tr><th>SKU</th><th>数量</th><th>単価</th><th>税率</th><th>税額</th></tr></thead>
+          <thead><tr><th>SKU</th><th>${t('commissions.hist_qty')}</th><th>${t('commissions.hist_price')}</th><th>${t('orders.tax')}</th><th>${t('orders.amount')}</th></tr></thead>
           <tbody>${taxDetails.items.map(it => `
             <tr>
               <td>${escapeHtml(it.sku)}</td>
               <td>${it.qty}</td>
-              <td>¥${(it.unit_price || 0).toLocaleString()}</td>
+              <td>\u00a5${(it.unit_price || 0).toLocaleString()}</td>
               <td>${((it.tax_rate || 0) * 100).toFixed(0)}%</td>
-              <td>¥${(it.tax_amount || 0).toLocaleString()}</td>
+              <td>\u00a5${(it.tax_amount || 0).toLocaleString()}</td>
             </tr>`).join('')}
           </tbody>
         </table>`;
@@ -505,45 +530,37 @@ async function viewInvoiceDetail(id) {
     content.innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <div>
-          <span style="color:var(--text-muted);font-size:0.8rem">請求書番号</span>
+          <span style="color:var(--text-muted);font-size:0.8rem">${t('invoices.number')}</span>
           <p style="font-weight:600;margin-top:4px">${escapeHtml(inv.invoice_number)}</p>
         </div>
         <div>
-          <span style="color:var(--text-muted);font-size:0.8rem">発行日</span>
+          <span style="color:var(--text-muted);font-size:0.8rem">${t('invoices.date')}</span>
           <p style="font-weight:600;margin-top:4px">${formatDate(inv.created_at)}</p>
         </div>
         <div>
-          <span style="color:var(--text-muted);font-size:0.8rem">販売者</span>
-          <p style="font-weight:600;margin-top:4px">${escapeHtml(taxDetails?.seller?.name || '—')}</p>
+          <span style="color:var(--text-muted);font-size:0.8rem">${t('distributors.name')}</span>
+          <p style="font-weight:600;margin-top:4px">${escapeHtml(taxDetails?.seller?.name || '\u2014')}</p>
           <p style="font-size:0.8rem;color:var(--text-secondary)">${escapeHtml(taxDetails?.seller?.registration_number || '')}</p>
         </div>
-        <div>
-          <span style="color:var(--text-muted);font-size:0.8rem">購入者</span>
-          <p style="font-weight:600;margin-top:4px">${escapeHtml(taxDetails?.buyer?.name || '—')}</p>
-        </div>
       </div>
-      <h4 style="margin-bottom:8px">品目・税明細</h4>
       ${taxItemsHtml}
       <div style="text-align:right;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
-        <span style="color:var(--text-muted)">合計 (税込):</span>
-        <strong style="font-size:1.2rem;margin-left:8px">¥${(Number(taxDetails?.summary?.grandTotal || taxDetails?.total_with_tax) || 0).toLocaleString()}</strong>
+        <strong style="font-size:1.2rem">\u00a5${(Number(taxDetails?.summary?.grandTotal || taxDetails?.total_with_tax) || 0).toLocaleString()}</strong>
       </div>
       <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
         ${inv.pdf_url
-            ? `<a href="/api/v1/invoices/${Number(inv.id)}/pdf" target="_blank" class="btn-primary" style="text-decoration:none;padding:8px 16px;border-radius:8px;font-size:0.85rem">PDF ダウンロード</a>`
-            : `<button class="btn-primary" onclick="generateInvoicePdf(${Number(inv.id)})" style="padding:8px 16px;font-size:0.85rem">PDF 生成</button>`
+            ? `<a href="/api/v1/invoices/${Number(inv.id)}/pdf" target="_blank" class="btn-primary" style="text-decoration:none;padding:8px 16px;border-radius:8px;font-size:0.85rem">PDF</a>`
+            : `<button class="btn-primary" onclick="generateInvoicePdf(${Number(inv.id)})" style="padding:8px 16px;font-size:0.85rem">PDF</button>`
         }
       </div>`;
 }
 
-// --- Generate Invoice PDF ---
 async function generateInvoicePdf(id) {
     const result = await apiFetch(`/api/v1/invoices/${Number(id)}/pdf`, { method: 'POST' });
     if (result?.error) {
-        alert(`PDF生成エラー: ${result.error}`);
+        alert(`${t('common.error')}: ${result.error}`);
         return;
     }
-    // Refresh the detail view
     viewInvoiceDetail(id);
 }
 
@@ -553,7 +570,7 @@ async function loadDistributors(offset = 0) {
     const tbody = document.getElementById('distributorsTableBody');
 
     if (!data?.distributors?.length) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">販売者がいません</td></tr>';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${t('distributors.empty')}</td></tr>`;
         document.getElementById('distributorsPagination').innerHTML = '';
         return;
     }
@@ -563,13 +580,13 @@ async function loadDistributors(offset = 0) {
       <td>#${escapeHtml(d.id)}</td>
       <td><strong>${escapeHtml(d.name)}</strong></td>
       <td>${roleBadge(d.role)}</td>
-      <td>¥${(Number(d.balance) || 0).toLocaleString()}</td>
-      <td>¥${(Number(d.frozen_balance) || 0).toLocaleString()}</td>
-      <td>${escapeHtml(d.tax_reg_number) || '—'}</td>
-      <td>${formatDate(d.created_at)}</td>
+      <td>\u00a5${(Number(d.balance) || 0).toLocaleString()}</td>
+      <td class="col-hide-mobile">\u00a5${(Number(d.frozen_balance) || 0).toLocaleString()}</td>
+      <td class="col-hide-mobile">${escapeHtml(d.tax_reg_number) || '\u2014'}</td>
+      <td class="col-hide-mobile">${formatDate(d.created_at)}</td>
       <td>
-        <button class="btn-sm" onclick="openDistributorModal(${Number(d.id)})">編集</button>
-        <button class="btn-sm" onclick="resetDistributorToken(${Number(d.id)})" style="margin-left:4px">リセット</button>
+        <button class="btn-sm" onclick="openDistributorModal(${Number(d.id)})">${t('distributors.edit')}</button>
+        <button class="btn-sm" onclick="resetDistributorToken(${Number(d.id)})" style="margin-left:4px">${t('distributors.reset_token')}</button>
       </td>
     </tr>`).join('');
 
@@ -577,15 +594,12 @@ async function loadDistributors(offset = 0) {
 }
 
 function openDistributorModal(id) {
-    const modal = document.getElementById('distributorModal');
-    const title = document.getElementById('distributorModalTitle');
     const form = document.getElementById('distributorForm');
     form.reset();
 
     if (id) {
-        title.textContent = '販売者編集';
+        document.getElementById('distributorModalTitle').textContent = t('distributors.modal_edit');
         document.getElementById('distributorFormId').value = id;
-        // Fetch current data
         apiFetch(`/api/v1/distributors/${Number(id)}`).then(data => {
             if (data?.distributor) {
                 document.getElementById('distributorFormName').value = data.distributor.name || '';
@@ -594,7 +608,7 @@ function openDistributorModal(id) {
             }
         });
     } else {
-        title.textContent = '新規販売者';
+        document.getElementById('distributorModalTitle').textContent = t('distributors.modal_new');
         document.getElementById('distributorFormId').value = '';
     }
     openModal('distributorModal');
@@ -606,7 +620,7 @@ async function saveDistributor() {
     const role = document.getElementById('distributorFormRole').value;
     const taxReg = document.getElementById('distributorFormTaxReg').value.trim();
 
-    if (!name) { alert('名前は必須です'); return; }
+    if (!name) { alert(t('error.required_name')); return; }
 
     const payload = { name, role, tax_reg_number: taxReg || undefined };
 
@@ -614,14 +628,14 @@ async function saveDistributor() {
         const result = await apiFetch(`/api/v1/distributors/${Number(id)}`, {
             method: 'PUT', body: JSON.stringify(payload),
         });
-        if (result?.error) { alert(`更新エラー: ${result.error}`); return; }
+        if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     } else {
         const result = await apiFetch('/api/v1/distributors', {
             method: 'POST', body: JSON.stringify(payload),
         });
-        if (result?.error) { alert(`作成エラー: ${result.error}`); return; }
+        if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
         if (result?.distributor?.token) {
-            alert(`トークン: ${result.distributor.token}\n\nこのトークンは再表示されません。安全に保管してください。`);
+            alert(`Token: ${result.distributor.token}`);
         }
     }
 
@@ -630,12 +644,12 @@ async function saveDistributor() {
 }
 
 async function resetDistributorToken(id) {
-    if (!confirm('トークンをリセットしますか？旧トークンは無効になります。')) return;
+    if (!confirm(t('confirm.reset_token'))) return;
 
     const result = await apiFetch(`/api/v1/distributors/${Number(id)}/reset-token`, { method: 'POST' });
-    if (result?.error) { alert(`リセットエラー: ${result.error}`); return; }
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     if (result?.token) {
-        alert(`新トークン: ${result.token}\n\nこのトークンは再表示されません。安全に保管してください。`);
+        alert(`Token: ${result.token}`);
     }
 }
 
@@ -659,7 +673,7 @@ async function loadAuditLogs(offset = 0) {
     const tbody = document.getElementById('auditTableBody');
 
     if (!data?.logs?.length) {
-        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">ログがありません</td></tr>';
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${t('audit.empty')}</td></tr>`;
         document.getElementById('auditPagination').innerHTML = '';
         return;
     }
@@ -667,12 +681,12 @@ async function loadAuditLogs(offset = 0) {
     tbody.innerHTML = data.logs.map(log => `
     <tr>
       <td>#${escapeHtml(log.id)}</td>
-      <td>${escapeHtml(log.distributor_name || log.distributor_id || '—')}</td>
+      <td>${escapeHtml(log.distributor_name || log.distributor_id || '\u2014')}</td>
       <td><span class="badge badge-processing">${escapeHtml(log.action)}</span></td>
       <td>${escapeHtml(log.resource_type)}</td>
-      <td>${escapeHtml(log.resource_id) || '—'}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(log.details || '')}">${escapeHtml(log.details) || '—'}</td>
-      <td>${escapeHtml(log.ip_address) || '—'}</td>
+      <td class="col-hide-mobile">${escapeHtml(log.resource_id) || '\u2014'}</td>
+      <td class="col-hide-mobile" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(log.details || '')}">${escapeHtml(log.details) || '\u2014'}</td>
+      <td class="col-hide-mobile">${escapeHtml(log.ip_address) || '\u2014'}</td>
       <td>${formatDate(log.created_at)}</td>
     </tr>`).join('');
 
@@ -692,9 +706,9 @@ function renderPagination(containerId, offset, limit, total, onNavigate) {
     const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
 
     container.innerHTML = `
-      <button class="btn-ghost ${prevDisabled}" id="${containerId}-prev">前へ</button>
+      <button class="btn-ghost ${prevDisabled}" id="${containerId}-prev">${t('common.prev')}</button>
       <span style="color:var(--text-secondary);font-size:0.85rem">${currentPage} / ${totalPages}</span>
-      <button class="btn-ghost ${nextDisabled}" id="${containerId}-next">次へ</button>`;
+      <button class="btn-ghost ${nextDisabled}" id="${containerId}-next">${t('common.next')}</button>`;
 
     if (!prevDisabled) {
         container.querySelector(`#${containerId}-prev`).addEventListener('click', () => onNavigate(offset - limit));
@@ -706,15 +720,12 @@ function renderPagination(containerId, offset, limit, total, onNavigate) {
 
 // ===== Actions =====
 async function shipOrder(orderId) {
-    const tracking = prompt('トラッキング番号を入力してください:');
+    const tracking = prompt(t('prompt.tracking'));
     if (!tracking) return;
     const result = await apiFetch(`/api/v1/orders/${Number(orderId)}/ship`, {
         method: 'PATCH', body: JSON.stringify({ tracking_number: tracking }),
     });
-    if (result?.error) {
-        alert(`発送エラー: ${result.error}`);
-        return;
-    }
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     loadOrders();
 }
 
@@ -724,10 +735,7 @@ async function addProduct(formData) {
     const result = await apiFetch('/api/v1/inventory/products', {
         method: 'POST', body: JSON.stringify(payload),
     });
-    if (result?.error) {
-        alert(`商品追加エラー: ${result.error}`);
-        return;
-    }
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     closeModal('addProductModal');
     loadInventory();
 }
@@ -738,10 +746,7 @@ async function inboundStock(formData) {
     const result = await apiFetch('/api/v1/inventory/inbound', {
         method: 'POST', body: JSON.stringify(payload),
     });
-    if (result?.error) {
-        alert(`入庫エラー: ${result.error}`);
-        return;
-    }
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     closeModal('inboundModal');
     loadInventory();
 }
@@ -753,10 +758,7 @@ async function deposit(formData) {
     const result = await apiFetch('/api/v1/wallet/deposit', {
         method: 'POST', body: JSON.stringify(payload),
     });
-    if (result?.error) {
-        alert(`入金エラー: ${result.error}`);
-        return;
-    }
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     closeModal('depositModal');
     loadWallet(payload.distributor_id);
 }
@@ -765,34 +767,28 @@ async function deposit(formData) {
 function orderActions(o) {
     const btns = [];
     if (o.status === 'PROCESSING') {
-        btns.push(`<button class="btn-sm" onclick="shipOrder(${Number(o.id)})">発送</button>`);
+        btns.push(`<button class="btn-sm" onclick="shipOrder(${Number(o.id)})">${t('orders.ship')}</button>`);
     }
     if (o.status === 'SHIPPED' && window._isAdmin) {
-        btns.push(`<button class="btn-sm" onclick="deliverOrder(${Number(o.id)})">配達完了</button>`);
+        btns.push(`<button class="btn-sm" onclick="deliverOrder(${Number(o.id)})">${t('orders.deliver')}</button>`);
     }
     if ((o.status === 'PENDING' || o.status === 'PROCESSING')) {
-        btns.push(`<button class="btn-danger" onclick="cancelOrder(${Number(o.id)})" style="margin-left:4px">キャンセル</button>`);
+        btns.push(`<button class="btn-danger" onclick="cancelOrder(${Number(o.id)})" style="margin-left:4px">${t('orders.cancel')}</button>`);
     }
-    return btns.length ? btns.join('') : '—';
+    return btns.length ? btns.join('') : '\u2014';
 }
 
 async function deliverOrder(orderId) {
-    if (!confirm('この注文を配達完了にしますか？')) return;
+    if (!confirm(t('confirm.deliver'))) return;
     const result = await apiFetch(`/api/v1/orders/${Number(orderId)}/deliver`, { method: 'PATCH' });
-    if (result?.error) {
-        alert(`配達完了エラー: ${result.error}`);
-        return;
-    }
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     loadOrders();
 }
 
 async function cancelOrder(orderId) {
-    if (!confirm('この注文をキャンセルしますか？')) return;
+    if (!confirm(t('confirm.cancel_order'))) return;
     const result = await apiFetch(`/api/v1/orders/${Number(orderId)}/cancel`, { method: 'PATCH' });
-    if (result?.error) {
-        alert(`キャンセルエラー: ${result.error}`);
-        return;
-    }
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     loadOrders();
 }
 
@@ -817,16 +813,15 @@ async function saveProduct() {
     };
 
     if (!payload.cost_price || payload.cost_price <= 0) {
-        alert('原価は0より大きい値を入力してください');
+        alert(`${t('common.error')}`);
         return;
     }
 
     const result = await apiFetch(`/api/v1/inventory/products/${Number(id)}`, {
         method: 'PUT', body: JSON.stringify(payload),
     });
-    if (result?.error) { alert(`更新エラー: ${result.error}`); return; }
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
 
-    // Upload image if selected
     const fileInput = document.getElementById('editProductImage');
     if (fileInput.files.length > 0) {
         await uploadProductImage(Number(id), fileInput.files[0]);
@@ -837,12 +832,9 @@ async function saveProduct() {
 }
 
 async function deleteProduct(id, sku) {
-    if (!confirm(`商品 ${sku} を削除しますか？この操作は取り消せません。`)) return;
+    if (!confirm(t('confirm.delete_product', { sku }))) return;
     const result = await apiFetch(`/api/v1/inventory/products/${Number(id)}`, { method: 'DELETE' });
-    if (result?.error) {
-        alert(`削除エラー: ${result.error}`);
-        return;
-    }
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     loadInventory();
 }
 
@@ -855,8 +847,126 @@ async function uploadProductImage(id, file) {
     });
     if (!res || !res.ok) {
         const errData = res ? await res.json().catch(() => null) : null;
-        alert(`画像アップロードエラー: ${errData?.error || 'Unknown error'}`);
+        alert(`${t('common.error')}: ${errData?.error || 'Unknown error'}`);
     }
+}
+
+// ===== Password Change =====
+async function changePassword() {
+    const currentPw = document.getElementById('currentPasswordInput').value;
+    const newPw = document.getElementById('newPasswordInput').value;
+    const errEl = document.getElementById('changePasswordError');
+    errEl.textContent = '';
+
+    if (!currentPw || !newPw) return;
+    if (newPw.length < 8) { errEl.textContent = 'Min 8 characters'; return; }
+
+    const result = await apiFetch('/api/v1/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ current_password: currentPw, new_password: newPw }),
+    });
+
+    if (result?.error) { errEl.textContent = result.error; return; }
+    closeModal('changePasswordModal');
+    document.getElementById('changePasswordForm').reset();
+    alert(t('common.success'));
+}
+
+// ===== 2FA Management =====
+async function load2FAStatus() {
+    const content = document.getElementById('twoFAContent');
+    content.innerHTML = `<p style="color:var(--text-muted)">${t('common.loading')}</p>`;
+
+    const data = await apiFetch('/api/v1/auth/me');
+    if (!data?.distributor) {
+        content.innerHTML = `<p style="color:var(--accent-red)">${t('common.error')}</p>`;
+        return;
+    }
+
+    if (data.distributor.totp_enabled) {
+        content.innerHTML = `
+          <p style="color:var(--accent-emerald);margin-bottom:16px">2FA is enabled</p>
+          <div class="form-group">
+            <label data-i18n="auth.2fa_code">${t('auth.2fa_code')}</label>
+            <input type="text" id="disable2faCode" placeholder="000000" maxlength="6" inputmode="numeric">
+          </div>
+          <button class="btn-danger" onclick="disable2FA()" style="width:100%">${t('auth.2fa_disable')}</button>
+          <div id="twoFAError" style="color:var(--accent-red);font-size:0.85rem;margin-top:8px"></div>`;
+    } else {
+        content.innerHTML = `
+          <p style="color:var(--text-muted);margin-bottom:16px">2FA is not enabled</p>
+          <button class="btn-primary" onclick="setup2FA()" style="width:100%">${t('auth.2fa_enable')}</button>
+          <div id="twoFASetupArea"></div>
+          <div id="twoFAError" style="color:var(--accent-red);font-size:0.85rem;margin-top:8px"></div>`;
+    }
+}
+
+async function setup2FA() {
+    const result = await apiFetch('/api/v1/auth/totp/setup', { method: 'POST' });
+    if (result?.error) {
+        document.getElementById('twoFAError').textContent = result.error;
+        return;
+    }
+
+    const area = document.getElementById('twoFASetupArea');
+    area.innerHTML = `
+      <div style="margin-top:16px;padding:16px;background:var(--bg-secondary);border-radius:8px">
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px">${t('auth.2fa_scan_qr')}</p>
+        <div id="qrContainer" style="text-align:center;margin:12px 0;background:#fff;border-radius:8px;padding:16px;display:inline-block"></div>
+        <p style="font-size:0.75rem;color:var(--text-muted);word-break:break-all;margin-top:8px">Secret: ${escapeHtml(result.secret)}</p>
+      </div>
+      <div class="form-group" style="margin-top:16px">
+        <label>${t('auth.2fa_enter_code')}</label>
+        <input type="text" id="setup2faCode" placeholder="000000" maxlength="6" inputmode="numeric">
+      </div>
+      <button class="btn-primary" onclick="verifySetup2FA()" style="width:100%">${t('common.confirm')}</button>`;
+
+    // Generate QR code if library is available
+    if (typeof QRCode !== 'undefined') {
+        new QRCode(document.getElementById('qrContainer'), {
+            text: result.otpauth_uri,
+            width: 200,
+            height: 200,
+        });
+    } else {
+        // Fallback: show URI
+        document.getElementById('qrContainer').innerHTML =
+            `<p style="font-size:0.75rem;color:#333;word-break:break-all">${escapeHtml(result.otpauth_uri)}</p>`;
+    }
+}
+
+async function verifySetup2FA() {
+    const code = document.getElementById('setup2faCode')?.value?.trim();
+    if (!code || code.length !== 6) return;
+
+    const result = await apiFetch('/api/v1/auth/totp/verify-setup', {
+        method: 'POST', body: JSON.stringify({ code }),
+    });
+
+    if (result?.error) {
+        document.getElementById('twoFAError').textContent = result.error;
+        return;
+    }
+
+    alert(t('common.success'));
+    load2FAStatus();
+}
+
+async function disable2FA() {
+    const code = document.getElementById('disable2faCode')?.value?.trim();
+    if (!code || code.length !== 6) return;
+
+    const result = await apiFetch('/api/v1/auth/totp/disable', {
+        method: 'POST', body: JSON.stringify({ code }),
+    });
+
+    if (result?.error) {
+        document.getElementById('twoFAError').textContent = result.error;
+        return;
+    }
+
+    alert(t('common.success'));
+    load2FAStatus();
 }
 
 // ===== Dynamic Modal Creation =====
@@ -867,7 +977,7 @@ function createInboundModal() {
     overlay.innerHTML = `
       <div class="modal">
         <div class="modal-header">
-          <h3>入庫登録</h3>
+          <h3>${t('inventory.inbound')}</h3>
           <button class="modal-close" data-close="inboundModal">&#10005;</button>
         </div>
         <form id="inboundForm">
@@ -877,17 +987,17 @@ function createInboundModal() {
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>数量</label>
+              <label>${t('commissions.hist_qty')}</label>
               <input type="number" name="quantity" required min="1" placeholder="100">
             </div>
             <div class="form-group">
-              <label>倉庫</label>
+              <label>Warehouse</label>
               <input type="text" name="warehouse" value="JP-MAIN" placeholder="JP-MAIN">
             </div>
           </div>
           <div class="form-actions">
-            <button type="button" class="btn-secondary" data-close="inboundModal">キャンセル</button>
-            <button type="submit" class="btn-primary">入庫</button>
+            <button type="button" class="btn-secondary" data-close="inboundModal">${t('common.cancel')}</button>
+            <button type="submit" class="btn-primary">${t('inventory.inbound')}</button>
           </div>
         </form>
       </div>`;
@@ -909,18 +1019,18 @@ function createDepositModal() {
     overlay.innerHTML = `
       <div class="modal">
         <div class="modal-header">
-          <h3>入金申請</h3>
+          <h3>${t('wallet.deposit')}</h3>
           <button class="modal-close" data-close="depositModal">&#10005;</button>
         </div>
         <form id="depositForm">
           <input type="hidden" name="distributor_id" value="1">
           <div class="form-group">
-            <label>入金額 (&#165;)</label>
+            <label>${t('wallet.tx_amount')} (\u00a5)</label>
             <input type="number" name="amount" required min="1" placeholder="10000">
           </div>
           <div class="form-actions">
-            <button type="button" class="btn-secondary" data-close="depositModal">キャンセル</button>
-            <button type="submit" class="btn-primary">入金</button>
+            <button type="button" class="btn-secondary" data-close="depositModal">${t('common.cancel')}</button>
+            <button type="submit" class="btn-primary">${t('wallet.deposit')}</button>
           </div>
         </form>
       </div>`;
@@ -950,32 +1060,33 @@ function statusBadge(status) {
 
 function commStatusBadge(status) {
     const map = {
-        PENDING: { cls: 'pending', label: '未決済' },
-        SETTLED: { cls: 'delivered', label: '決済済' },
-        FAILED: { cls: 'pending', label: '失敗' },
+        PENDING: { cls: 'pending', key: 'commissions.status_pending' },
+        SETTLED: { cls: 'delivered', key: 'commissions.status_settled' },
+        FAILED: { cls: 'pending', key: 'commissions.status_failed' },
     };
-    const info = map[status] || { cls: 'pending', label: escapeHtml(status) };
-    return `<span class="badge badge-${info.cls}">${info.label}</span>`;
+    const info = map[status] || { cls: 'pending', key: null };
+    const label = info.key ? t(info.key) : escapeHtml(status);
+    return `<span class="badge badge-${info.cls}">${label}</span>`;
 }
 
 function taxBadge(category) {
-    if (category === 'reduced') return '<span class="badge badge-processing">軽減 8%</span>';
-    return '<span class="badge badge-pending">標準 10%</span>';
+    if (category === 'reduced') return `<span class="badge badge-processing">${t('inventory.tax_reduced')}</span>`;
+    return `<span class="badge badge-pending">${t('inventory.tax_standard')}</span>`;
 }
 
 function txTypeBadge(type) {
     const map = {
-        DEPOSIT: { cls: 'delivered', label: '入金' },
-        FREEZE: { cls: 'processing', label: '凍結' },
-        DEDUCT: { cls: 'pending', label: '決済' },
-        REFUND: { cls: 'shipped', label: '返金' },
+        DEPOSIT: { cls: 'delivered', label: '\u5165\u91d1' },
+        FREEZE: { cls: 'processing', label: '\u51cd\u7d50' },
+        DEDUCT: { cls: 'pending', label: '\u6c7a\u6e08' },
+        REFUND: { cls: 'shipped', label: '\u8fd4\u91d1' },
     };
     const info = map[type] || { cls: 'pending', label: escapeHtml(type) };
     return `<span class="badge badge-${info.cls}">${info.label}</span>`;
 }
 
 function formatDate(dateStr) {
-    if (!dateStr) return '—';
+    if (!dateStr) return '\u2014';
     const d = new Date(dateStr);
     return d.toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
@@ -991,7 +1102,6 @@ function closeModal(id) { document.getElementById(id)?.classList.remove('active'
 
 // ===== Event Listeners =====
 document.addEventListener('DOMContentLoaded', () => {
-    // Create dynamic modals
     createInboundModal();
     createDepositModal();
 
@@ -999,7 +1109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            navigateTo(item.dataset.page);
+            if (item.dataset.page) navigateTo(item.dataset.page);
         });
     });
 
@@ -1054,12 +1164,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Check admin role to show admin-only nav items
+    // Check admin role and init language from server
     window._isAdmin = false;
     apiFetch('/api/v1/auth/me').then(data => {
-        if (data?.distributor?.role === 'admin') {
-            window._isAdmin = true;
-            document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+        if (data?.distributor) {
+            if (data.distributor.role === 'admin') {
+                window._isAdmin = true;
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+            }
+            document.getElementById('userDisplayName').textContent = data.distributor.name || t('common.admin');
+            // Initialize language from server preference
+            if (typeof initLanguage === 'function') {
+                initLanguage(data.distributor.language);
+            }
         }
     });
 
@@ -1096,11 +1213,15 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadCSV(url);
     });
 
+    // Change Password form
+    document.getElementById('changePasswordForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        changePassword();
+    });
+
     // Initial load
     navigateTo('dashboard');
 
-    // Resize chart on window resize
-    window.addEventListener('resize', () => {
-        if (document.getElementById('page-dashboard').classList.contains('active')) renderChart();
-    });
+    // Apply initial translations
+    if (typeof applyTranslations === 'function') applyTranslations();
 });

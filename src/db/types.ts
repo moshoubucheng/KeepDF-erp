@@ -19,6 +19,11 @@ export interface Distributor {
     id: number
     name: string
     token: string | null
+    username: string | null
+    password_hash: string | null
+    totp_secret: string | null
+    totp_enabled: number
+    language: string
     balance: number
     frozen_balance: number
     tax_reg_number: string | null

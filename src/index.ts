@@ -38,6 +38,7 @@ app.use('/*', cors({
 app.use('/*', securityHeaders)
 app.use('/api/*', loggerMiddleware)
 app.use('/api/v1/auth/login', loginRateLimit)
+app.use('/api/v1/auth/verify-2fa', loginRateLimit)
 app.use('/api/*', authMiddleware)
 
 app.get('/health', async (c) => {
