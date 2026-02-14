@@ -194,3 +194,17 @@ CREATE TABLE IF NOT EXISTS platform_sync_logs (
   completed_at DATETIME
 );
 CREATE INDEX IF NOT EXISTS idx_sync_logs_platform ON platform_sync_logs(platform, started_at);
+
+-- ===== Audit Logs =====
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  distributor_id INTEGER,
+  action TEXT NOT NULL,
+  resource_type TEXT NOT NULL,
+  resource_id TEXT,
+  details TEXT,
+  ip_address TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_audit_distributor ON audit_logs(distributor_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action, created_at);

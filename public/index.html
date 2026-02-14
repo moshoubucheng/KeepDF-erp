@@ -41,6 +41,14 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         <span>請求書</span>
       </a>
+      <a href="#" class="nav-item admin-only" data-page="distributors" style="display:none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>販売者管理</span>
+      </a>
+      <a href="#" class="nav-item admin-only" data-page="audit" style="display:none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        <span>監査ログ</span>
+      </a>
     </nav>
     <div class="sidebar-footer">
       <button class="nav-item" onclick="logout()" style="width:100%;border:none;cursor:pointer;background:transparent;color:#94a3b8;padding:12px 20px;display:flex;align-items:center;gap:12px;font-size:14px;">
@@ -474,6 +482,131 @@
           <div id="invoiceDetailContent" style="padding:24px">
             <p style="color:var(--text-muted)">読み込み中...</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Distributors Page (admin-only) -->
+      <div class="page" id="page-distributors">
+        <div class="page-actions">
+          <div class="filter-group"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" id="exportDistributorsBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              CSV出力
+            </button>
+            <button class="btn-primary" id="addDistributorBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              新規作成
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>販売者一覧</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>名前</th>
+                  <th>ロール</th>
+                  <th>残高</th>
+                  <th>凍結</th>
+                  <th>登録番号</th>
+                  <th>作成日</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="distributorsTableBody">
+                <tr class="empty-row"><td colspan="8">データを読み込み中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="distributorsPagination"></div>
+        </div>
+      </div>
+
+      <!-- Distributor Modal -->
+      <div class="modal-overlay" id="distributorModal">
+        <div class="modal">
+          <div class="modal-header">
+            <h3 id="distributorModalTitle">新規販売者</h3>
+            <button class="modal-close" data-close="distributorModal">&#10005;</button>
+          </div>
+          <form id="distributorForm">
+            <input type="hidden" name="id" id="distributorFormId">
+            <div class="form-group">
+              <label>名前</label>
+              <input type="text" name="name" id="distributorFormName" required placeholder="例: 東京物産株式会社" maxlength="100">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>ロール</label>
+                <select name="role" id="distributorFormRole">
+                  <option value="distributor">Distributor</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>登録番号 (任意)</label>
+                <input type="text" name="tax_reg_number" id="distributorFormTaxReg" placeholder="T1234567890123">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" data-close="distributorModal">キャンセル</button>
+              <button type="submit" class="btn-primary">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Audit Logs Page (admin-only) -->
+      <div class="page" id="page-audit">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="auditActionFilter" class="select-input">
+              <option value="">全アクション</option>
+              <option value="LOGIN">LOGIN</option>
+              <option value="SHIP_ORDER">SHIP_ORDER</option>
+              <option value="DEPOSIT">DEPOSIT</option>
+              <option value="FREEZE">FREEZE</option>
+              <option value="GENERATE_INVOICE">GENERATE_INVOICE</option>
+              <option value="GENERATE_PDF">GENERATE_PDF</option>
+              <option value="CREATE_DISTRIBUTOR">CREATE_DISTRIBUTOR</option>
+              <option value="UPDATE_DISTRIBUTOR">UPDATE_DISTRIBUTOR</option>
+              <option value="RESET_TOKEN">RESET_TOKEN</option>
+              <option value="SYNC_PLATFORM">SYNC_PLATFORM</option>
+            </select>
+            <input type="date" id="auditStartDate" class="select-input" placeholder="開始日">
+            <input type="date" id="auditEndDate" class="select-input" placeholder="終了日">
+            <button class="btn-secondary" id="auditSearchBtn">検索</button>
+          </div>
+          <button class="btn-secondary" id="exportAuditBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            CSV出力
+          </button>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3>監査ログ</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>実行者</th>
+                  <th>アクション</th>
+                  <th>リソース</th>
+                  <th>リソースID</th>
+                  <th>詳細</th>
+                  <th>IP</th>
+                  <th>日時</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody">
+                <tr class="empty-row"><td colspan="8">ログがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="auditPagination"></div>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import seedSQL from '../db/seed.sql'
 const TOKEN = 'tok_dev_abc123'   // distributor 1
 
 const TABLE_NAMES = [
-    'platform_sync_logs', 'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
+    'audit_logs', 'platform_sync_logs', 'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
     'commission_settlements', 'commissions', 'wallet_transactions', 'outbound_records',
     'inbound_records', 'warehouse_locations', 'order_items', 'orders',
     'platform_mappings', 'product_variants', 'products', 'distributors',

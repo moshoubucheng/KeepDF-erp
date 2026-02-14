@@ -8,7 +8,7 @@ import seedSQL from '../db/seed.sql'
 
 // 提取 schema 中的表名，用于清理
 const TABLE_NAMES = [
-    'platform_sync_logs', 'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
+    'audit_logs', 'platform_sync_logs', 'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
     'commissions', 'wallet_transactions', 'outbound_records',
     'inbound_records', 'warehouse_locations', 'order_items', 'orders',
     'platform_mappings', 'product_variants', 'products', 'distributors',

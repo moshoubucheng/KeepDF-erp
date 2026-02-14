@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { Bindings, Variables, PlatformSyncLog } from '../db/types'
 import { adminOnly } from '../middleware/admin'
 import { PlatformSyncService } from '../services/platform-sync.service'
+import { AuditService } from '../services/audit.service'
 
 const VALID_PLATFORMS = ['TIKTOK', 'TEMU', 'RAKUTEN'] as const
 
@@ -20,6 +21,16 @@ platformSync.post('/:platform', async (c) => {
 
     const service = new PlatformSyncService(c.env.DB, c.env.ORDER_QUEUE)
     const result = await service.syncPlatform(platform, 'MANUAL')
+
+    const audit = new AuditService(c.env.DB)
+    audit.log({
+        distributorId: c.get('distributorId'),
+        action: 'SYNC_PLATFORM',
+        resourceType: 'platform_sync',
+        resourceId: platform,
+        details: `fetched: ${result.ordersFetched}, queued: ${result.ordersQueued}`,
+        ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+    })
 
     return c.json({
         success: true,

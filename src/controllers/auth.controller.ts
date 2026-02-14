@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables, Distributor } from '../db/types'
+import { AuditService } from '../services/audit.service'
 
 const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -22,6 +23,15 @@ auth.post('/login', async (c) => {
 
     // 写入 KV session（1小时过期，格式: "id:role"）
     await c.env.KV.put(`session:${body.token}`, `${distributor.id}:${role}`, { expirationTtl: 3600 })
+
+    const audit = new AuditService(c.env.DB)
+    audit.log({
+        distributorId: distributor.id,
+        action: 'LOGIN',
+        resourceType: 'distributor',
+        resourceId: String(distributor.id),
+        ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+    })
 
     return c.json({
         success: true,

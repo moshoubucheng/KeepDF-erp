@@ -17,6 +17,8 @@ const pageTitles = {
     wallet: { title: 'ウォレット', sub: 'Distributor Wallet' },
     commissions: { title: '佣金管理', sub: 'Commission Management' },
     invoices: { title: '請求書', sub: 'Invoice Management' },
+    distributors: { title: '販売者管理', sub: 'Distributor Management' },
+    audit: { title: '監査ログ', sub: 'Audit Logs' },
 };
 
 function navigateTo(pageName) {
@@ -101,6 +103,8 @@ async function loadPageData(page) {
         case 'wallet': return loadWallet();
         case 'commissions': return loadCommissions();
         case 'invoices': return loadInvoices();
+        case 'distributors': return loadDistributors();
+        case 'audit': return loadAuditLogs();
     }
 }
 
@@ -434,7 +438,10 @@ async function loadInvoices(offset = 0) {
       <td>${platformBadge(inv.platform || '')}</td>
       <td>¥${(Number(inv.total_amount || inv.amount) || 0).toLocaleString()}</td>
       <td>${formatDate(inv.created_at)}</td>
-      <td><button class="btn-sm" onclick="viewInvoiceDetail(${Number(inv.id)})">詳細</button></td>
+      <td>
+        <button class="btn-sm" onclick="viewInvoiceDetail(${Number(inv.id)})">詳細</button>
+        ${inv.pdf_url ? `<a href="/api/v1/invoices/${Number(inv.id)}/pdf" target="_blank" class="btn-sm" style="margin-left:4px;text-decoration:none">PDF</a>` : ''}
+      </td>
     </tr>`).join('');
 
     renderPagination('invoicesPagination', offset, 20, data.total, (newOffset) => loadInvoices(newOffset));
@@ -495,8 +502,157 @@ async function viewInvoiceDetail(id) {
       ${taxItemsHtml}
       <div style="text-align:right;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
         <span style="color:var(--text-muted)">合計 (税込):</span>
-        <strong style="font-size:1.2rem;margin-left:8px">¥${(Number(taxDetails?.total_with_tax) || 0).toLocaleString()}</strong>
+        <strong style="font-size:1.2rem;margin-left:8px">¥${(Number(taxDetails?.summary?.grandTotal || taxDetails?.total_with_tax) || 0).toLocaleString()}</strong>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+        ${inv.pdf_url
+            ? `<a href="/api/v1/invoices/${Number(inv.id)}/pdf" target="_blank" class="btn-primary" style="text-decoration:none;padding:8px 16px;border-radius:8px;font-size:0.85rem">PDF ダウンロード</a>`
+            : `<button class="btn-primary" onclick="generateInvoicePdf(${Number(inv.id)})" style="padding:8px 16px;font-size:0.85rem">PDF 生成</button>`
+        }
       </div>`;
+}
+
+// --- Generate Invoice PDF ---
+async function generateInvoicePdf(id) {
+    const result = await apiFetch(`/api/v1/invoices/${Number(id)}/pdf`, { method: 'POST' });
+    if (result?.error) {
+        alert(`PDF生成エラー: ${result.error}`);
+        return;
+    }
+    // Refresh the detail view
+    viewInvoiceDetail(id);
+}
+
+// --- Distributors ---
+async function loadDistributors(offset = 0) {
+    const data = await apiFetch(`/api/v1/distributors?limit=20&offset=${offset}`);
+    const tbody = document.getElementById('distributorsTableBody');
+
+    if (!data?.distributors?.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">販売者がいません</td></tr>';
+        document.getElementById('distributorsPagination').innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = data.distributors.map(d => `
+    <tr>
+      <td>#${escapeHtml(d.id)}</td>
+      <td><strong>${escapeHtml(d.name)}</strong></td>
+      <td>${roleBadge(d.role)}</td>
+      <td>¥${(Number(d.balance) || 0).toLocaleString()}</td>
+      <td>¥${(Number(d.frozen_balance) || 0).toLocaleString()}</td>
+      <td>${escapeHtml(d.tax_reg_number) || '—'}</td>
+      <td>${formatDate(d.created_at)}</td>
+      <td>
+        <button class="btn-sm" onclick="openDistributorModal(${Number(d.id)})">編集</button>
+        <button class="btn-sm" onclick="resetDistributorToken(${Number(d.id)})" style="margin-left:4px">リセット</button>
+      </td>
+    </tr>`).join('');
+
+    renderPagination('distributorsPagination', offset, 20, data.total, (newOffset) => loadDistributors(newOffset));
+}
+
+function openDistributorModal(id) {
+    const modal = document.getElementById('distributorModal');
+    const title = document.getElementById('distributorModalTitle');
+    const form = document.getElementById('distributorForm');
+    form.reset();
+
+    if (id) {
+        title.textContent = '販売者編集';
+        document.getElementById('distributorFormId').value = id;
+        // Fetch current data
+        apiFetch(`/api/v1/distributors/${Number(id)}`).then(data => {
+            if (data?.distributor) {
+                document.getElementById('distributorFormName').value = data.distributor.name || '';
+                document.getElementById('distributorFormRole').value = data.distributor.role || 'distributor';
+                document.getElementById('distributorFormTaxReg').value = data.distributor.tax_reg_number || '';
+            }
+        });
+    } else {
+        title.textContent = '新規販売者';
+        document.getElementById('distributorFormId').value = '';
+    }
+    openModal('distributorModal');
+}
+
+async function saveDistributor() {
+    const id = document.getElementById('distributorFormId').value;
+    const name = document.getElementById('distributorFormName').value.trim();
+    const role = document.getElementById('distributorFormRole').value;
+    const taxReg = document.getElementById('distributorFormTaxReg').value.trim();
+
+    if (!name) { alert('名前は必須です'); return; }
+
+    const payload = { name, role, tax_reg_number: taxReg || undefined };
+
+    if (id) {
+        const result = await apiFetch(`/api/v1/distributors/${Number(id)}`, {
+            method: 'PUT', body: JSON.stringify(payload),
+        });
+        if (result?.error) { alert(`更新エラー: ${result.error}`); return; }
+    } else {
+        const result = await apiFetch('/api/v1/distributors', {
+            method: 'POST', body: JSON.stringify(payload),
+        });
+        if (result?.error) { alert(`作成エラー: ${result.error}`); return; }
+        if (result?.distributor?.token) {
+            alert(`トークン: ${result.distributor.token}\n\nこのトークンは再表示されません。安全に保管してください。`);
+        }
+    }
+
+    closeModal('distributorModal');
+    loadDistributors();
+}
+
+async function resetDistributorToken(id) {
+    if (!confirm('トークンをリセットしますか？旧トークンは無効になります。')) return;
+
+    const result = await apiFetch(`/api/v1/distributors/${Number(id)}/reset-token`, { method: 'POST' });
+    if (result?.error) { alert(`リセットエラー: ${result.error}`); return; }
+    if (result?.token) {
+        alert(`新トークン: ${result.token}\n\nこのトークンは再表示されません。安全に保管してください。`);
+    }
+}
+
+function roleBadge(role) {
+    if (role === 'admin') return '<span class="badge badge-shipped">Admin</span>';
+    return '<span class="badge badge-pending">Distributor</span>';
+}
+
+// --- Audit Logs ---
+async function loadAuditLogs(offset = 0) {
+    const action = document.getElementById('auditActionFilter')?.value || '';
+    const startDate = document.getElementById('auditStartDate')?.value || '';
+    const endDate = document.getElementById('auditEndDate')?.value || '';
+
+    let url = `/api/v1/audit-logs?limit=20&offset=${offset}`;
+    if (action) url += `&action=${encodeURIComponent(action)}`;
+    if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
+    if (endDate) url += `&end_date=${encodeURIComponent(endDate + 'T23:59:59')}`;
+
+    const data = await apiFetch(url);
+    const tbody = document.getElementById('auditTableBody');
+
+    if (!data?.logs?.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">ログがありません</td></tr>';
+        document.getElementById('auditPagination').innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = data.logs.map(log => `
+    <tr>
+      <td>#${escapeHtml(log.id)}</td>
+      <td>${escapeHtml(log.distributor_name || log.distributor_id || '—')}</td>
+      <td><span class="badge badge-processing">${escapeHtml(log.action)}</span></td>
+      <td>${escapeHtml(log.resource_type)}</td>
+      <td>${escapeHtml(log.resource_id) || '—'}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(log.details || '')}">${escapeHtml(log.details) || '—'}</td>
+      <td>${escapeHtml(log.ip_address) || '—'}</td>
+      <td>${formatDate(log.created_at)}</td>
+    </tr>`).join('');
+
+    renderPagination('auditPagination', offset, 20, data.total, (newOffset) => loadAuditLogs(newOffset));
 }
 
 // ===== Pagination =====
@@ -774,6 +930,37 @@ document.addEventListener('DOMContentLoaded', () => {
             dot.style.background = '#ef4444';
             dot.style.boxShadow = '0 0 8px #ef4444';
         }
+    });
+
+    // Check admin role to show admin-only nav items
+    apiFetch('/api/v1/auth/me').then(data => {
+        if (data?.distributor?.role === 'admin') {
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+        }
+    });
+
+    // Distributors management
+    document.getElementById('addDistributorBtn')?.addEventListener('click', () => openDistributorModal());
+    document.getElementById('exportDistributorsBtn')?.addEventListener('click', () => downloadCSV('/api/v1/distributors/export'));
+    document.getElementById('distributorForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveDistributor();
+    });
+    document.querySelectorAll('[data-close="distributorModal"]').forEach(btn => {
+        btn.addEventListener('click', () => closeModal('distributorModal'));
+    });
+
+    // Audit logs
+    document.getElementById('auditSearchBtn')?.addEventListener('click', () => loadAuditLogs(0));
+    document.getElementById('exportAuditBtn')?.addEventListener('click', () => {
+        const action = document.getElementById('auditActionFilter')?.value || '';
+        const startDate = document.getElementById('auditStartDate')?.value || '';
+        const endDate = document.getElementById('auditEndDate')?.value || '';
+        let url = '/api/v1/audit-logs/export?';
+        if (action) url += `action=${encodeURIComponent(action)}&`;
+        if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`;
+        if (endDate) url += `end_date=${encodeURIComponent(endDate + 'T23:59:59')}&`;
+        downloadCSV(url);
     });
 
     // Initial load

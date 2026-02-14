@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
 import { WalletService } from '../services/wallet.service'
 import { NotificationService } from '../services/notification.service'
+import { AuditService } from '../services/audit.service'
 
 const wallet = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -56,6 +57,16 @@ wallet.post('/deposit', async (c) => {
         console.error('Notification failed:', e)
     }
 
+    const audit = new AuditService(c.env.DB)
+    audit.log({
+        distributorId: body.distributor_id,
+        action: 'DEPOSIT',
+        resourceType: 'wallet',
+        resourceId: String(body.distributor_id),
+        details: `amount: ${body.amount}`,
+        ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+    })
+
     return c.json({ status: 'success', transaction: tx })
 })
 
@@ -72,6 +83,16 @@ wallet.post('/freeze', async (c) => {
 
     try {
         await service.freeze(body.distributor_id, body.amount, body.order_id)
+        const audit = new AuditService(c.env.DB)
+        audit.log({
+            distributorId: body.distributor_id,
+            action: 'FREEZE',
+            resourceType: 'wallet',
+            resourceId: String(body.distributor_id),
+            details: `amount: ${body.amount}, order: ${body.order_id}`,
+            ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+        })
+
         return c.json({ status: 'frozen', orderId: body.order_id })
     } catch (e: any) {
         return c.json({ error: e.message }, 400)

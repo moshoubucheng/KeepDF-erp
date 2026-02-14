@@ -166,6 +166,17 @@ export interface PlatformSyncLog {
     completed_at: string | null
 }
 
+export interface AuditLog {
+    id: number
+    distributor_id: number | null
+    action: string
+    resource_type: string
+    resource_id: string | null
+    details: string | null
+    ip_address: string | null
+    created_at: string
+}
+
 export interface OrderSyncMessage {
     platform: string
     payload: {

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables, Order } from '../db/types'
 import { NotificationService } from '../services/notification.service'
+import { AuditService } from '../services/audit.service'
 import { getAuthorizedOrder } from '../utils/auth-helpers'
 import { toCSV, csvResponse } from '../utils/csv'
 
@@ -139,6 +140,16 @@ orders.patch('/:id/ship', async (c) => {
     } catch (e) {
         console.error('Notification failed:', e)
     }
+
+    const audit = new AuditService(c.env.DB)
+    audit.log({
+        distributorId: c.get('distributorId'),
+        action: 'SHIP_ORDER',
+        resourceType: 'order',
+        resourceId: String(id),
+        details: `tracking: ${body.tracking_number}`,
+        ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+    })
 
     return c.json({ status: 'shipped', orderId: id, tracking: body.tracking_number })
 })

@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
 import { InvoiceService } from '../services/invoice.service'
+import { InvoicePdfService } from '../services/invoice-pdf.service'
+import { AuditService } from '../services/audit.service'
 import { toCSV, csvResponse } from '../utils/csv'
 
 const invoices = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -30,6 +32,56 @@ invoices.get('/export', async (c) => {
     return csvResponse(csv, 'invoices.csv')
 })
 
+/** POST /invoices/:id/pdf - Generate PDF */
+invoices.post('/:id/pdf', async (c) => {
+    const id = Number(c.req.param('id'))
+    const distributorId = c.get('distributorId')
+
+    const pdfService = new InvoicePdfService(c.env.DB, c.env.BUCKET)
+    try {
+        const result = await pdfService.generatePdf(id, distributorId)
+
+        const audit = new AuditService(c.env.DB)
+        audit.log({
+            distributorId,
+            action: 'GENERATE_PDF',
+            resourceType: 'invoice',
+            resourceId: String(id),
+            ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+        })
+
+        return c.json({ success: true, pdf_url: result.pdf_url }, 201)
+    } catch (e: any) {
+        if (e.message === 'Invoice not found') return c.json({ error: e.message }, 404)
+        if (e.message === 'Forbidden') return c.json({ error: 'Invoice does not belong to you' }, 403)
+        if (e.message === 'PDF already generated') return c.json({ error: e.message }, 409)
+        return c.json({ error: e.message }, 500)
+    }
+})
+
+/** GET /invoices/:id/pdf - Download PDF */
+invoices.get('/:id/pdf', async (c) => {
+    const id = Number(c.req.param('id'))
+    const distributorId = c.get('distributorId')
+
+    const pdfService = new InvoicePdfService(c.env.DB, c.env.BUCKET)
+    try {
+        const pdfBody = await pdfService.getPdf(id, distributorId)
+        if (!pdfBody) return c.json({ error: 'PDF not found' }, 404)
+
+        return new Response(pdfBody.body, {
+            headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `inline; filename="invoice-${id}.pdf"`,
+            },
+        })
+    } catch (e: any) {
+        if (e.message === 'Invoice not found') return c.json({ error: e.message }, 404)
+        if (e.message === 'Forbidden') return c.json({ error: 'Invoice does not belong to you' }, 403)
+        return c.json({ error: e.message }, 500)
+    }
+})
+
 /** POST /invoices/generate/:orderId - 生成适格请求书 */
 invoices.post('/generate/:orderId', async (c) => {
     const orderId = Number(c.req.param('orderId'))
@@ -43,6 +95,15 @@ invoices.post('/generate/:orderId', async (c) => {
     const service = new InvoiceService(c.env.DB)
     try {
         const invoice = await service.generateInvoice(orderId, distributorId, body.buyerName, body.invoiceDate)
+        const audit = new AuditService(c.env.DB)
+        audit.log({
+            distributorId,
+            action: 'GENERATE_INVOICE',
+            resourceType: 'invoice',
+            resourceId: String(invoice.id),
+            ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+        })
+
         return c.json({
             success: true,
             invoice: {

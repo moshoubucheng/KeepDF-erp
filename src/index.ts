@@ -13,6 +13,8 @@ import { commissions } from './controllers/commissions.controller'
 import { invoices } from './controllers/invoices.controller'
 import { dashboard } from './controllers/dashboard.controller'
 import { platformSync } from './controllers/platform-sync.controller'
+import { distributors } from './controllers/distributors.controller'
+import { auditLogs } from './controllers/audit.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
@@ -56,6 +58,8 @@ app.route('/api/v1/commissions', commissions)
 app.route('/api/v1/invoices', invoices)
 app.route('/api/v1/dashboard', dashboard)
 app.route('/api/v1/platform-sync', platformSync)
+app.route('/api/v1/distributors', distributors)
+app.route('/api/v1/audit-logs', auditLogs)
 
 // ===== Error Handler =====
 app.onError((err, c) => {
