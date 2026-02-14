@@ -51,8 +51,12 @@ inventory.post('/products', async (c) => {
         ).bind(body.sku, body.name_cn || null, body.name_jp || null, body.cost_price, body.tax_category || 'standard').run()
 
         return c.json({ status: 'created', sku: body.sku }, 201)
-    } catch (e: any) {
-        return c.json({ error: e.message }, 400)
+    } catch (e) {
+        const message = e instanceof Error ? e.message : 'Unknown error'
+        if (message.includes('UNIQUE constraint')) {
+            return c.json({ error: 'SKU already exists' }, 409)
+        }
+        return c.json({ error: 'Failed to create product' }, 400)
     }
 })
 

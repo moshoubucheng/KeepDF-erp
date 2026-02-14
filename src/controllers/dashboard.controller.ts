@@ -1,6 +1,34 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
 
+interface OrderStats {
+    total_orders: number
+    pending_orders: number
+    processing_orders: number
+    total_revenue: number
+}
+
+interface PlatformRow {
+    platform: string
+    order_count: number
+    revenue: number
+}
+
+interface RevenueTrendRow {
+    date: string
+    order_count: number
+    revenue: number
+}
+
+const VALID_PERIODS = ['7d', '30d', '90d', 'all'] as const
+const VALID_GROUP_BY = ['day', 'week'] as const
+
+const PERIOD_DAYS: Record<string, number> = {
+    '7d': 7,
+    '30d': 30,
+    '90d': 90,
+}
+
 const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 /** GET /dashboard/stats - 总览统计 */
@@ -15,7 +43,7 @@ dashboard.get('/stats', async (c) => {
             COALESCE(SUM(CASE WHEN status = 'DELIVERED' THEN total_amount ELSE 0 END), 0) as total_revenue
         FROM orders
         WHERE distributor_id = ?
-    `).bind(distributorId).first<any>()
+    `).bind(distributorId).first<OrderStats>()
 
     const productStats = await c.env.DB.prepare(
         'SELECT COUNT(*) as total FROM products'
@@ -50,31 +78,47 @@ dashboard.get('/orders-by-platform', async (c) => {
     const distributorId = c.get('distributorId')
     const period = c.req.query('period') || '30d'
 
-    let dateFilter = ''
-    if (period !== 'all') {
-        const days = period === '7d' ? 7 : period === '90d' ? 90 : 30
-        dateFilter = `AND created_at >= datetime('now', '-${days} days')`
+    if (!VALID_PERIODS.includes(period as typeof VALID_PERIODS[number])) {
+        return c.json({ error: 'Invalid period. Must be one of: 7d, 30d, 90d, all' }, 400)
     }
 
-    const { results } = await c.env.DB.prepare(`
-        SELECT
-            platform,
-            COUNT(*) as order_count,
-            COALESCE(SUM(total_amount), 0) as revenue
-        FROM orders
-        WHERE distributor_id = ? ${dateFilter}
-        GROUP BY platform
-        ORDER BY order_count DESC
-    `).bind(distributorId).all()
+    let results: PlatformRow[]
+    if (period === 'all') {
+        const res = await c.env.DB.prepare(`
+            SELECT
+                platform,
+                COUNT(*) as order_count,
+                COALESCE(SUM(total_amount), 0) as revenue
+            FROM orders
+            WHERE distributor_id = ?
+            GROUP BY platform
+            ORDER BY order_count DESC
+        `).bind(distributorId).all<PlatformRow>()
+        results = res.results
+    } else {
+        const days = PERIOD_DAYS[period]
+        const res = await c.env.DB.prepare(`
+            SELECT
+                platform,
+                COUNT(*) as order_count,
+                COALESCE(SUM(total_amount), 0) as revenue
+            FROM orders
+            WHERE distributor_id = ?
+                AND created_at >= datetime('now', '-' || ? || ' days')
+            GROUP BY platform
+            ORDER BY order_count DESC
+        `).bind(distributorId, days).all<PlatformRow>()
+        results = res.results
+    }
 
-    const totalOrders = results.reduce((s: number, r: any) => s + (r.order_count as number), 0)
-    const totalRevenue = results.reduce((s: number, r: any) => s + (r.revenue as number), 0)
+    const totalOrders = results.reduce((s, r) => s + r.order_count, 0)
+    const totalRevenue = results.reduce((s, r) => s + r.revenue, 0)
 
-    const platforms = results.map((r: any) => ({
+    const platforms = results.map((r) => ({
         platform: r.platform,
         orderCount: r.order_count,
         revenue: r.revenue,
-        percentage: totalOrders > 0 ? Math.round(((r.order_count as number) / totalOrders) * 100) : 0,
+        percentage: totalOrders > 0 ? Math.round((r.order_count / totalOrders) * 100) : 0,
     }))
 
     return c.json({
@@ -90,14 +134,20 @@ dashboard.get('/revenue-trend', async (c) => {
     const period = c.req.query('period') || '30d'
     const groupBy = c.req.query('groupBy') || 'day'
 
-    const days = period === '7d' ? 7 : period === '90d' ? 90 : 30
-
-    let dateExpr: string
-    if (groupBy === 'week') {
-        dateExpr = "strftime('%Y-W%W', created_at)"
-    } else {
-        dateExpr = 'DATE(created_at)'
+    if (!VALID_PERIODS.includes(period as typeof VALID_PERIODS[number]) || period === 'all') {
+        return c.json({ error: 'Invalid period. Must be one of: 7d, 30d, 90d' }, 400)
     }
+
+    if (!VALID_GROUP_BY.includes(groupBy as typeof VALID_GROUP_BY[number])) {
+        return c.json({ error: 'Invalid groupBy. Must be one of: day, week' }, 400)
+    }
+
+    const days = PERIOD_DAYS[period]
+
+    // dateExpr 来自严格映射，无注入风险
+    const dateExpr = groupBy === 'week'
+        ? "strftime('%Y-W%W', created_at)"
+        : 'DATE(created_at)'
 
     const { results } = await c.env.DB.prepare(`
         SELECT
@@ -106,15 +156,15 @@ dashboard.get('/revenue-trend', async (c) => {
             COALESCE(SUM(total_amount), 0) as revenue
         FROM orders
         WHERE distributor_id = ?
-            AND created_at >= datetime('now', '-${days} days')
+            AND created_at >= datetime('now', '-' || ? || ' days')
         GROUP BY ${dateExpr}
         ORDER BY date ASC
-    `).bind(distributorId).all()
+    `).bind(distributorId, days).all<RevenueTrendRow>()
 
     return c.json({
         period,
         groupBy,
-        data: results.map((r: any) => ({
+        data: results.map((r) => ({
             date: r.date,
             orderCount: r.order_count,
             revenue: r.revenue,
@@ -124,8 +174,11 @@ dashboard.get('/revenue-trend', async (c) => {
 
 /** GET /dashboard/low-stock - 低库存商品 */
 dashboard.get('/low-stock', async (c) => {
-    const threshold = Number(c.req.query('threshold') || 50)
-    const limit = Number(c.req.query('limit') || 20)
+    const rawThreshold = Number(c.req.query('threshold') || 50)
+    const rawLimit = Number(c.req.query('limit') || 20)
+
+    const threshold = Number.isNaN(rawThreshold) ? 50 : Math.max(0, Math.min(rawThreshold, 10000))
+    const limit = Number.isNaN(rawLimit) ? 20 : Math.max(1, Math.min(rawLimit, 200))
 
     const { results } = await c.env.DB.prepare(`
         SELECT

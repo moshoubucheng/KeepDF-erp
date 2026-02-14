@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
 import { CommissionService } from '../services/commission.service'
+import { getAuthorizedOrder } from '../utils/auth-helpers'
 
 const commissions = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -20,13 +21,9 @@ commissions.get('/calculate/:orderId', async (c) => {
     const orderId = Number(c.req.param('orderId'))
     const distributorId = c.get('distributorId')
 
-    const order = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
-        .bind(orderId).first<any>()
-
-    if (!order) return c.json({ error: 'Order not found' }, 404)
-    if (order.distributor_id !== distributorId) {
-        return c.json({ error: 'Order does not belong to you' }, 403)
-    }
+    const authResult = await getAuthorizedOrder(c.env.DB, orderId, distributorId)
+    if ('error' in authResult) return c.json({ error: authResult.error }, authResult.status)
+    const { order } = authResult
 
     const service = new CommissionService(c.env.DB)
     const result = await service.calculateOrderCommission(orderId, order.platform)
@@ -63,16 +60,25 @@ commissions.post('/settle', async (c) => {
     }
 })
 
+const VALID_COMMISSION_STATUSES = ['PENDING', 'SETTLED', 'FAILED'] as const
+
 /** GET /commissions/history - 结算历史 */
 commissions.get('/history', async (c) => {
     const distributorId = c.get('distributorId')
     const status = c.req.query('status')
-    const limit = Number(c.req.query('limit') || 50)
-    const offset = Number(c.req.query('offset') || 0)
+    const rawLimit = Number(c.req.query('limit') || 50)
+    const rawOffset = Number(c.req.query('offset') || 0)
+
+    const limit = Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 200))
+    const offset = Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset)
+
+    if (status && !VALID_COMMISSION_STATUSES.includes(status.toUpperCase() as typeof VALID_COMMISSION_STATUSES[number])) {
+        return c.json({ error: 'Invalid status. Must be one of: PENDING, SETTLED, FAILED' }, 400)
+    }
 
     const service = new CommissionService(c.env.DB)
     const { settlements, total } = await service.getHistory(distributorId, {
-        status: status || undefined,
+        status: status ? status.toUpperCase() : undefined,
         limit,
         offset,
     })

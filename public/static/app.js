@@ -3,7 +3,11 @@
    ============================================= */
 
 const API_BASE = window.location.origin;
-const AUTH_TOKEN = localStorage.getItem('erp_token') || 'tok_dev_abc123';
+const AUTH_TOKEN = localStorage.getItem('erp_token');
+
+if (!AUTH_TOKEN) {
+    window.location.href = '/login.html';
+}
 
 // ===== SPA Router =====
 const pageTitles = {

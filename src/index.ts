@@ -1,7 +1,10 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { Bindings } from './db/types'
+import type { OrderSyncMessage } from './db/types'
 import { authMiddleware, loggerMiddleware } from './middleware/auth'
+import { securityHeaders } from './middleware/security-headers'
+import { loginRateLimit } from './middleware/rate-limit'
 import { wallet } from './controllers/wallet.controller'
 import { orders } from './controllers/orders.controller'
 import { inventory } from './controllers/inventory.controller'
@@ -13,11 +16,23 @@ import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
 
+const ALLOWED_ORIGINS = [
+    'http://localhost:8787',
+    'http://127.0.0.1:8787',
+]
+
 const app = new Hono<{ Bindings: Bindings }>()
 
 // ===== Global Middleware =====
-app.use('/*', cors())
+app.use('/*', cors({
+    origin: ALLOWED_ORIGINS,
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400,
+}))
+app.use('/*', securityHeaders)
 app.use('/api/*', loggerMiddleware)
+app.use('/api/v1/auth/login', loginRateLimit)
 app.use('/api/*', authMiddleware)
 
 app.get('/health', async (c) => {
@@ -40,8 +55,8 @@ app.route('/api/v1/dashboard', dashboard)
 
 // ===== Error Handler =====
 app.onError((err, c) => {
-  console.error(`[ERROR] ${c.req.method} ${c.req.path}:`, err.message)
-  return c.json({ error: 'Internal Server Error', message: err.message }, 500)
+  console.error(`[ERROR] ${c.req.method} ${c.req.path}:`, err.message, err.stack)
+  return c.json({ error: 'Internal Server Error' }, 500)
 })
 
 app.notFound((c) => c.json({ error: 'Not Found' }, 404))
@@ -51,9 +66,25 @@ export default {
   fetch: app.fetch,
 
   // Queue Consumer - 订单异步处理
-  async queue(batch: MessageBatch<any>, env: Bindings) {
+  async queue(batch: MessageBatch<OrderSyncMessage>, env: Bindings) {
     for (const message of batch.messages) {
-      const { platform, payload } = message.body
+      const body = message.body
+
+      // 验证消息结构
+      if (
+        !body ||
+        typeof body.platform !== 'string' ||
+        !body.payload ||
+        typeof body.payload.order_id !== 'string' ||
+        typeof body.payload.total !== 'number' ||
+        body.payload.total <= 0
+      ) {
+        console.error('[QUEUE] Invalid message, skipping:', JSON.stringify(body))
+        message.ack()
+        continue
+      }
+
+      const { platform, payload } = body
       console.log(`[QUEUE] Processing ${platform} order: ${payload.order_id}`)
 
       try {
@@ -66,8 +97,8 @@ export default {
         const orderId = meta.last_row_id
 
         // 2. 写入订单明细
-        if (payload.items?.length > 0) {
-          const stmts = payload.items.map((item: any) =>
+        if (Array.isArray(payload.items) && payload.items.length > 0) {
+          const stmts = payload.items.map((item) =>
             env.DB.prepare(
               'INSERT INTO order_items (order_id, sku, qty, unit_price, tax_rate) VALUES (?, ?, ?, ?, ?)'
             ).bind(orderId, item.sku, item.qty, item.price, 0.10)
@@ -76,9 +107,9 @@ export default {
         }
 
         // 3. 冻结分销商余额
-        if (payload.distributor_id) {
+        if ((body as any).payload?.distributor_id) {
           const walletService = new WalletService(env.DB)
-          await walletService.freeze(payload.distributor_id, payload.total, String(orderId))
+          await walletService.freeze((body as any).payload.distributor_id, payload.total, String(orderId))
         }
 
         message.ack()

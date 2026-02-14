@@ -51,8 +51,11 @@ invoices.get('/:id', async (c) => {
 invoices.get('/', async (c) => {
     const distributorId = c.get('distributorId')
     const orderId = c.req.query('orderId') ? Number(c.req.query('orderId')) : undefined
-    const limit = Number(c.req.query('limit') || 50)
-    const offset = Number(c.req.query('offset') || 0)
+    const rawLimit = Number(c.req.query('limit') || 50)
+    const rawOffset = Number(c.req.query('offset') || 0)
+
+    const limit = Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 200))
+    const offset = Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset)
 
     const service = new InvoiceService(c.env.DB)
     const { invoices: list, total } = await service.listInvoices(distributorId, { orderId, limit, offset })

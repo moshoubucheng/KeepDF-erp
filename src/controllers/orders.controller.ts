@@ -1,18 +1,30 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables, Order } from '../db/types'
 import { NotificationService } from '../services/notification.service'
+import { getAuthorizedOrder } from '../utils/auth-helpers'
 
 const orders = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+const VALID_PLATFORMS = ['TIKTOK', 'TEMU', 'RAKUTEN'] as const
+const VALID_STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'] as const
 
 /** GET /orders - 订单列表 */
 orders.get('/', async (c) => {
     const distributorId = c.get('distributorId')
     const platform = c.req.query('platform')
     const status = c.req.query('status')
-    const limit = Number(c.req.query('limit') || 50)
+    const rawLimit = Number(c.req.query('limit') || 50)
+    const limit = Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 200))
+
+    if (platform && !VALID_PLATFORMS.includes(platform.toUpperCase() as typeof VALID_PLATFORMS[number])) {
+        return c.json({ error: 'Invalid platform. Must be one of: TIKTOK, TEMU, RAKUTEN' }, 400)
+    }
+    if (status && !VALID_STATUSES.includes(status.toUpperCase() as typeof VALID_STATUSES[number])) {
+        return c.json({ error: 'Invalid status. Must be one of: PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED' }, 400)
+    }
 
     let sql = 'SELECT * FROM orders WHERE distributor_id = ?'
-    const params: any[] = [distributorId]
+    const params: (string | number)[] = [distributorId]
 
     if (platform) {
         sql += ' AND platform = ?'
@@ -37,20 +49,14 @@ orders.get('/:id', async (c) => {
     const id = Number(c.req.param('id'))
     const distributorId = c.get('distributorId')
 
-    const order = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
-        .bind(id).first<Order>()
-
-    if (!order) return c.json({ error: 'Order not found' }, 404)
-
-    if (order.distributor_id !== distributorId) {
-        return c.json({ error: 'Forbidden: order does not belong to you' }, 403)
-    }
+    const result = await getAuthorizedOrder(c.env.DB, id, distributorId)
+    if ('error' in result) return c.json({ error: result.error }, result.status)
 
     const { results: items } = await c.env.DB.prepare(
         'SELECT * FROM order_items WHERE order_id = ?'
     ).bind(id).all()
 
-    return c.json({ order, items })
+    return c.json({ order: result.order, items })
 })
 
 /** POST /orders/webhook/:platform - Webhook 接收 */
@@ -73,14 +79,9 @@ orders.patch('/:id/ship', async (c) => {
     const distributorId = c.get('distributorId')
     const body = await c.req.json<{ tracking_number: string }>()
 
-    const order = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
-        .bind(id).first<Order>()
-
-    if (!order) return c.json({ error: 'Order not found' }, 404)
-
-    if (order.distributor_id !== distributorId) {
-        return c.json({ error: 'Forbidden: order does not belong to you' }, 403)
-    }
+    const result = await getAuthorizedOrder(c.env.DB, id, distributorId)
+    if ('error' in result) return c.json({ error: result.error }, result.status)
+    const { order } = result
 
     const batch = [
         c.env.DB.prepare("UPDATE orders SET status = 'SHIPPED' WHERE id = ?").bind(id),
