@@ -342,7 +342,7 @@ auth.post('/logout', async (c) => {
 auth.get('/me', async (c) => {
     const distributorId = c.get('distributorId')
     const distributor = await c.env.DB.prepare(
-        'SELECT id, name, balance, frozen_balance, tax_reg_number, role, language, totp_enabled, created_at FROM distributors WHERE id = ?'
+        'SELECT id, name, username, balance, frozen_balance, tax_reg_number, email, phone, address, contact_person, role, language, totp_enabled, created_at FROM distributors WHERE id = ?'
     ).bind(distributorId).first<Distributor>()
 
     if (!distributor) {
@@ -353,15 +353,77 @@ auth.get('/me', async (c) => {
         distributor: {
             id: distributor.id,
             name: distributor.name,
+            username: distributor.username,
             balance: distributor.balance,
             frozen_balance: distributor.frozen_balance,
             tax_reg_number: distributor.tax_reg_number,
+            email: distributor.email || '',
+            phone: distributor.phone || '',
+            address: distributor.address || '',
+            contact_person: distributor.contact_person || '',
             role: distributor.role || 'distributor',
             language: distributor.language || 'ja',
             totp_enabled: !!distributor.totp_enabled,
             created_at: distributor.created_at,
         },
     })
+})
+
+/** PUT /auth/profile - Update company profile */
+auth.put('/profile', async (c) => {
+    const distributorId = c.get('distributorId')
+    const body = await c.req.json<{
+        name?: string; tax_reg_number?: string; email?: string;
+        phone?: string; address?: string; contact_person?: string
+    }>()
+
+    const fields: string[] = []
+    const values: (string | number)[] = []
+
+    if (body.name !== undefined && body.name.trim()) {
+        fields.push('name = ?')
+        values.push(body.name.trim().slice(0, 200))
+    }
+    if (body.tax_reg_number !== undefined) {
+        fields.push('tax_reg_number = ?')
+        values.push(body.tax_reg_number.trim().slice(0, 50))
+    }
+    if (body.email !== undefined) {
+        fields.push('email = ?')
+        values.push(body.email.trim().slice(0, 200))
+    }
+    if (body.phone !== undefined) {
+        fields.push('phone = ?')
+        values.push(body.phone.trim().slice(0, 30))
+    }
+    if (body.address !== undefined) {
+        fields.push('address = ?')
+        values.push(body.address.trim().slice(0, 500))
+    }
+    if (body.contact_person !== undefined) {
+        fields.push('contact_person = ?')
+        values.push(body.contact_person.trim().slice(0, 100))
+    }
+
+    if (fields.length === 0) {
+        return c.json({ error: 'No fields to update' }, 400)
+    }
+
+    values.push(distributorId)
+    await c.env.DB.prepare(`UPDATE distributors SET ${fields.join(', ')} WHERE id = ?`)
+        .bind(...values).run()
+
+    const audit = new AuditService(c.env.DB)
+    audit.log({
+        distributorId,
+        action: 'UPDATE_PROFILE',
+        resourceType: 'distributor',
+        resourceId: String(distributorId),
+        details: JSON.stringify(Object.keys(body)),
+        ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+    })
+
+    return c.json({ success: true })
 })
 
 export { auth }

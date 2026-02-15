@@ -68,6 +68,10 @@ export class DistributorService {
             balance: 0,
             frozen_balance: 0,
             tax_reg_number: params.tax_reg_number || null,
+            email: null,
+            phone: null,
+            address: null,
+            contact_person: null,
             role,
             created_at: new Date().toISOString(),
         }

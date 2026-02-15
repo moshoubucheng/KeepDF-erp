@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS distributors (
   balance REAL DEFAULT 0.0,
   frozen_balance REAL DEFAULT 0.0,
   tax_reg_number TEXT,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  contact_person TEXT,
   role TEXT DEFAULT 'distributor' CHECK(role IN ('admin', 'distributor')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

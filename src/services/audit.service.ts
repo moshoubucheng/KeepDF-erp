@@ -33,6 +33,7 @@ export type AuditAction =
     | 'IMPORT_CSV'
     | 'BATCH_UPDATE'
     | 'RESET_PASSWORD'
+    | 'UPDATE_PROFILE'
     | 'UPDATE_CONFIG'
     | 'CREATE_RETURN'
     | 'APPROVE_RETURN'

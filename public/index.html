@@ -202,6 +202,7 @@
             <span id="userDisplayName" data-i18n="common.admin">管理者</span>
           </div>
           <div class="user-menu-dropdown" id="userMenuDropdown">
+            <button class="user-menu-item" onclick="openProfileModal();closeUserMenu()" data-i18n="profile.title">会社情報</button>
             <button class="user-menu-item" onclick="openModal('changePasswordModal');closeUserMenu()" data-i18n="auth.change_password">パスワード変更</button>
             <button class="user-menu-item" onclick="openModal('twoFAModal');load2FAStatus();closeUserMenu()" data-i18n="auth.2fa_settings">2FA 設定</button>
             <button class="user-menu-item" onclick="logout()" data-i18n="nav.logout">ログアウト</button>
@@ -1579,6 +1580,50 @@
 
     </div>
   </main>
+
+  <!-- Company Profile Modal -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="modal" style="max-width:520px">
+      <div class="modal-header">
+        <h3 data-i18n="profile.title">会社情報</h3>
+        <button class="modal-close" data-close="profileModal">&#10005;</button>
+      </div>
+      <form id="profileForm">
+        <div class="form-group">
+          <label data-i18n="profile.company_name">会社名</label>
+          <input type="text" id="profileName" required maxlength="200">
+        </div>
+        <div class="form-group">
+          <label data-i18n="profile.contact_person">担当者</label>
+          <input type="text" id="profileContact" maxlength="100">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="profile.email">メール</label>
+            <input type="email" id="profileEmail" maxlength="200">
+          </div>
+          <div class="form-group">
+            <label data-i18n="profile.phone">電話番号</label>
+            <input type="tel" id="profilePhone" maxlength="30">
+          </div>
+        </div>
+        <div class="form-group">
+          <label data-i18n="profile.address">住所</label>
+          <input type="text" id="profileAddress" maxlength="500">
+        </div>
+        <div class="form-group">
+          <label data-i18n="profile.tax_reg">登録番号 (インボイス)</label>
+          <input type="text" id="profileTaxReg" maxlength="50" placeholder="T1234567890123">
+        </div>
+        <div id="profileError" style="color:var(--accent-red);font-size:0.85rem;min-height:20px;margin-bottom:8px"></div>
+        <div id="profileSuccess" style="color:var(--accent-emerald);font-size:0.85rem;min-height:20px;margin-bottom:8px"></div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" data-close="profileModal" data-i18n="common.cancel">キャンセル</button>
+          <button type="submit" class="btn-primary" data-i18n="common.save">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Change Password Modal -->
   <div class="modal-overlay" id="changePasswordModal">

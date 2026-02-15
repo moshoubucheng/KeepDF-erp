@@ -938,6 +938,47 @@ async function uploadProductImage(id, file) {
     }
 }
 
+// ===== Company Profile =====
+async function openProfileModal() {
+    const data = await apiFetch('/api/v1/auth/me');
+    if (!data?.distributor) return;
+    const d = data.distributor;
+    document.getElementById('profileName').value = d.name || '';
+    document.getElementById('profileContact').value = d.contact_person || '';
+    document.getElementById('profileEmail').value = d.email || '';
+    document.getElementById('profilePhone').value = d.phone || '';
+    document.getElementById('profileAddress').value = d.address || '';
+    document.getElementById('profileTaxReg').value = d.tax_reg_number || '';
+    document.getElementById('profileError').textContent = '';
+    document.getElementById('profileSuccess').textContent = '';
+    openModal('profileModal');
+}
+
+async function saveProfile() {
+    const errEl = document.getElementById('profileError');
+    const successEl = document.getElementById('profileSuccess');
+    errEl.textContent = ''; successEl.textContent = '';
+
+    const name = document.getElementById('profileName').value.trim();
+    if (!name) { errEl.textContent = t('profile.name_required'); return; }
+
+    const result = await apiFetch('/api/v1/auth/profile', {
+        method: 'PUT',
+        body: JSON.stringify({
+            name,
+            contact_person: document.getElementById('profileContact').value.trim(),
+            email: document.getElementById('profileEmail').value.trim(),
+            phone: document.getElementById('profilePhone').value.trim(),
+            address: document.getElementById('profileAddress').value.trim(),
+            tax_reg_number: document.getElementById('profileTaxReg').value.trim(),
+        }),
+    });
+
+    if (result?.error) { errEl.textContent = result.error; return; }
+    successEl.textContent = t('common.success');
+    document.getElementById('userDisplayName').textContent = name;
+}
+
 // ===== Password Change =====
 async function changePassword() {
     const currentPw = document.getElementById('currentPasswordInput').value;
@@ -1887,6 +1928,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`;
         if (endDate) url += `end_date=${encodeURIComponent(endDate + 'T23:59:59')}&`;
         downloadCSV(url);
+    });
+
+    // Profile form
+    document.getElementById('profileForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveProfile();
     });
 
     // Change Password form

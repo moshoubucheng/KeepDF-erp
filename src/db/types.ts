@@ -27,6 +27,10 @@ export interface Distributor {
     balance: number
     frozen_balance: number
     tax_reg_number: string | null
+    email: string | null
+    phone: string | null
+    address: string | null
+    contact_person: string | null
     role: 'admin' | 'distributor'
     created_at: string
 }
