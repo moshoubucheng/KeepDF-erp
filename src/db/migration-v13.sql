@@ -84,7 +84,7 @@ ALTER TABLE platform_mappings ADD COLUMN stock_sync INTEGER DEFAULT 0;
 ALTER TABLE platform_mappings ADD COLUMN platform_title TEXT;
 ALTER TABLE platform_mappings ADD COLUMN platform_description TEXT;
 ALTER TABLE platform_mappings ADD COLUMN is_active INTEGER DEFAULT 1;
-ALTER TABLE platform_mappings ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE platform_mappings ADD COLUMN updated_at DATETIME;
 
 -- ===== Indexes =====
 CREATE INDEX IF NOT EXISTS idx_exchange_rates_pair ON exchange_rates(from_currency, to_currency);
