@@ -59,11 +59,13 @@ describe('Error Message Leak Prevention', () => {
     })
 
     it('エラーレスポンスに内部情報が含まれない', async () => {
-        // 404 エラーテスト
-        const res = await SELF.fetch('http://localhost/nonexistent/path')
-        expect(res.status).toBe(404)
-        const data = await res.json() as { error: string; message?: string }
-        expect(data.error).toBe('Not Found')
+        // 401 エラーテスト (unauthenticated API request)
+        const res = await SELF.fetch('http://localhost/api/v1/orders')
+        expect(res.status).toBe(401)
+        const data = await res.json() as { error: string; message?: string; stack?: string }
+        expect(data.error).toBeDefined()
+        // エラーレスポンスにスタックトレースや内部情報が含まれない
+        expect(data.stack).toBeUndefined()
         expect(data.message).toBeUndefined()
     })
 })

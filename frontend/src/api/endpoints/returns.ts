@@ -2,7 +2,7 @@ import { api } from '../client'
 import type { Return } from '../types'
 
 interface ReturnsParams {
-  page?: number
+  offset?: number
   limit?: number
   status?: string
 }
@@ -10,15 +10,18 @@ interface ReturnsParams {
 export const returnsApi = {
   list: (params: ReturnsParams = {}) => {
     const query = new URLSearchParams()
-    if (params.page) query.set('page', String(params.page))
+    if (params.offset) query.set('offset', String(params.offset))
     if (params.limit) query.set('limit', String(params.limit))
     if (params.status) query.set('status', params.status)
     const qs = query.toString()
-    return api.get<{ success: boolean; returns: Return[]; pagination: { total: number; page: number; limit: number; pages: number } }>(`/returns${qs ? `?${qs}` : ''}`)
+    return api.get<{ returns: Return[]; total: number }>(`/returns${qs ? `?${qs}` : ''}`)
   },
 
-  approve: (id: number) => api.post(`/returns/${id}/approve`),
-  reject: (id: number, reason: string) => api.post(`/returns/${id}/reject`, { reason }),
-  receive: (id: number) => api.post(`/returns/${id}/receive`),
-  refund: (id: number) => api.post(`/returns/${id}/refund`),
+  create: (data: { order_id: number; reason?: string; notes?: string; refund_type?: string; items: { sku: string; qty: number; unit_price: number; reason?: string }[] }) =>
+    api.post<{ success: boolean; return: Return }>('/returns', data),
+
+  approve: (id: number) => api.patch<{ success: boolean; return: Return }>(`/returns/${id}/approve`),
+  reject: (id: number, reason?: string) => api.patch<{ success: boolean; return: Return }>(`/returns/${id}/reject`, { reason }),
+  receive: (id: number) => api.patch<{ success: boolean; return: Return }>(`/returns/${id}/receive`),
+  refund: (id: number) => api.patch<{ success: boolean; return: Return }>(`/returns/${id}/refund`),
 }

@@ -34,11 +34,12 @@ export default function ReturnsPage() {
   // Query
   const { data, isLoading } = useQuery({
     queryKey: ['returns', { page, limit, status }],
-    queryFn: () => returnsApi.list({ page, limit, status: status || undefined }),
+    queryFn: () => returnsApi.list({ offset: (page - 1) * limit, limit, status: status || undefined }),
   })
 
   const returns = data?.returns ?? []
-  const pagination = data?.pagination
+  const total = data?.total ?? 0
+  const totalPages = Math.ceil(total / limit)
 
   // Mutations
   const approveMutation = useMutation({
@@ -264,11 +265,11 @@ export default function ReturnsPage() {
             emptyMessage={t('returns.empty', 'No returns found')}
           />
         </CardContent>
-        {pagination && pagination.pages > 1 && (
+        {totalPages > 1 && (
           <div className="px-6 py-3 border-t border-border">
             <Pagination
-              page={pagination.page}
-              pages={pagination.pages}
+              page={page}
+              pages={totalPages}
               onPageChange={setPage}
             />
           </div>

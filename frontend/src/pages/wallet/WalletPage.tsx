@@ -15,9 +15,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { DataTable, type Column } from '@/components/data/DataTable'
-import { Pagination } from '@/components/ui/Pagination'
 import { formatCurrency, formatDate } from '@/utils/format'
-import { usePagination } from '@/hooks/usePagination'
 import { cn } from '@/utils/cn'
 
 const depositSchema = z.object({
@@ -52,28 +50,31 @@ const TX_TYPE_STYLES: Record<string, { label: string; color: string; amountColor
 
 export default function WalletPage() {
   const { t } = useTranslation()
-  const { isAdmin } = useAuthStore()
+  const { isAdmin, user } = useAuthStore()
   const addToast = useUIStore((s) => s.addToast)
   const queryClient = useQueryClient()
   const [depositOpen, setDepositOpen] = useState(false)
-  const { page, limit, setPage } = usePagination(20)
+
+  const distributorId = user?.id ?? 0
 
   // Balance query
   const balanceQuery = useQuery({
-    queryKey: ['wallet', 'balance'],
-    queryFn: () => walletApi.balance(),
+    queryKey: ['wallet', 'balance', distributorId],
+    queryFn: () => walletApi.balance(distributorId),
+    enabled: distributorId > 0,
   })
 
   // Transactions query
   const txQuery = useQuery({
-    queryKey: ['wallet', 'transactions', { page, limit }],
-    queryFn: () => walletApi.transactions({ page, limit }),
+    queryKey: ['wallet', 'transactions', distributorId],
+    queryFn: () => walletApi.transactions(distributorId),
+    enabled: distributorId > 0,
   })
 
   // Deposit mutation
   const depositMutation = useMutation({
     mutationFn: (data: DepositForm) =>
-      walletApi.deposit({ amount: data.amount, note: data.note }),
+      walletApi.deposit(distributorId, data.amount),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] })
       addToast('success', t('wallet.depositSuccess', 'Deposit completed successfully'))
@@ -94,7 +95,6 @@ export default function WalletPage() {
   const frozen = balanceQuery.data?.frozen_balance ?? 0
   const total = balance + frozen
   const transactions = txQuery.data?.transactions ?? []
-  const pagination = txQuery.data?.pagination
 
   const txColumns: Column<WalletTransaction>[] = [
     {
@@ -226,15 +226,6 @@ export default function WalletPage() {
             emptyMessage={t('wallet.noTransactions', 'No transactions found')}
           />
         </CardContent>
-        {pagination && pagination.pages > 1 && (
-          <div className="px-6 py-3 border-t border-border">
-            <Pagination
-              page={pagination.page}
-              pages={pagination.pages}
-              onPageChange={setPage}
-            />
-          </div>
-        )}
       </Card>
 
       {/* Deposit Modal */}

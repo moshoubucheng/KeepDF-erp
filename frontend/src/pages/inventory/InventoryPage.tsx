@@ -35,8 +35,9 @@ type ProductFormData = z.infer<typeof productSchema>
 
 const inboundSchema = z.object({
   sku: z.string().min(1, 'SKU is required'),
-  qty: z.coerce.number().int().min(1, 'Quantity must be >= 1'),
-  location_code: z.string().optional().default(''),
+  expected_qty: z.coerce.number().int().min(1, 'Quantity must be >= 1'),
+  actual_qty: z.coerce.number().int().min(1, 'Quantity must be >= 1'),
+  location_code: z.string().min(1, 'Location code is required'),
 })
 
 type InboundFormData = z.infer<typeof inboundSchema>
@@ -61,12 +62,21 @@ export default function InventoryPage() {
   // ---- Queries ----
 
   const { data, isLoading } = useQuery({
-    queryKey: ['inventory', { page, limit, search }],
-    queryFn: () => inventoryApi.list({ page, limit, search: search || undefined }),
+    queryKey: ['inventory'],
+    queryFn: () => inventoryApi.list(),
   })
 
-  const products = data?.products ?? []
-  const pagination = data?.pagination
+  // Client-side search/pagination since backend returns all products
+  const allProducts = data?.products ?? []
+  const filteredProducts = search
+    ? allProducts.filter((p) =>
+        p.sku.toLowerCase().includes(search.toLowerCase()) ||
+        (p.name_jp && p.name_jp.toLowerCase().includes(search.toLowerCase())) ||
+        (p.name_cn && p.name_cn.toLowerCase().includes(search.toLowerCase()))
+      )
+    : allProducts
+  const totalPages = Math.ceil(filteredProducts.length / limit)
+  const products = filteredProducts.slice((page - 1) * limit, page * limit)
 
   // ---- Mutations ----
 
@@ -91,7 +101,6 @@ export default function InventoryPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, values }: { id: number; values: ProductFormData }) =>
       inventoryApi.update(id, {
-        sku: values.sku,
         name_jp: values.name_jp || undefined,
         name_cn: values.name_cn || undefined,
         cost_price: values.cost_price,
@@ -123,8 +132,9 @@ export default function InventoryPage() {
     mutationFn: (values: InboundFormData) =>
       inventoryApi.inbound({
         sku: values.sku,
-        qty: values.qty,
-        location_code: values.location_code || undefined,
+        location_code: values.location_code,
+        expected_qty: values.expected_qty,
+        actual_qty: values.actual_qty,
       }),
     onSuccess: () => {
       addToast('success', t('common.success'))
@@ -302,10 +312,10 @@ export default function InventoryPage() {
       </Card>
 
       {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
+      {totalPages > 1 && (
         <Pagination
-          page={pagination.page}
-          pages={pagination.pages}
+          page={page}
+          pages={totalPages}
           onPageChange={setPage}
         />
       )}
@@ -480,7 +490,8 @@ function InboundModal({ open, onClose, saving, onSubmit }: InboundModalProps) {
     resolver: zodResolver(inboundSchema),
     defaultValues: {
       sku: '',
-      qty: 1,
+      expected_qty: 1,
+      actual_qty: 1,
       location_code: '',
     },
   })
@@ -507,18 +518,26 @@ function InboundModal({ open, onClose, saving, onSubmit }: InboundModalProps) {
           autoFocus
         />
         <Input
-          label={t('inventory.stock')}
-          type="number"
-          min={1}
-          step={1}
-          {...register('qty')}
-          error={errors.qty?.message}
-        />
-        <Input
           label="Location Code"
           {...register('location_code')}
           error={errors.location_code?.message}
           placeholder="e.g. A-01-01"
+        />
+        <Input
+          label={t('inventory.expectedQty', 'Expected Qty')}
+          type="number"
+          min={1}
+          step={1}
+          {...register('expected_qty')}
+          error={errors.expected_qty?.message}
+        />
+        <Input
+          label={t('inventory.actualQty', 'Actual Qty')}
+          type="number"
+          min={1}
+          step={1}
+          {...register('actual_qty')}
+          error={errors.actual_qty?.message}
         />
 
         <div className="flex justify-end gap-3 pt-2">

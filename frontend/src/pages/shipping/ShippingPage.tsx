@@ -44,11 +44,12 @@ export default function ShippingPage() {
   // Query
   const { data, isLoading } = useQuery({
     queryKey: ['shipping', { page, limit, status }],
-    queryFn: () => shippingApi.list({ page, limit, status: status || undefined }),
+    queryFn: () => shippingApi.list({ offset: (page - 1) * limit, limit, status: status || undefined }),
   })
 
   const shipments = data?.shipments ?? []
-  const pagination = data?.pagination
+  const total = data?.total ?? 0
+  const totalPages = Math.ceil(total / limit)
 
   // Timeline query
   const { data: timelineData, isLoading: timelineLoading } = useQuery({
@@ -214,11 +215,11 @@ export default function ShippingPage() {
             onRowClick={(row) => handleRowClick(row as unknown as Shipment)}
           />
         </CardContent>
-        {pagination && pagination.pages > 1 && (
+        {totalPages > 1 && (
           <div className="px-6 py-3 border-t border-border">
             <Pagination
-              page={pagination.page}
-              pages={pagination.pages}
+              page={page}
+              pages={totalPages}
               onPageChange={setPage}
             />
           </div>

@@ -1,32 +1,28 @@
 import { api } from '../client'
-import type { Product, ApiResponse } from '../types'
-
-interface InventoryParams {
-  page?: number
-  limit?: number
-  search?: string
-}
+import type { Product } from '../types'
 
 export const inventoryApi = {
-  list: (params: InventoryParams = {}) => {
-    const query = new URLSearchParams()
-    if (params.page) query.set('page', String(params.page))
-    if (params.limit) query.set('limit', String(params.limit))
-    if (params.search) query.set('search', params.search)
-    const qs = query.toString()
-    return api.get<{ success: boolean; products: Product[]; pagination: { total: number; page: number; limit: number; pages: number } }>(`/inventory${qs ? `?${qs}` : ''}`)
-  },
+  list: () =>
+    api.get<{ products: (Product & { total_stock: number })[] }>('/inventory'),
 
-  get: (id: number) => api.get<ApiResponse<Product>>(`/inventory/${id}`),
+  get: (sku: string) =>
+    api.get<{ product: Product; locations: { code: string; qty: number }[]; platformMappings: { platform: string; platform_sku: string }[] }>(`/inventory/${encodeURIComponent(sku)}`),
 
-  create: (data: { sku: string; name_jp?: string; name_cn?: string; cost_price: number; tax_category: string }) =>
-    api.post('/inventory', data),
+  create: (data: { sku: string; name_jp?: string; name_cn?: string; cost_price: number; tax_category?: string }) =>
+    api.post<{ status: string; sku: string }>('/inventory/products', data),
 
-  update: (id: number, data: Partial<{ sku: string; name_jp: string; name_cn: string; cost_price: number; tax_category: string }>) =>
-    api.put(`/inventory/${id}`, data),
+  update: (id: number, data: Partial<{ name_jp: string; name_cn: string; cost_price: number; tax_category: string; image_url: string }>) =>
+    api.put<{ product: Product }>(`/inventory/products/${id}`, data),
 
-  delete: (id: number) => api.delete(`/inventory/${id}`),
+  delete: (id: number) =>
+    api.delete<{ status: string; id: number }>(`/inventory/products/${id}`),
 
-  inbound: (data: { sku: string; qty: number; location_code?: string }) =>
-    api.post('/inventory/inbound', data),
+  inbound: (data: { sku: string; location_code: string; expected_qty: number; actual_qty: number }) =>
+    api.post<{ status: string; sku: string; actual: number }>('/inventory/inbound', data),
+
+  variants: (productId: number) =>
+    api.get<{ variants: unknown[] }>(`/inventory/products/${productId}/variants`),
+
+  createVariant: (productId: number, data: { sku: string; color?: string; size?: string; stock_qty?: number }) =>
+    api.post(`/inventory/products/${productId}/variants`, data),
 }

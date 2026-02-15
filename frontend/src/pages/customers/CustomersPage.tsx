@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil } from 'lucide-react'
 
 import { customersApi } from '@/api/endpoints/customers'
 import type { Customer } from '@/api/types'
@@ -55,17 +55,17 @@ export default function CustomersPage() {
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null)
 
   // ---- Queries ----
 
   const { data, isLoading } = useQuery({
     queryKey: ['customers', { page, limit, search }],
-    queryFn: () => customersApi.list({ page, limit, search: search || undefined }),
+    queryFn: () => customersApi.list({ offset: (page - 1) * limit, limit, search: search || undefined }),
   })
 
   const customers = data?.customers ?? []
-  const pagination = data?.pagination
+  const total = data?.total ?? 0
+  const totalPages = Math.ceil(total / limit)
 
   // ---- Mutations ----
 
@@ -119,17 +119,7 @@ export default function CustomersPage() {
     },
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => customersApi.delete(id),
-    onSuccess: () => {
-      addToast('success', t('common.success'))
-      queryClient.invalidateQueries({ queryKey: ['customers'] })
-      setDeleteTarget(null)
-    },
-    onError: (err: Error) => {
-      addToast('error', err.message)
-    },
-  })
+  // Note: backend does not support customer deletion
 
   // ---- Handlers ----
 
@@ -246,16 +236,6 @@ export default function CustomersPage() {
             >
               <Pencil size={15} />
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setDeleteTarget(row)
-              }}
-              className="rounded-md p-1.5 text-text-muted hover:bg-bg-input hover:text-accent-red transition-colors cursor-pointer"
-              title={t('common.delete')}
-            >
-              <Trash2 size={15} />
-            </button>
           </div>
         ),
       },
@@ -303,10 +283,10 @@ export default function CustomersPage() {
       </Card>
 
       {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
+      {totalPages > 1 && (
         <Pagination
-          page={pagination.page}
-          pages={pagination.pages}
+          page={page}
+          pages={totalPages}
           onPageChange={setPage}
         />
       )}
@@ -326,29 +306,6 @@ export default function CustomersPage() {
         }}
       />
 
-      {/* Delete confirmation */}
-      <Modal
-        open={deleteTarget !== null}
-        onClose={() => setDeleteTarget(null)}
-        title={t('common.confirm_delete')}
-      >
-        <p className="text-sm text-text-secondary mb-6">
-          {t('common.confirm_delete')}: <strong>{deleteTarget?.name}</strong>
-        </p>
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)}>
-            {t('common.cancel')}
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            loading={deleteMutation.isPending}
-            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-          >
-            {t('common.delete')}
-          </Button>
-        </div>
-      </Modal>
     </div>
   )
 }

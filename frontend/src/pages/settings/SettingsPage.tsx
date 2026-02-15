@@ -241,7 +241,7 @@ function SecurityTab({
 }) {
   const { t } = useTranslation()
   const [twoFAStep, setTwoFAStep] = useState<'idle' | 'setup' | 'verify' | 'disable'>('idle')
-  const [qrUrl, setQrUrl] = useState('')
+  const [otpauthUri, setOtpauthUri] = useState('')
   const [totpCode, setTotpCode] = useState('')
 
   const passwordForm = useForm<PasswordForm>({
@@ -267,7 +267,7 @@ function SecurityTab({
   const setup2FA = useMutation({
     mutationFn: () => authApi.setup2FA(),
     onSuccess: (data) => {
-      setQrUrl(data.qr_url)
+      setOtpauthUri(data.otpauth_uri)
       setTwoFAStep('verify')
     },
     onError: (err: Error) => {
@@ -282,7 +282,7 @@ function SecurityTab({
       addToast('success', t('settings.2faEnabled', '2FA enabled successfully'))
       setTwoFAStep('idle')
       setTotpCode('')
-      setQrUrl('')
+      setOtpauthUri('')
       await fetchMe()
     },
     onError: (err: Error) => {
@@ -326,7 +326,7 @@ function SecurityTab({
     }
   }
 
-  const is2FAEnabled = user?.totp_enabled === 1
+  const is2FAEnabled = !!user?.totp_enabled
 
   return (
     <div className="space-y-6">
@@ -458,21 +458,22 @@ function SecurityTab({
                 </div>
               </div>
 
-              {twoFAStep === 'verify' && qrUrl ? (
+              {twoFAStep === 'verify' && otpauthUri ? (
                 <div className="space-y-4">
                   <div className="p-4 rounded-lg bg-bg-input border border-border">
                     <p className="text-sm text-text-secondary mb-2">
-                      {t('settings.scanQrCode', 'Scan this QR code with your authenticator app:')}
+                      {t('settings.enterSecretManually', 'Add this account to your authenticator app:')}
                     </p>
-                    <div className="flex justify-center py-3">
-                      <img
-                        src={qrUrl}
-                        alt="2FA QR Code"
-                        className="w-48 h-48 rounded-lg bg-white p-2"
-                      />
+                    <div className="mt-2 p-3 bg-bg-secondary rounded-lg">
+                      <p className="text-xs text-text-muted mb-1">Secret Key:</p>
+                      <p className="font-mono text-sm text-accent-purple break-all select-all">
+                        {otpauthUri.includes('secret=')
+                          ? new URLSearchParams(otpauthUri.split('?')[1]).get('secret')
+                          : otpauthUri}
+                      </p>
                     </div>
-                    <p className="text-xs text-text-muted text-center mt-2 break-all">
-                      {qrUrl}
+                    <p className="text-xs text-text-muted mt-2 break-all">
+                      {otpauthUri}
                     </p>
                   </div>
                   <Input
@@ -488,7 +489,7 @@ function SecurityTab({
                       onClick={() => {
                         setTwoFAStep('idle')
                         setTotpCode('')
-                        setQrUrl('')
+                        setOtpauthUri('')
                       }}
                     >
                       {t('common.cancel', 'Cancel')}
@@ -533,7 +534,13 @@ function SystemTab({
   // System settings query
   const settingsQuery = useQuery({
     queryKey: ['settings'],
-    queryFn: () => settingsApi.getAll(),
+    queryFn: () => settingsApi.getConfig(),
+  })
+
+  // System info query
+  const systemInfoQuery = useQuery({
+    queryKey: ['settings', 'system-info'],
+    queryFn: () => settingsApi.systemInfo(),
   })
 
   // Users query
@@ -547,7 +554,7 @@ function SystemTab({
   const [initialized, setInitialized] = useState(false)
 
   // Initialize form values when settings load
-  const settingsData = settingsQuery.data?.settings
+  const settingsData = settingsQuery.data?.config as Record<string, string> | undefined
   useEffect(() => {
     if (settingsData && !initialized) {
       if (settingsData.low_stock_threshold) setLowStockThreshold(settingsData.low_stock_threshold)
@@ -557,7 +564,7 @@ function SystemTab({
   }, [settingsData, initialized])
 
   const updateSettings = useMutation({
-    mutationFn: (data: Record<string, string>) => settingsApi.update(data),
+    mutationFn: (data: Record<string, string>) => settingsApi.updateConfig(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] })
       addToast('success', t('settings.settingsSaved', 'Settings saved successfully'))
@@ -613,8 +620,8 @@ function SystemTab({
     }
   }
 
-  const tables = settingsQuery.data?.tables ?? []
-  const users = usersQuery.data?.users ?? []
+  const counts = systemInfoQuery.data?.counts ?? {}
+  const users = usersQuery.data?.distributors ?? []
 
   type UserRow = { id: number; name: string; username: string; role: string; totp_enabled: number; created_at: string }
 
@@ -684,7 +691,7 @@ function SystemTab({
             <RotateCcw size={12} />
             {t('settings.resetPW', 'Reset PW')}
           </Button>
-          {row.totp_enabled === 1 && (
+          {row.totp_enabled && (
             <Button
               size="sm"
               variant="danger"
@@ -715,22 +722,22 @@ function SystemTab({
           </div>
         </CardHeader>
         <CardContent>
-          {settingsQuery.isLoading ? (
+          {systemInfoQuery.isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent-purple border-t-transparent" />
             </div>
-          ) : tables.length > 0 ? (
+          ) : Object.keys(counts).length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {tables.map((table) => (
+              {Object.entries(counts).map(([name, count]) => (
                 <div
-                  key={table.name}
+                  key={name}
                   className="flex items-center justify-between p-3 rounded-lg bg-bg-input border border-border"
                 >
                   <span className="text-xs text-text-muted font-mono truncate mr-2">
-                    {table.name}
+                    {name}
                   </span>
                   <span className="text-sm font-semibold text-text-primary tabular-nums">
-                    {table.count}
+                    {count}
                   </span>
                 </div>
               ))}

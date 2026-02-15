@@ -42,11 +42,12 @@ export default function OrdersPage() {
   // Query
   const { data, isLoading } = useQuery({
     queryKey: ['orders', { page, limit, platform, status, search }],
-    queryFn: () => ordersApi.list({ page, limit, platform: platform || undefined, status: status || undefined, search: search || undefined }),
+    queryFn: () => ordersApi.list({ offset: (page - 1) * limit, limit, platform: platform || undefined, status: status || undefined }),
   })
 
-  const orders = data?.data ?? []
-  const pagination = data?.pagination
+  const orders = data?.orders ?? []
+  const total = data?.count ?? 0
+  const totalPages = Math.ceil(total / limit)
 
   // Mutations
   const shipMutation = useMutation({
@@ -90,9 +91,9 @@ export default function OrdersPage() {
   async function handleExportCsv() {
     setCsvExporting(true)
     try {
-      const res = await ordersApi.exportCsv({ platform: platform || undefined, status: status || undefined })
-      if (res.csv) {
-        downloadCsv(`orders_${new Date().toISOString().slice(0, 10)}.csv`, res.csv)
+      const csv = await ordersApi.exportCsv({ platform: platform || undefined, status: status || undefined })
+      if (csv) {
+        downloadCsv(`orders_${new Date().toISOString().slice(0, 10)}.csv`, csv)
         addToast('success', t('orders.exportSuccess', 'CSV exported'))
       }
     } catch (err) {
@@ -308,11 +309,11 @@ export default function OrdersPage() {
             emptyMessage={t('orders.empty', 'No orders found')}
           />
         </CardContent>
-        {pagination && pagination.pages > 1 && (
+        {totalPages > 1 && (
           <div className="px-6 py-3 border-t border-border">
             <Pagination
-              page={pagination.page}
-              pages={pagination.pages}
+              page={page}
+              pages={totalPages}
               onPageChange={setPage}
             />
           </div>

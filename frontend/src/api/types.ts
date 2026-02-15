@@ -18,8 +18,14 @@ export interface User {
   username: string | null
   email: string | null
   phone: string | null
-  totp_enabled: number
+  address: string | null
+  contact_person: string | null
+  tax_reg_number: string | null
+  balance: number
+  frozen_balance: number
+  totp_enabled: boolean | number
   onboarding_completed?: number
+  created_at: string
 }
 
 export interface Order {

@@ -89,7 +89,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   fetchMe: async () => {
     set({ isLoading: true })
     try {
-      const data = await api.get<{ success: boolean; distributor: User }>('/auth/me')
+      const data = await api.get<{ distributor: User }>('/auth/me')
       const user = data.distributor
       set({
         user,

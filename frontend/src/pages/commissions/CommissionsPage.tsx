@@ -28,10 +28,10 @@ export default function CommissionsPage() {
 
   // Settlements query
   const settlementsQuery = useQuery({
-    queryKey: ['commissions', 'settlements', { page, limit, status: statusFilter }],
+    queryKey: ['commissions', 'history', { page, limit, status: statusFilter }],
     queryFn: () =>
-      commissionsApi.settlements({
-        page,
+      commissionsApi.history({
+        offset: (page - 1) * limit,
         limit,
         status: statusFilter || undefined,
       }),
@@ -39,7 +39,8 @@ export default function CommissionsPage() {
 
   const rates = ratesQuery.data?.rates ?? []
   const settlements = settlementsQuery.data?.settlements ?? []
-  const pagination = settlementsQuery.data?.pagination
+  const total = settlementsQuery.data?.total ?? 0
+  const totalPages = Math.ceil(total / limit)
 
   const rateColumns: Column<Commission>[] = [
     {
@@ -198,11 +199,11 @@ export default function CommissionsPage() {
             emptyMessage={t('commissions.noSettlements', 'No settlements found')}
           />
         </CardContent>
-        {pagination && pagination.pages > 1 && (
+        {totalPages > 1 && (
           <div className="px-6 py-3 border-t border-border">
             <Pagination
-              page={pagination.page}
-              pages={pagination.pages}
+              page={page}
+              pages={totalPages}
               onPageChange={setPage}
             />
           </div>
