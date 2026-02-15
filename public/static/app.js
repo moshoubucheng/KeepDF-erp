@@ -20,6 +20,9 @@ const pageTitles = {
     distributors: { title: 'distributors.title', sub: 'distributors.subtitle' },
     audit: { title: 'audit.title', sub: 'audit.subtitle' },
     reports: { title: 'reports.title', sub: 'reports.subtitle' },
+    shipping: { title: 'shipping.title', sub: 'shipping.subtitle' },
+    customers: { title: 'customers.title', sub: 'customers.subtitle' },
+    settings: { title: 'settings.title', sub: 'settings.subtitle' },
 };
 
 function navigateTo(pageName) {
@@ -160,6 +163,9 @@ async function loadPageData(page) {
         case 'distributors': return loadDistributors();
         case 'audit': return loadAuditLogs();
         case 'reports': return loadReports();
+        case 'shipping': return loadShipping();
+        case 'customers': return loadCustomers();
+        case 'settings': return loadSettings();
     }
 }
 
@@ -1269,6 +1275,292 @@ function exportCustomReport() {
     downloadCSV(`/api/v1/reports/custom/export?${params}`);
 }
 
+// --- Shipping ---
+async function loadShipping(offset = 0) {
+    const status = document.getElementById('shipStatusFilter')?.value || '';
+    const carrier = document.getElementById('shipCarrierFilter')?.value || '';
+    let url = `/api/v1/shipping?limit=20&offset=${offset}`;
+    if (status) url += `&status=${encodeURIComponent(status)}`;
+    if (carrier) url += `&carrier=${encodeURIComponent(carrier)}`;
+
+    const data = await apiFetch(url);
+    const tbody = document.getElementById('shippingTableBody');
+
+    if (!data?.shipments?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('shipping.empty')}</td></tr>`;
+        document.getElementById('shippingPagination').innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = data.shipments.map(s => `
+    <tr>
+      <td>#${escapeHtml(s.id)}</td>
+      <td><strong>#${escapeHtml(s.order_id)}</strong></td>
+      <td>${escapeHtml(s.tracking_number)}</td>
+      <td><span class="carrier-badge">${escapeHtml(s.carrier)}</span></td>
+      <td>${shipStatusBadge(s.status)}</td>
+      <td class="col-hide-mobile">${s.platform ? platformBadge(s.platform) : '\u2014'}</td>
+      <td class="col-hide-mobile">${formatDate(s.shipped_at)}</td>
+    </tr>`).join('');
+
+    renderPagination('shippingPagination', offset, 20, data.total, (newOffset) => loadShipping(newOffset));
+}
+
+function shipStatusBadge(status) {
+    const map = { SHIPPED: 'shipped', IN_TRANSIT: 'processing', DELIVERED: 'delivered', RETURNED: 'cancelled' };
+    return `<span class="badge badge-${map[status] || 'pending'}">${escapeHtml(status)}</span>`;
+}
+
+async function createShipment() {
+    const orderId = prompt(t('shipping.enter_order_id'));
+    if (!orderId) return;
+    const tracking = prompt(t('prompt.tracking'));
+    if (!tracking) return;
+
+    const carriers = ['YAMATO', 'SAGAWA', 'JAPAN_POST', 'FEDEX', 'DHL', 'OTHER'];
+    const carrier = prompt(`Carrier (${carriers.join('/')}):`, 'YAMATO');
+    if (!carrier || !carriers.includes(carrier.toUpperCase())) { alert('Invalid carrier'); return; }
+
+    const result = await apiFetch('/api/v1/shipping', {
+        method: 'POST',
+        body: JSON.stringify({ order_id: Number(orderId), tracking_number: tracking, carrier: carrier.toUpperCase() }),
+    });
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
+    loadShipping();
+}
+
+// --- Customers ---
+async function loadCustomers(offset = 0) {
+    const search = document.getElementById('customerSearchInput')?.value || '';
+    let url = `/api/v1/customers?limit=20&offset=${offset}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+
+    const data = await apiFetch(url);
+    const tbody = document.getElementById('customersTableBody');
+
+    if (!data?.customers?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('customers.empty')}</td></tr>`;
+        document.getElementById('customersPagination').innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = data.customers.map(c => {
+        let tags = [];
+        try { tags = JSON.parse(c.tags || '[]'); } catch(e) {}
+        const tagHtml = tags.map(tag => `<span class="customer-tag">${escapeHtml(tag)}</span>`).join('');
+        return `
+        <tr>
+          <td>#${escapeHtml(c.id)}</td>
+          <td><strong>${escapeHtml(c.name)}</strong></td>
+          <td>${escapeHtml(c.email) || '\u2014'}</td>
+          <td class="col-hide-mobile">${escapeHtml(c.phone) || '\u2014'}</td>
+          <td class="col-hide-mobile">${escapeHtml(c.prefecture) || '\u2014'}</td>
+          <td>${tagHtml || '\u2014'}</td>
+          <td>
+            <button class="btn-sm" onclick="openCustomerModal(${Number(c.id)})">${t('distributors.edit')}</button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    renderPagination('customersPagination', offset, 20, data.total, (newOffset) => loadCustomers(newOffset));
+}
+
+function openCustomerModal(id) {
+    const form = document.getElementById('customerForm');
+    form.reset();
+    document.getElementById('customerFormId').value = '';
+
+    if (id) {
+        document.getElementById('customerModalTitle').textContent = t('customers.edit');
+        document.getElementById('customerFormId').value = id;
+        apiFetch(`/api/v1/customers/${Number(id)}`).then(data => {
+            if (data?.customer) {
+                const c = data.customer;
+                document.getElementById('customerFormName').value = c.name || '';
+                document.getElementById('customerFormEmail').value = c.email || '';
+                document.getElementById('customerFormPhone').value = c.phone || '';
+                document.getElementById('customerFormAddr1').value = c.address_line1 || '';
+                document.getElementById('customerFormCity').value = c.city || '';
+                document.getElementById('customerFormPrefecture').value = c.prefecture || '';
+                document.getElementById('customerFormPostal').value = c.postal_code || '';
+                document.getElementById('customerFormNotes').value = c.notes || '';
+            }
+        });
+    } else {
+        document.getElementById('customerModalTitle').textContent = t('customers.add');
+    }
+    openModal('customerModal');
+}
+
+async function saveCustomer() {
+    const id = document.getElementById('customerFormId').value;
+    const payload = {
+        name: document.getElementById('customerFormName').value.trim(),
+        email: document.getElementById('customerFormEmail').value.trim() || undefined,
+        phone: document.getElementById('customerFormPhone').value.trim() || undefined,
+        address_line1: document.getElementById('customerFormAddr1').value.trim() || undefined,
+        city: document.getElementById('customerFormCity').value.trim() || undefined,
+        prefecture: document.getElementById('customerFormPrefecture').value.trim() || undefined,
+        postal_code: document.getElementById('customerFormPostal').value.trim() || undefined,
+        notes: document.getElementById('customerFormNotes').value.trim() || undefined,
+    };
+
+    if (!payload.name) { alert(t('error.required_name')); return; }
+
+    if (id) {
+        const result = await apiFetch(`/api/v1/customers/${Number(id)}`, { method: 'PUT', body: JSON.stringify(payload) });
+        if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
+    } else {
+        const result = await apiFetch('/api/v1/customers', { method: 'POST', body: JSON.stringify(payload) });
+        if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
+    }
+
+    closeModal('customerModal');
+    loadCustomers();
+}
+
+// --- Settings ---
+async function loadSettings() {
+    loadSystemInfo();
+    loadBusinessConfig();
+    loadSettingsUsers();
+}
+
+async function loadSystemInfo() {
+    const data = await apiFetch('/api/v1/settings/system-info');
+    const tbody = document.getElementById('systemInfoBody');
+    if (!data?.counts) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="2">${t('common.error')}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = Object.entries(data.counts).map(([key, val]) =>
+        `<tr><td><strong>${escapeHtml(key)}</strong></td><td>${val}</td></tr>`
+    ).join('');
+
+    if (data.lastSync) {
+        tbody.innerHTML += `<tr><td><strong>Last Sync</strong></td><td>${escapeHtml(data.lastSync.platform)} - ${formatDate(data.lastSync.started_at)}</td></tr>`;
+    }
+    if (data.lastBackup) {
+        tbody.innerHTML += `<tr><td><strong>Last Backup</strong></td><td>${formatDate(data.lastBackup.created_at)}</td></tr>`;
+    }
+}
+
+async function loadBusinessConfig() {
+    const data = await apiFetch('/api/v1/settings/config');
+    if (data?.config) {
+        document.getElementById('configLowStock').value = data.config.low_stock_threshold || 10;
+        document.getElementById('configDefaultCarrier').value = data.config.default_carrier || 'YAMATO';
+    }
+}
+
+async function saveBusinessConfig() {
+    const payload = {
+        low_stock_threshold: Number(document.getElementById('configLowStock').value) || 10,
+        default_carrier: document.getElementById('configDefaultCarrier').value || 'YAMATO',
+    };
+
+    const result = await apiFetch('/api/v1/settings/config', { method: 'PUT', body: JSON.stringify(payload) });
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
+    alert(t('common.success'));
+}
+
+async function loadSettingsUsers() {
+    const data = await apiFetch('/api/v1/distributors');
+    const tbody = document.getElementById('settingsUsersBody');
+    if (!data?.distributors?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${t('distributors.empty')}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = data.distributors.map(d => `
+    <tr>
+      <td>#${escapeHtml(d.id)}</td>
+      <td><strong>${escapeHtml(d.name)}</strong></td>
+      <td>${roleBadge(d.role)}</td>
+      <td>${d.totp_enabled ? '<span class="badge badge-delivered">ON</span>' : '<span class="badge badge-pending">OFF</span>'}</td>
+      <td>
+        <button class="btn-sm" onclick="resetUserPassword(${Number(d.id)})">${t('settings.reset_pw')}</button>
+        ${d.totp_enabled ? `<button class="btn-danger" onclick="disableUser2FA(${Number(d.id)})" style="margin-left:4px">${t('settings.disable_2fa')}</button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+async function resetUserPassword(id) {
+    const pw = prompt(t('settings.enter_new_password'));
+    if (!pw || pw.length < 8) { alert('Min 8 characters'); return; }
+
+    const result = await apiFetch(`/api/v1/settings/users/${Number(id)}/reset-password`, {
+        method: 'POST', body: JSON.stringify({ new_password: pw }),
+    });
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
+    alert(t('common.success'));
+}
+
+async function disableUser2FA(id) {
+    if (!confirm(t('settings.confirm_disable_2fa'))) return;
+
+    const result = await apiFetch(`/api/v1/settings/users/${Number(id)}/disable-2fa`, { method: 'POST' });
+    if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
+    alert(t('common.success'));
+    loadSettingsUsers();
+}
+
+// --- Notifications ---
+async function loadNotifBell() {
+    const data = await apiFetch('/api/v1/notifications/unread-count');
+    if (!data) return;
+    const badge = document.getElementById('notifBadge');
+    if (data.unreadCount > 0) {
+        badge.textContent = data.unreadCount > 99 ? '99+' : data.unreadCount;
+        badge.style.display = '';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+async function loadNotifDropdown() {
+    const data = await apiFetch('/api/v1/notifications?limit=10');
+    const list = document.getElementById('notifList');
+    if (!data?.notifications?.length) {
+        list.innerHTML = `<div class="notif-empty">${t('notifications.empty')}</div>`;
+        return;
+    }
+
+    list.innerHTML = data.notifications.map(n => `
+      <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="markNotifRead(${Number(n.id)})">
+        <div class="notif-item-title">${escapeHtml(n.title)}</div>
+        <div class="notif-item-msg">${escapeHtml(n.message)}</div>
+        <div class="notif-item-time">${formatDate(n.created_at)}</div>
+      </div>`).join('');
+}
+
+function toggleNotifDropdown() {
+    const dropdown = document.getElementById('notifDropdown');
+    const isActive = dropdown.classList.toggle('active');
+    if (isActive) loadNotifDropdown();
+}
+
+async function markNotifRead(id) {
+    await apiFetch(`/api/v1/notifications/${Number(id)}/read`, { method: 'PATCH' });
+    loadNotifBell();
+    loadNotifDropdown();
+}
+
+async function markAllNotifRead() {
+    await apiFetch('/api/v1/notifications/mark-all-read', { method: 'POST' });
+    loadNotifBell();
+    loadNotifDropdown();
+}
+
+// Close notification dropdown on outside click
+document.addEventListener('click', (e) => {
+    const bell = document.getElementById('notifBell');
+    if (bell && !bell.contains(e.target)) {
+        document.getElementById('notifDropdown')?.classList.remove('active');
+    }
+});
+
 // ===== Dynamic Modal Creation =====
 function createInboundModal() {
     const overlay = document.createElement('div');
@@ -1556,6 +1848,40 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('customEndDate').value = dateStr(today);
         document.getElementById('customStartDate').value = dateStr(thirtyDaysAgo);
     }
+
+    // Shipping
+    document.getElementById('shipStatusFilter')?.addEventListener('change', () => loadShipping(0));
+    document.getElementById('shipCarrierFilter')?.addEventListener('change', () => loadShipping(0));
+    document.getElementById('createShipmentBtn')?.addEventListener('click', createShipment);
+    document.getElementById('exportShippingBtn')?.addEventListener('click', () => downloadCSV('/api/v1/shipping/export'));
+
+    // Customers
+    document.getElementById('addCustomerBtn')?.addEventListener('click', () => openCustomerModal());
+    document.getElementById('exportCustomersBtn')?.addEventListener('click', () => downloadCSV('/api/v1/customers/export'));
+    document.getElementById('customerForm')?.addEventListener('submit', (e) => { e.preventDefault(); saveCustomer(); });
+    document.querySelectorAll('[data-close="customerModal"]').forEach(btn => {
+        btn.addEventListener('click', () => closeModal('customerModal'));
+    });
+    let customerSearchTimer;
+    document.getElementById('customerSearchInput')?.addEventListener('input', () => {
+        clearTimeout(customerSearchTimer);
+        customerSearchTimer = setTimeout(() => loadCustomers(0), 300);
+    });
+
+    // Settings
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(`settings-${tab.dataset.settingsTab}`)?.classList.add('active');
+        });
+    });
+    document.getElementById('businessConfigForm')?.addEventListener('submit', (e) => { e.preventDefault(); saveBusinessConfig(); });
+
+    // Notification bell - initial load + polling every 60s
+    loadNotifBell();
+    setInterval(loadNotifBell, 60000);
 
     // Initial load
     navigateTo('dashboard');

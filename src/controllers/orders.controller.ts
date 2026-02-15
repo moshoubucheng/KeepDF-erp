@@ -5,6 +5,7 @@ import { AuditService } from '../services/audit.service'
 import { WalletService } from '../services/wallet.service'
 import { CommissionService } from '../services/commission.service'
 import { getAuthorizedOrder } from '../utils/auth-helpers'
+import { NotificationCenterService } from '../services/notification-center.service'
 import { toCSV, csvResponse } from '../utils/csv'
 
 const orders = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -198,6 +199,14 @@ orders.patch('/:id/deliver', async (c) => {
         console.error('[DELIVER] Commission auto-settle failed:', e)
     }
 
+    // In-app notification (best effort)
+    try {
+        const nc = new NotificationCenterService(c.env.DB)
+        await nc.notifyOrderDelivered(order.distributor_id, id)
+    } catch (e) {
+        console.error('[DELIVER] Notification failed:', e)
+    }
+
     const audit = new AuditService(c.env.DB)
     audit.log({
         distributorId: c.get('distributorId'),
@@ -251,6 +260,14 @@ orders.patch('/:id/cancel', async (c) => {
     if (freezeTx) {
         const walletService = new WalletService(c.env.DB)
         await walletService.refund(order.distributor_id, freezeTx.amount, String(id))
+    }
+
+    // In-app notification (best effort)
+    try {
+        const nc = new NotificationCenterService(c.env.DB)
+        await nc.notifyOrderCancelled(order.distributor_id, id)
+    } catch (e) {
+        console.error('[CANCEL] Notification failed:', e)
     }
 
     const audit = new AuditService(c.env.DB)

@@ -24,6 +24,15 @@ export type AuditAction =
     | 'CHANGE_PASSWORD'
     | 'ENABLE_2FA'
     | 'DISABLE_2FA'
+    | 'CREATE_SHIPMENT'
+    | 'BATCH_SHIPMENT'
+    | 'UPDATE_SHIPMENT_STATUS'
+    | 'CREATE_CUSTOMER'
+    | 'UPDATE_CUSTOMER'
+    | 'IMPORT_CSV'
+    | 'BATCH_UPDATE'
+    | 'RESET_PASSWORD'
+    | 'UPDATE_CONFIG'
 
 export type ResourceType =
     | 'order'
@@ -32,6 +41,11 @@ export type ResourceType =
     | 'distributor'
     | 'platform_sync'
     | 'product'
+    | 'shipment'
+    | 'customer'
+    | 'import'
+    | 'notification'
+    | 'settings'
 
 export interface AuditLogParams {
     distributorId?: number | null

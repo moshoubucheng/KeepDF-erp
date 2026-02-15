@@ -68,6 +68,7 @@ export interface Order {
     created_at: string
     delivered_at: string | null
     cancelled_at: string | null
+    customer_id: number | null
 }
 
 export interface OrderItem {
@@ -151,6 +152,71 @@ export interface CommissionSettlement {
     status: 'PENDING' | 'SETTLED' | 'FAILED'
     settled_at: string | null
     wallet_tx_id: number | null
+    created_at: string
+}
+
+export interface Shipment {
+    id: number
+    order_id: number
+    tracking_number: string
+    carrier: 'YAMATO' | 'SAGAWA' | 'JAPAN_POST' | 'FEDEX' | 'DHL' | 'OTHER'
+    status: 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED' | 'RETURNED'
+    shipped_at: string
+    estimated_delivery: string | null
+    distributor_id: number
+    created_at: string
+}
+
+export interface Customer {
+    id: number
+    name: string
+    email: string | null
+    phone: string | null
+    address_line1: string | null
+    address_line2: string | null
+    city: string | null
+    prefecture: string | null
+    postal_code: string | null
+    country: string
+    platform: string | null
+    platform_customer_id: string | null
+    tags: string
+    notes: string | null
+    distributor_id: number
+    created_at: string
+}
+
+export interface ImportLog {
+    id: number
+    type: 'PRODUCTS' | 'ORDERS'
+    filename: string
+    total_rows: number
+    success_count: number
+    error_count: number
+    error_details: string | null
+    distributor_id: number
+    created_at: string
+}
+
+export interface Notification {
+    id: number
+    distributor_id: number
+    type: 'ORDER_SHIPPED' | 'ORDER_DELIVERED' | 'ORDER_CANCELLED' | 'LOW_STOCK' | 'COMMISSION_SETTLED' | 'IMPORT_COMPLETE' | 'SYSTEM_ALERT'
+    title: string
+    message: string
+    is_read: number
+    related_resource_type: string | null
+    related_resource_id: string | null
+    created_at: string
+}
+
+export interface NotificationPreference {
+    id: number
+    distributor_id: number
+    event_type: string
+    enabled: number
+    channel: string
+    webhook_url: string | null
     created_at: string
 }
 

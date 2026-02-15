@@ -49,6 +49,14 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V11"/><path d="M12 17V7"/><path d="M16 17V13"/></svg>
         <span data-i18n="nav.reports">レポート</span>
       </a>
+      <a href="#" class="nav-item" data-page="shipping">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <span data-i18n="nav.shipping">出荷管理</span>
+      </a>
+      <a href="#" class="nav-item" data-page="customers">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span data-i18n="nav.customers">顧客管理</span>
+      </a>
       <a href="#" class="nav-item admin-only" data-page="distributors" style="display:none">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span data-i18n="nav.distributors">販売者管理</span>
@@ -56,6 +64,10 @@
       <a href="#" class="nav-item admin-only" data-page="audit" style="display:none">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
         <span data-i18n="nav.audit">監査ログ</span>
+      </a>
+      <a href="#" class="nav-item admin-only" data-page="settings" style="display:none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span data-i18n="nav.settings">設定</span>
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -87,6 +99,19 @@
         <div class="header-search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" id="searchInput" data-i18n-placeholder="common.search" placeholder="検索...">
+        </div>
+        <div class="notification-bell" id="notifBell" onclick="toggleNotifDropdown()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-dropdown-header">
+              <span data-i18n="notifications.title">通知</span>
+              <button class="btn-ghost" onclick="markAllNotifRead()" data-i18n="notifications.mark_all_read">全て既読</button>
+            </div>
+            <div class="notif-dropdown-list" id="notifList">
+              <div class="notif-empty" data-i18n="notifications.empty">通知はありません</div>
+            </div>
+          </div>
         </div>
         <div class="lang-switcher">
           <button class="lang-btn" data-lang="ja" onclick="setLanguage('ja')">JP</button>
@@ -804,6 +829,233 @@
                 <thead id="customReportHead"><tr></tr></thead>
                 <tbody id="customReportBody">
                   <tr class="empty-row"><td data-i18n="reports.no_data">データがありません</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shipping Page -->
+      <div class="page" id="page-shipping">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="shipStatusFilter" class="select-input">
+              <option value="" data-i18n="orders.all_statuses">全ステータス</option>
+              <option value="SHIPPED">Shipped</option>
+              <option value="IN_TRANSIT">In Transit</option>
+              <option value="DELIVERED">Delivered</option>
+              <option value="RETURNED">Returned</option>
+            </select>
+            <select id="shipCarrierFilter" class="select-input">
+              <option value="">All Carriers</option>
+              <option value="YAMATO">Yamato</option>
+              <option value="SAGAWA">Sagawa</option>
+              <option value="JAPAN_POST">Japan Post</option>
+              <option value="FEDEX">FedEx</option>
+              <option value="DHL">DHL</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" id="exportShippingBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span data-i18n="orders.export_csv">CSV出力</span>
+            </button>
+            <button class="btn-primary" id="createShipmentBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="shipping.create">新規出荷</span>
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="shipping.list">出荷一覧</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th data-i18n="shipping.order_id">注文ID</th>
+                  <th data-i18n="shipping.tracking">追跡番号</th>
+                  <th data-i18n="shipping.carrier">運送会社</th>
+                  <th data-i18n="orders.status">ステータス</th>
+                  <th class="col-hide-mobile" data-i18n="orders.platform">プラットフォーム</th>
+                  <th class="col-hide-mobile" data-i18n="shipping.shipped_at">発送日</th>
+                </tr>
+              </thead>
+              <tbody id="shippingTableBody">
+                <tr class="empty-row"><td colspan="7" data-i18n="shipping.empty">出荷データがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="shippingPagination"></div>
+        </div>
+      </div>
+
+      <!-- Customers Page -->
+      <div class="page" id="page-customers">
+        <div class="page-actions">
+          <div class="filter-group">
+            <div class="header-search" style="flex:1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" id="customerSearchInput" data-i18n-placeholder="common.search" placeholder="検索...">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" id="exportCustomersBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span data-i18n="orders.export_csv">CSV出力</span>
+            </button>
+            <button class="btn-primary" id="addCustomerBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="customers.add">顧客追加</span>
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="customers.list">顧客一覧</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th data-i18n="customers.name">名前</th>
+                  <th data-i18n="customers.email">Email</th>
+                  <th class="col-hide-mobile" data-i18n="customers.phone">電話</th>
+                  <th class="col-hide-mobile" data-i18n="customers.prefecture">都道府県</th>
+                  <th data-i18n="customers.tags">タグ</th>
+                  <th data-i18n="orders.actions">操作</th>
+                </tr>
+              </thead>
+              <tbody id="customersTableBody">
+                <tr class="empty-row"><td colspan="7" data-i18n="customers.empty">顧客データがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="customersPagination"></div>
+        </div>
+      </div>
+
+      <!-- Customer Modal -->
+      <div class="modal-overlay" id="customerModal">
+        <div class="modal">
+          <div class="modal-header">
+            <h3 id="customerModalTitle" data-i18n="customers.add">顧客追加</h3>
+            <button class="modal-close" data-close="customerModal">&#10005;</button>
+          </div>
+          <form id="customerForm">
+            <input type="hidden" name="id" id="customerFormId">
+            <div class="form-group">
+              <label data-i18n="customers.name">名前</label>
+              <input type="text" name="name" id="customerFormName" required maxlength="200">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" id="customerFormEmail">
+              </div>
+              <div class="form-group">
+                <label data-i18n="customers.phone">電話</label>
+                <input type="text" name="phone" id="customerFormPhone">
+              </div>
+            </div>
+            <div class="form-group">
+              <label data-i18n="customers.address">住所</label>
+              <input type="text" name="address_line1" id="customerFormAddr1" placeholder="住所1">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label data-i18n="customers.city">市区町村</label>
+                <input type="text" name="city" id="customerFormCity">
+              </div>
+              <div class="form-group">
+                <label data-i18n="customers.prefecture">都道府県</label>
+                <input type="text" name="prefecture" id="customerFormPrefecture">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label data-i18n="customers.postal_code">郵便番号</label>
+                <input type="text" name="postal_code" id="customerFormPostal">
+              </div>
+              <div class="form-group">
+                <label data-i18n="customers.notes">メモ</label>
+                <input type="text" name="notes" id="customerFormNotes">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-secondary" data-close="customerModal" data-i18n="common.cancel">キャンセル</button>
+              <button type="submit" class="btn-primary" data-i18n="common.save">保存</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Settings Page (admin-only) -->
+      <div class="page" id="page-settings">
+        <div class="settings-tabs">
+          <button class="settings-tab active" data-settings-tab="system" data-i18n="settings.system">システム</button>
+          <button class="settings-tab" data-settings-tab="business" data-i18n="settings.business">ビジネス</button>
+          <button class="settings-tab" data-settings-tab="users" data-i18n="settings.users">ユーザー</button>
+        </div>
+
+        <div class="settings-panel active" id="settings-system">
+          <div class="card">
+            <div class="card-header"><h3 data-i18n="settings.system_info">システム情報</h3></div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead><tr><th data-i18n="settings.table">テーブル</th><th data-i18n="settings.count">件数</th></tr></thead>
+                <tbody id="systemInfoBody">
+                  <tr class="empty-row"><td colspan="2" data-i18n="common.loading">読み込み中...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-panel" id="settings-business">
+          <div class="card">
+            <div class="card-header"><h3 data-i18n="settings.business_config">ビジネス設定</h3></div>
+            <form id="businessConfigForm" style="padding:24px">
+              <div class="form-row">
+                <div class="form-group">
+                  <label data-i18n="settings.low_stock_threshold">低在庫閾値</label>
+                  <input type="number" id="configLowStock" min="1" value="10">
+                </div>
+                <div class="form-group">
+                  <label data-i18n="settings.default_carrier">デフォルト運送会社</label>
+                  <select id="configDefaultCarrier" class="select-input">
+                    <option value="YAMATO">Yamato</option>
+                    <option value="SAGAWA">Sagawa</option>
+                    <option value="JAPAN_POST">Japan Post</option>
+                    <option value="FEDEX">FedEx</option>
+                    <option value="DHL">DHL</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-primary" data-i18n="common.save">保存</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="settings-panel" id="settings-users">
+          <div class="card">
+            <div class="card-header"><h3 data-i18n="settings.user_management">ユーザー管理</h3></div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th data-i18n="distributors.name">名前</th>
+                    <th data-i18n="distributors.role">ロール</th>
+                    <th>2FA</th>
+                    <th data-i18n="orders.actions">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="settingsUsersBody">
+                  <tr class="empty-row"><td colspan="5" data-i18n="common.loading">読み込み中...</td></tr>
                 </tbody>
               </table>
             </div>
