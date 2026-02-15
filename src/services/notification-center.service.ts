@@ -7,7 +7,7 @@ import { decodeCursor, buildCursorWhere, encodeCursor } from '../utils/cursor'
 export class NotificationCenterService {
     constructor(private db: D1Database) {}
 
-    /** Create a notification */
+    /** Create a notification and push to external channels if configured */
     async create(params: {
         distributorId: number
         type: string
@@ -28,8 +28,51 @@ export class NotificationCenterService {
                 params.relatedResourceType ?? null,
                 params.relatedResourceId ?? null,
             ).run()
+
+            // Check external channel preferences
+            await this.pushToExternalChannels(params)
         } catch (e) {
             console.error('[NOTIFICATION_CENTER] Failed to create:', e)
+        }
+    }
+
+    /** Push notification to external channels based on preferences */
+    private async pushToExternalChannels(params: {
+        distributorId: number; type: string; title: string; message: string
+    }): Promise<void> {
+        try {
+            const pref = await this.db.prepare(
+                'SELECT * FROM notification_preferences WHERE distributor_id = ? AND event_type = ? AND enabled = 1'
+            ).bind(params.distributorId, params.type).first<any>()
+
+            if (!pref || pref.channel === 'IN_APP') return
+
+            const channel = pref.channel?.toUpperCase()
+            const webhookUrl = pref.webhook_url
+
+            if ((channel === 'SLACK' || channel === 'LINE' || channel === 'LARK') && webhookUrl) {
+                const { NotificationService } = await import('./notification.service')
+                const notifService = new NotificationService(this.db)
+                await notifService.send({
+                    type: 'INFO',
+                    channel,
+                    message: `${params.title}: ${params.message}`,
+                    webhookUrl,
+                })
+            } else if (channel === 'EMAIL') {
+                // Get distributor email
+                const dist = await this.db.prepare(
+                    'SELECT email FROM distributors WHERE id = ?'
+                ).bind(params.distributorId).first<{ email: string | null }>()
+
+                if (dist?.email) {
+                    const { NotificationService } = await import('./notification.service')
+                    const notifService = new NotificationService(this.db)
+                    await notifService.sendEmail(dist.email, params.title, params.message)
+                }
+            }
+        } catch (e) {
+            console.error('[NOTIFICATION_CENTER] External push failed:', e)
         }
     }
 

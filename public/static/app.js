@@ -27,6 +27,13 @@ const pageTitles = {
     currency: { title: 'currency.title', sub: 'currency.subtitle' },
     'sku-mappings': { title: 'skuMappings.title', sub: 'skuMappings.subtitle' },
     coupons: { title: 'coupons.title', sub: 'coupons.subtitle' },
+    'shipping-fees': { title: 'shippingFees.title', sub: 'shippingFees.subtitle' },
+    stocktakes: { title: 'stocktakes.title', sub: 'stocktakes.subtitle' },
+    'customer-segments': { title: 'segments.title', sub: 'segments.subtitle' },
+    promotions: { title: 'promotions.title', sub: 'promotions.subtitle' },
+    approvals: { title: 'approvals.title', sub: 'approvals.subtitle' },
+    webhooks: { title: 'webhooks.title', sub: 'webhooks.subtitle' },
+    datascreen: { title: 'datascreen.title', sub: 'datascreen.subtitle' },
 };
 
 function navigateTo(pageName) {
@@ -209,6 +216,13 @@ async function loadPageData(page) {
         case 'currency': return loadCurrency();
         case 'sku-mappings': return loadSkuMappings();
         case 'coupons': return loadCoupons();
+        case 'shipping-fees': return loadShippingFees();
+        case 'stocktakes': return loadStocktakes();
+        case 'customer-segments': return loadCustomerSegments();
+        case 'promotions': return loadPromotions();
+        case 'approvals': return loadApprovals();
+        case 'webhooks': return loadWebhooks();
+        case 'datascreen': return loadDataScreen();
     }
 }
 
@@ -2769,3 +2783,383 @@ async function exportCSV(url, filename) {
         alert(t('common.error') + ': ' + e.message);
     }
 }
+
+// ===== Sprint 14: Shipping Fees =====
+async function loadShippingFees() {
+    const data = await apiFetch('/api/v1/shipping-fees/templates');
+    const tbody = document.getElementById('shippingFeeTemplatesBody');
+    if (!data?.templates?.length) { tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('common.no_data')}</td></tr>`; return; }
+    tbody.innerHTML = data.templates.map(t => `<tr>
+        <td>${t.id}</td><td>${escapeHtml(t.name)}</td><td>${t.carrier}</td><td>${t.region}</td>
+        <td>¥${(t.base_fee||0).toLocaleString()}</td><td>¥${(t.per_kg_fee||0).toLocaleString()}/kg</td>
+        <td>${t.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-muted">Inactive</span>'}</td>
+    </tr>`).join('');
+}
+
+async function saveShippingFeeTemplate(e) {
+    e.preventDefault();
+    const payload = {
+        name: document.getElementById('sftName').value,
+        carrier: document.getElementById('sftCarrier').value,
+        region: document.getElementById('sftRegion').value,
+        base_fee: Number(document.getElementById('sftBaseFee').value),
+        per_kg_fee: Number(document.getElementById('sftPerKg').value),
+    };
+    const data = await apiFetch('/api/v1/shipping-fees/templates', { method: 'POST', body: JSON.stringify(payload) });
+    if (data?.error) { alert(data.error); return; }
+    closeModal('shippingFeeTemplateModal');
+    loadShippingFees();
+}
+
+async function reconcileShippingFees() {
+    const checkboxes = document.querySelectorAll('#shippingFeeRecordsBody input[type="checkbox"]:checked');
+    const ids = Array.from(checkboxes).map(cb => Number(cb.value));
+    if (!ids.length) { alert('Select items to reconcile'); return; }
+    await apiFetch('/api/v1/shipping-fees/reconcile', { method: 'POST', body: JSON.stringify({ ids }) });
+    loadShippingFees();
+}
+
+// ===== Sprint 14: Stocktakes =====
+async function loadStocktakes() {
+    const status = document.getElementById('stocktakeStatusFilter')?.value || '';
+    const url = status ? `/api/v1/stocktakes?status=${status}` : '/api/v1/stocktakes';
+    const data = await apiFetch(url);
+    const tbody = document.getElementById('stocktakesBody');
+    if (!data?.stocktakes?.length) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('common.no_data')}</td></tr>`; return; }
+    tbody.innerHTML = data.stocktakes.map(s => `<tr>
+        <td>${s.id}</td><td>${escapeHtml(s.code)}</td>
+        <td>${statusBadge(s.status)}</td>
+        <td>${s.started_at ? formatDate(s.started_at) : '-'}</td>
+        <td>${s.completed_at ? formatDate(s.completed_at) : '-'}</td>
+        <td>
+            ${s.status === 'DRAFT' ? `<button class="btn-sm" onclick="startStocktake(${s.id})">開始</button>` : ''}
+            ${s.status === 'IN_PROGRESS' ? `<button class="btn-sm" onclick="completeStocktake(${s.id})">完了</button>` : ''}
+            ${s.status !== 'COMPLETED' && s.status !== 'CANCELLED' ? `<button class="btn-sm btn-danger" onclick="cancelStocktake(${s.id})">取消</button>` : ''}
+        </td>
+    </tr>`).join('');
+}
+
+async function createStocktake() {
+    const data = await apiFetch('/api/v1/stocktakes', { method: 'POST', body: JSON.stringify({}) });
+    if (data?.error) { alert(data.error); return; }
+    loadStocktakes();
+}
+async function startStocktake(id) { await apiFetch(`/api/v1/stocktakes/${id}/start`, { method: 'POST' }); loadStocktakes(); }
+async function completeStocktake(id) { if (!confirm('Complete this stocktake? Inventory will be adjusted.')) return; await apiFetch(`/api/v1/stocktakes/${id}/complete`, { method: 'POST' }); loadStocktakes(); }
+async function cancelStocktake(id) { await apiFetch(`/api/v1/stocktakes/${id}/cancel`, { method: 'POST' }); loadStocktakes(); }
+
+// ===== Sprint 14: Customer Segments =====
+async function loadCustomerSegments() {
+    loadRFMDistribution();
+    loadSegmentsList();
+}
+
+async function loadRFMDistribution() {
+    const data = await apiFetch('/api/v1/customer-segments/rfm/distribution');
+    if (!data?.segments) return;
+    const chart = getChart('rfmDistributionChart');
+    if (!chart) return;
+    const s = data.segments;
+    chart.setOption({
+        tooltip: { trigger: 'item' },
+        series: [{
+            type: 'pie', radius: ['40%', '70%'],
+            data: [
+                { value: s.champions, name: 'Champions', itemStyle: { color: '#10b981' } },
+                { value: s.loyal, name: 'Loyal', itemStyle: { color: '#3b82f6' } },
+                { value: s.potential, name: 'Potential', itemStyle: { color: '#8b5cf6' } },
+                { value: s.new_customers, name: 'New', itemStyle: { color: '#f59e0b' } },
+                { value: s.at_risk, name: 'At Risk', itemStyle: { color: '#ef4444' } },
+                { value: s.lost, name: 'Lost', itemStyle: { color: '#6b7280' } },
+            ].filter(d => d.value > 0),
+            label: { show: true, formatter: '{b}: {c}' },
+        }],
+    });
+}
+
+async function loadSegmentsList() {
+    const data = await apiFetch('/api/v1/customer-segments/segments');
+    const tbody = document.getElementById('segmentsBody');
+    if (!data?.segments?.length) { tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${t('common.no_data')}</td></tr>`; return; }
+    tbody.innerHTML = data.segments.map(s => {
+        const rules = JSON.parse(s.rules || '{}');
+        const ruleStr = Object.entries(rules).map(([k,v]) => `${k}:${v}`).join(', ');
+        return `<tr>
+            <td>${s.id}</td><td><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${s.color};margin-right:6px"></span>${escapeHtml(s.name)}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${escapeHtml(ruleStr) || '-'}</td>
+            <td>${s.customer_count}</td>
+            <td><button class="btn-sm btn-danger" onclick="deleteSegment(${s.id})">削除</button></td>
+        </tr>`;
+    }).join('');
+}
+
+async function saveSegment(e) {
+    e.preventDefault();
+    const id = document.getElementById('segmentFormId').value;
+    const payload = {
+        name: document.getElementById('segmentName').value,
+        rules: {
+            rfm_min: document.getElementById('segmentRfmMin').value || undefined,
+            rfm_max: document.getElementById('segmentRfmMax').value || undefined,
+            min_orders: Number(document.getElementById('segmentMinOrders').value) || undefined,
+            min_spent: Number(document.getElementById('segmentMinSpent').value) || undefined,
+        },
+        color: document.getElementById('segmentColor').value,
+    };
+    const url = id ? `/api/v1/customer-segments/segments/${id}` : '/api/v1/customer-segments/segments';
+    const method = id ? 'PATCH' : 'POST';
+    const data = await apiFetch(url, { method, body: JSON.stringify(payload) });
+    if (data?.error) { alert(data.error); return; }
+    closeModal('segmentModal');
+    loadCustomerSegments();
+}
+
+async function deleteSegment(id) {
+    if (!confirm('Delete this segment?')) return;
+    await apiFetch(`/api/v1/customer-segments/segments/${id}`, { method: 'DELETE' });
+    loadSegmentsList();
+}
+
+// ===== Sprint 14: Promotions =====
+async function loadPromotions() {
+    const status = document.getElementById('promotionStatusFilter')?.value || '';
+    const url = status ? `/api/v1/promotions?status=${status}` : '/api/v1/promotions';
+    const data = await apiFetch(url);
+    const tbody = document.getElementById('promotionsBody');
+    if (!data?.promotions?.length) { tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('common.no_data')}</td></tr>`; return; }
+    tbody.innerHTML = data.promotions.map(p => {
+        const now = new Date().toISOString();
+        const isActive = p.is_active && p.start_date <= now && p.end_date >= now;
+        return `<tr>
+            <td>${p.id}</td><td>${escapeHtml(p.name)}</td><td>${p.type}</td>
+            <td>${p.discount_value}${p.type === 'PERCENTAGE' || p.type === 'THRESHOLD' ? '%' : '¥'}</td>
+            <td style="font-size:12px">${formatDate(p.start_date)} ~ ${formatDate(p.end_date)}</td>
+            <td>${p.current_uses}${p.max_uses ? '/' + p.max_uses : ''}</td>
+            <td>${isActive ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-muted">Inactive</span>'}
+                <button class="btn-sm btn-danger admin-only" style="display:none" onclick="deletePromotion(${p.id})">削除</button></td>
+        </tr>`;
+    }).join('');
+    document.querySelectorAll('#promotionsBody .admin-only').forEach(el => { if (currentRole === 'admin') el.style.display = ''; });
+}
+
+async function savePromotion(e) {
+    e.preventDefault();
+    const id = document.getElementById('promotionFormId').value;
+    const payload = {
+        name: document.getElementById('promotionName').value,
+        type: document.getElementById('promotionType').value,
+        discount_value: Number(document.getElementById('promotionValue').value),
+        start_date: new Date(document.getElementById('promotionStart').value).toISOString(),
+        end_date: new Date(document.getElementById('promotionEnd').value).toISOString(),
+        min_order_amount: Number(document.getElementById('promotionMinAmount').value) || 0,
+    };
+    const url = id ? `/api/v1/promotions/${id}` : '/api/v1/promotions';
+    const method = id ? 'PATCH' : 'POST';
+    const data = await apiFetch(url, { method, body: JSON.stringify(payload) });
+    if (data?.error) { alert(data.error); return; }
+    closeModal('promotionModal');
+    loadPromotions();
+}
+
+async function deletePromotion(id) {
+    if (!confirm('Delete this promotion?')) return;
+    const data = await apiFetch(`/api/v1/promotions/${id}`, { method: 'DELETE' });
+    if (data?.error) { alert(data.error); return; }
+    loadPromotions();
+}
+
+// ===== Sprint 14: Approvals =====
+async function loadApprovals() {
+    loadApprovalRequests();
+    loadApprovalWorkflows();
+}
+
+async function loadApprovalRequests() {
+    const data = await apiFetch('/api/v1/approvals/requests');
+    const tbody = document.getElementById('approvalRequestsBody');
+    if (!data?.requests?.length) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('common.no_data')}</td></tr>`; return; }
+    tbody.innerHTML = data.requests.map(r => `<tr>
+        <td>${r.id}</td><td>${r.resource_type} #${r.resource_id}</td>
+        <td>${escapeHtml(r.requester_name || r.requested_by)}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${formatDate(r.created_at)}</td>
+        <td>${r.status === 'PENDING' ? `
+            <button class="btn-sm admin-only" style="display:none" onclick="approveRequest(${r.id})">承認</button>
+            <button class="btn-sm btn-danger admin-only" style="display:none" onclick="rejectRequest(${r.id})">却下</button>
+        ` : (r.reason || '-')}</td>
+    </tr>`).join('');
+    document.querySelectorAll('#approvalRequestsBody .admin-only').forEach(el => { if (currentRole === 'admin') el.style.display = ''; });
+}
+
+async function loadApprovalWorkflows() {
+    const data = await apiFetch('/api/v1/approvals/workflows');
+    const tbody = document.getElementById('approvalWorkflowsBody');
+    if (!data?.workflows?.length) { tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${t('common.no_data')}</td></tr>`; return; }
+    tbody.innerHTML = data.workflows.map(w => {
+        const cond = JSON.parse(w.conditions || '{}');
+        return `<tr>
+            <td>${w.id}</td><td>${escapeHtml(w.name)}</td><td>${w.resource_type}</td>
+            <td style="font-size:12px">${cond.min_amount ? '≥¥'+cond.min_amount.toLocaleString() : 'All'}</td>
+            <td><button class="btn-sm btn-danger" onclick="deleteWorkflow(${w.id})">削除</button></td>
+        </tr>`;
+    }).join('');
+}
+
+async function approveRequest(id) { await apiFetch(`/api/v1/approvals/requests/${id}/approve`, { method: 'POST', body: '{}' }); loadApprovalRequests(); }
+async function rejectRequest(id) {
+    const reason = prompt('Rejection reason:');
+    if (!reason) return;
+    await apiFetch(`/api/v1/approvals/requests/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+    loadApprovalRequests();
+}
+
+async function saveWorkflow(e) {
+    e.preventDefault();
+    const payload = {
+        name: document.getElementById('wfName').value,
+        resource_type: document.getElementById('wfResourceType').value,
+        conditions: { min_amount: Number(document.getElementById('wfMinAmount').value) || undefined },
+        approver_ids: [1], // Default to admin (id=1)
+    };
+    const data = await apiFetch('/api/v1/approvals/workflows', { method: 'POST', body: JSON.stringify(payload) });
+    if (data?.error) { alert(data.error); return; }
+    closeModal('workflowModal');
+    loadApprovalWorkflows();
+}
+
+async function deleteWorkflow(id) {
+    if (!confirm('Delete this workflow?')) return;
+    await apiFetch(`/api/v1/approvals/workflows/${id}`, { method: 'DELETE' });
+    loadApprovalWorkflows();
+}
+
+// ===== Sprint 14: Webhooks =====
+async function loadWebhooks() {
+    const data = await apiFetch('/api/v1/webhooks');
+    const tbody = document.getElementById('webhooksBody');
+    if (!data?.endpoints?.length) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('common.no_data')}</td></tr>`; return; }
+    tbody.innerHTML = data.endpoints.map(ep => {
+        const events = JSON.parse(ep.events || '[]');
+        return `<tr>
+            <td>${ep.id}</td><td>${escapeHtml(ep.name)}</td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(ep.url)}</td>
+            <td style="font-size:11px">${events.join(', ')}</td>
+            <td>${ep.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-muted">Inactive</span>'}
+                ${ep.failure_count > 0 ? `<span class="badge badge-danger">${ep.failure_count} fails</span>` : ''}</td>
+            <td>
+                <button class="btn-sm" onclick="testWebhook(${ep.id})">Test</button>
+                <button class="btn-sm btn-danger" onclick="deleteWebhook(${ep.id})">削除</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function saveWebhook(e) {
+    e.preventDefault();
+    const id = document.getElementById('webhookFormId').value;
+    const events = Array.from(document.querySelectorAll('#webhookEvents input:checked')).map(cb => cb.value);
+    const payload = {
+        name: document.getElementById('webhookName').value,
+        url: document.getElementById('webhookUrl').value,
+        secret: document.getElementById('webhookSecret').value || undefined,
+        events,
+    };
+    const url = id ? `/api/v1/webhooks/${id}` : '/api/v1/webhooks';
+    const method = id ? 'PATCH' : 'POST';
+    const data = await apiFetch(url, { method, body: JSON.stringify(payload) });
+    if (data?.error) { alert(data.error); return; }
+    closeModal('webhookModal');
+    loadWebhooks();
+}
+
+async function testWebhook(id) {
+    const data = await apiFetch(`/api/v1/webhooks/${id}/test`, { method: 'POST' });
+    alert(data?.success ? 'Webhook test sent!' : 'Webhook test failed: ' + (data?.error || 'unknown'));
+}
+
+async function deleteWebhook(id) {
+    if (!confirm('Delete this webhook?')) return;
+    await apiFetch(`/api/v1/webhooks/${id}`, { method: 'DELETE' });
+    loadWebhooks();
+}
+
+// ===== Sprint 14: Data Screen =====
+let dsRefreshInterval = null;
+
+async function loadDataScreen() {
+    stopAutoRefresh();
+    const stats = await apiFetch('/api/v1/dashboard/stats');
+    if (stats?.overview) {
+        document.getElementById('dsTodayOrders').textContent = (stats.overview.totalOrders || 0).toLocaleString();
+        document.getElementById('dsTodayRevenue').textContent = '¥' + (stats.overview.totalRevenue || 0).toLocaleString();
+        document.getElementById('dsTodayShipped').textContent = (stats.overview.processingOrders || 0).toLocaleString();
+        document.getElementById('dsTodayReturns').textContent = (stats.overview.pendingOrders || 0).toLocaleString();
+    }
+
+    // Revenue trend chart
+    const trendData = await apiFetch('/api/v1/dashboard/revenue-trend?period=30d');
+    const dsRevChart = getChart('dsRevenueChart');
+    if (dsRevChart && trendData?.data) {
+        dsRevChart.setOption({
+            tooltip: { trigger: 'axis' },
+            xAxis: { type: 'category', data: trendData.data.map(d => d.date), axisLabel: { color: '#94a3b8' } },
+            yAxis: { type: 'value', axisLabel: { color: '#94a3b8' } },
+            series: [{ data: trendData.data.map(d => d.revenue), type: 'line', smooth: true, areaStyle: { color: 'rgba(139,92,246,0.2)' }, lineStyle: { color: '#8b5cf6' }, itemStyle: { color: '#8b5cf6' } }],
+        });
+    }
+
+    // Platform donut
+    const platData = await apiFetch('/api/v1/dashboard/orders-by-platform?period=30d');
+    const dsPlatChart = getChart('dsPlatformChart');
+    if (dsPlatChart && platData?.platforms) {
+        dsPlatChart.setOption({
+            tooltip: { trigger: 'item' },
+            series: [{
+                type: 'pie', radius: ['40%','70%'],
+                data: platData.platforms.map(p => ({ value: p.orderCount, name: p.platform })),
+                label: { color: '#e2e8f0' },
+            }],
+        });
+    }
+
+    // Ticker - latest orders
+    const ordersData = await apiFetch('/api/v1/orders?limit=10');
+    const ticker = document.getElementById('dsTickerContent');
+    if (ticker && ordersData?.orders) {
+        ticker.innerHTML = ordersData.orders.map(o =>
+            `<div class="ds-ticker-item">#${o.id} ${o.platform} ¥${(o.total_amount||0).toLocaleString()} <span class="badge badge-sm">${o.status}</span></div>`
+        ).join('');
+    }
+
+    startAutoRefresh();
+}
+
+function startAutoRefresh() { dsRefreshInterval = setInterval(loadDataScreen, 30000); }
+function stopAutoRefresh() { if (dsRefreshInterval) { clearInterval(dsRefreshInterval); dsRefreshInterval = null; } }
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+// ===== Sprint 14: Dashboard Customization =====
+async function loadDashboardLayout() {
+    const data = await apiFetch('/api/v1/dashboard/layout');
+    return data?.layout || null;
+}
+
+async function saveDashboardLayout(layout) {
+    await apiFetch('/api/v1/dashboard/layout', { method: 'PUT', body: JSON.stringify({ layout }) });
+}
+
+// ===== Sprint 14: Offline detection =====
+window.addEventListener('online', () => { const b = document.getElementById('offlineBanner'); if (b) b.style.display = 'none'; });
+window.addEventListener('offline', () => {
+    let b = document.getElementById('offlineBanner');
+    if (!b) { b = document.createElement('div'); b.id = 'offlineBanner'; b.className = 'offline-banner';
+        b.textContent = 'Offline - cached data shown'; document.body.prepend(b); }
+    b.style.display = 'block';
+});

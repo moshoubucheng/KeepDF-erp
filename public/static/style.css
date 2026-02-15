@@ -1629,3 +1629,62 @@ body.role-admin .distributor-view { display: none !important; }
         display: none;
     }
 }
+
+/* ===== Sprint 14: Data Screen ===== */
+.datascreen-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.datascreen-card {
+    background: rgba(15, 15, 35, 0.9);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
+}
+
+.ds-big-number { text-align: center; }
+.ds-big-number .ds-label { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+.ds-big-number .ds-value { font-size: 36px; font-weight: 700; color: var(--primary); text-shadow: 0 0 20px rgba(139, 92, 246, 0.5); }
+
+.ds-chart-wide { grid-column: span 3; }
+.ds-chart { grid-column: span 1; }
+.ds-ticker { grid-column: span 4; max-height: 150px; overflow: hidden; }
+.ds-ticker-content { display: flex; gap: 16px; overflow-x: auto; padding: 8px 0; }
+.ds-ticker-item {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 8px;
+    font-size: 13px;
+    white-space: nowrap;
+    animation: tickerSlide 20s linear infinite;
+}
+
+@keyframes tickerSlide {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+@media (max-width: 768px) {
+    .datascreen-grid { grid-template-columns: 1fr 1fr; }
+    .ds-chart-wide { grid-column: span 2; }
+    .ds-chart { grid-column: span 2; }
+    .ds-ticker { grid-column: span 2; }
+    .ds-big-number .ds-value { font-size: 24px; }
+}
+
+/* Offline banner */
+.offline-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #f59e0b; color: #000; text-align: center;
+    padding: 8px; font-size: 13px; font-weight: 600;
+}
+
+/* Badge variants */
+.badge-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+.badge-sm { font-size: 10px; padding: 1px 6px; }
+.btn-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+.btn-danger:hover { background: rgba(239, 68, 68, 0.3); }

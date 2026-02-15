@@ -71,4 +71,20 @@ notifications.put('/preferences', async (c) => {
     return c.json({ success: true })
 })
 
+/** POST /notifications/test - Send test notification */
+notifications.post('/test', async (c) => {
+    const distributorId = c.get('distributorId')
+    const body = await c.req.json<{ channel?: string; webhook_url?: string }>().catch(() => ({}))
+
+    const service = new NotificationCenterService(c.env.DB)
+    await service.create({
+        distributorId,
+        type: 'SYSTEM_ALERT',
+        title: 'テスト通知',
+        message: 'これはテスト通知です。チャンネル設定が正常に動作しています。',
+    })
+
+    return c.json({ success: true, message: 'Test notification sent' })
+})
+
 export { notifications }

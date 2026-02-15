@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
 import { CacheService } from '../services/cache.service'
+import { DashboardLayoutService } from '../services/dashboard-layout.service'
 import { adminOnly } from '../middleware/admin'
 
 interface OrderStats {
@@ -303,6 +304,24 @@ dashboard.get('/inventory-turnover', adminOnly, async (c) => {
             turnoverRate: r.turnover_rate,
         })),
     })
+})
+
+/** GET /dashboard/layout - Get dashboard layout */
+dashboard.get('/layout', async (c) => {
+    const service = new DashboardLayoutService(c.env.DB)
+    const layout = await service.getLayout(c.get('distributorId'))
+    return c.json({ layout })
+})
+
+/** PUT /dashboard/layout - Save dashboard layout */
+dashboard.put('/layout', async (c) => {
+    const body = await c.req.json<{ layout: any[] }>()
+    if (!body.layout || !Array.isArray(body.layout)) {
+        return c.json({ error: 'layout array is required' }, 400)
+    }
+    const service = new DashboardLayoutService(c.env.DB)
+    const layout = await service.saveLayout(c.get('distributorId'), body.layout)
+    return c.json({ layout })
 })
 
 export { dashboard }

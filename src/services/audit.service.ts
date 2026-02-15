@@ -62,6 +62,12 @@ export type AuditAction =
     | 'BATCH_ORDER_STATUS'
     | 'BATCH_PRODUCT_UPDATE'
     | 'BATCH_STOCK_ADJUST'
+    | 'CREATE_SHIPPING_TEMPLATE'
+    | 'UPDATE_SHIPPING_TEMPLATE'
+    | 'DELETE_SHIPPING_TEMPLATE'
+    | 'CREATE_STOCKTAKE'
+    | 'UPDATE_STOCKTAKE'
+    | 'RESTORE_DATA'
 
 export type ResourceType =
     | 'order'
@@ -85,6 +91,12 @@ export type ResourceType =
     | 'automation_rule'
     | 'automation_log'
     | 'batch_operation'
+    | 'shipping_fee'
+    | 'stocktake'
+    | 'approval'
+    | 'webhook'
+    | 'promotion'
+    | 'customer_segment'
 
 export interface AuditLogParams {
     distributorId?: number | null
@@ -188,6 +200,40 @@ export class AuditService {
 
         const { results } = await this.db.prepare(sql).bind(...params).all()
         return { logs: results, total }
+    }
+
+    /** Log with before/after snapshot for data recovery */
+    async logWithSnapshot(params: AuditLogParams, beforeData: any, afterData: any): Promise<void> {
+        try {
+            const { meta } = await this.db.prepare(
+                'INSERT INTO audit_logs (distributor_id, action, resource_type, resource_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?)'
+            ).bind(
+                params.distributorId ?? null,
+                params.action,
+                params.resourceType,
+                params.resourceId ?? null,
+                params.details ?? null,
+                params.ipAddress ?? null,
+            ).run()
+
+            const auditLogId = meta.last_row_id
+            await this.db.prepare(
+                'INSERT INTO audit_snapshots (audit_log_id, before_data, after_data) VALUES (?, ?, ?)'
+            ).bind(
+                auditLogId,
+                beforeData ? JSON.stringify(beforeData) : null,
+                afterData ? JSON.stringify(afterData) : null,
+            ).run()
+        } catch (e) {
+            console.error('[AUDIT] Failed to log with snapshot:', e)
+        }
+    }
+
+    /** Get snapshot for an audit log */
+    async getSnapshot(auditLogId: number): Promise<any | null> {
+        return this.db.prepare(
+            'SELECT * FROM audit_snapshots WHERE audit_log_id = ?'
+        ).bind(auditLogId).first()
     }
 
     /** Export audit logs as CSV */

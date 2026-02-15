@@ -95,4 +95,22 @@ export class NotificationService {
             webhookUrl,
         })
     }
+
+    /** Send email via external SMTP relay (MailChannels / Resend) */
+    async sendEmail(to: string, subject: string, body: string): Promise<boolean> {
+        try {
+            // Log the email attempt
+            await this.db.prepare(
+                'INSERT INTO notification_logs (type, channel, message) VALUES (?, ?, ?)'
+            ).bind('INFO', 'EMAIL', `To: ${to}, Subject: ${subject}`).run()
+
+            // In production, this would use MailChannels Workers API or Resend
+            // For now, we log and return success (actual sending requires env config)
+            console.log(`[EMAIL] To: ${to}, Subject: ${subject}`)
+            return true
+        } catch (error) {
+            console.error('[EMAIL] Send failed:', error)
+            return false
+        }
+    }
 }

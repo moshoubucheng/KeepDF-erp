@@ -33,6 +33,13 @@ import { batch } from './controllers/batch.controller'
 import { currency } from './controllers/currency.controller'
 import { skuMappings } from './controllers/sku-mapping.controller'
 import { coupons } from './controllers/coupons.controller'
+import { shippingFees } from './controllers/shipping-fee.controller'
+import { stocktakes } from './controllers/stocktake.controller'
+import { customerSegments } from './controllers/customer-segment.controller'
+import { promotions } from './controllers/promotion.controller'
+import { approvals } from './controllers/approval.controller'
+import { webhooks } from './controllers/webhook.controller'
+import { auditRecovery } from './controllers/audit-recovery.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
@@ -99,6 +106,14 @@ app.route('/api/v1/batch', batch)
 app.route('/api/v1/currency', currency)
 app.route('/api/v1/sku-mappings', skuMappings)
 app.route('/api/v1/coupons', coupons)
+app.route('/api/v1/shipping-fees', shippingFees)
+app.route('/api/v1/stocktakes', stocktakes)
+app.route('/api/v1/customer-segments', customerSegments)
+app.route('/api/v1/promotions', promotions)
+app.route('/api/v1/approvals', approvals)
+app.route('/api/v1/webhooks', webhooks)
+// auditRecovery routes also mounted under /audit-logs (unique sub-paths)
+app.route('/api/v1/audit-recovery', auditRecovery)
 
 // ===== Error Handler =====
 app.onError((err, c) => {
