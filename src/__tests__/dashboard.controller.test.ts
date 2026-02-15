@@ -40,37 +40,33 @@ describe('Dashboard Controller', () => {
     })
 
     describe('GET /api/v1/dashboard/stats', () => {
-        it('返回分销商 1 的统计数据', async () => {
+        it('管理员看到全局统计数据', async () => {
             const res = await SELF.fetch('http://localhost/api/v1/dashboard/stats', {
                 headers: authHeaders(TOKEN),
             })
             expect(res.status).toBe(200)
             const data = await res.json() as any
-            expect(data.overview.totalOrders).toBe(2)
+            expect(data.role).toBe('admin')
+            expect(data.overview.totalOrders).toBe(5)
             expect(data.overview.totalRevenue).toBe(4800)
-            expect(data.wallet.balance).toBe(500000)
+            expect(data.overview.totalProducts).toBe(6)
+            expect(data.overview.totalDistributors).toBe(3)
+            expect(data.overview.lowStockCount).toBe(0)
+            expect(data.wallet).toBeUndefined()
         })
 
-        it('分销商 2 看到自己的数据', async () => {
+        it('分销商 2 看到个人数据', async () => {
             const res = await SELF.fetch('http://localhost/api/v1/dashboard/stats', {
                 headers: authHeaders(TOKEN_2),
             })
             expect(res.status).toBe(200)
             const data = await res.json() as any
+            expect(data.role).toBe('distributor')
             expect(data.overview.totalOrders).toBe(2)
             expect(data.overview.totalRevenue).toBe(0)
+            expect(data.overview.totalCommission).toBe(0)
             expect(data.wallet.balance).toBe(300000)
             expect(data.wallet.frozen_balance).toBe(50000)
-        })
-
-        it('商品总数和低库存统计', async () => {
-            const res = await SELF.fetch('http://localhost/api/v1/dashboard/stats', {
-                headers: authHeaders(TOKEN),
-            })
-            expect(res.status).toBe(200)
-            const data = await res.json() as any
-            expect(data.overview.totalProducts).toBe(6)
-            expect(data.overview.lowStockCount).toBe(0)
         })
 
         it('未认证返回 401', async () => {
@@ -80,18 +76,27 @@ describe('Dashboard Controller', () => {
     })
 
     describe('GET /api/v1/dashboard/orders-by-platform', () => {
-        it('按平台统计订单', async () => {
+        it('管理员看到全局平台统计', async () => {
             const res = await SELF.fetch('http://localhost/api/v1/dashboard/orders-by-platform?period=all', {
                 headers: authHeaders(TOKEN),
             })
             expect(res.status).toBe(200)
             const data = await res.json() as any
             expect(data.platforms).toBeDefined()
-            expect(data.total.orders).toBe(2)
+            expect(data.total.orders).toBe(5)
 
             const totalPct = data.platforms.reduce((s: number, p: any) => s + p.percentage, 0)
             expect(totalPct).toBeGreaterThanOrEqual(99)
             expect(totalPct).toBeLessThanOrEqual(101)
+        })
+
+        it('分销商看到个人平台统计', async () => {
+            const res = await SELF.fetch('http://localhost/api/v1/dashboard/orders-by-platform?period=all', {
+                headers: authHeaders(TOKEN_2),
+            })
+            expect(res.status).toBe(200)
+            const data = await res.json() as any
+            expect(data.total.orders).toBe(2)
         })
 
         it('未认证返回 401', async () => {

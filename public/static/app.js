@@ -222,12 +222,29 @@ async function loadDashboardStats() {
     ]);
 
     if (statsData?.overview) {
-        document.getElementById('stat-revenue').textContent =
-            `\u00a5${(statsData.overview.totalRevenue || 0).toLocaleString()}`;
-        document.getElementById('stat-orders').textContent =
-            statsData.overview.totalOrders || 0;
-        document.getElementById('stat-products').textContent =
-            statsData.overview.totalProducts || 0;
+        if (statsData.role === 'admin') {
+            // Admin: global stats
+            document.getElementById('stat-revenue').textContent =
+                `\u00a5${(statsData.overview.totalRevenue || 0).toLocaleString()}`;
+            document.getElementById('stat-orders').textContent =
+                statsData.overview.totalOrders || 0;
+            document.getElementById('stat-products').textContent =
+                statsData.overview.totalProducts || 0;
+            document.getElementById('stat-distributors').textContent =
+                statsData.overview.totalDistributors || 0;
+        } else {
+            // Distributor: personal stats
+            document.getElementById('stat-my-revenue').textContent =
+                `\u00a5${(statsData.overview.totalRevenue || 0).toLocaleString()}`;
+            document.getElementById('stat-my-orders').textContent =
+                statsData.overview.totalOrders || 0;
+            document.getElementById('stat-my-commission').textContent =
+                `\u00a5${(statsData.overview.totalCommission || 0).toLocaleString()}`;
+            if (statsData.wallet) {
+                document.getElementById('stat-my-balance').textContent =
+                    `\u00a5${(statsData.wallet.balance || 0).toLocaleString()}`;
+            }
+        }
     }
 
     if (ordersData) {
@@ -1825,7 +1842,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data?.distributor) {
             if (data.distributor.role === 'admin') {
                 window._isAdmin = true;
+                document.body.classList.add('role-admin');
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
+            } else {
+                document.body.classList.add('role-distributor');
             }
             updateNavGroupVisibility();
             document.getElementById('userDisplayName').textContent = data.distributor.name || t('common.admin');

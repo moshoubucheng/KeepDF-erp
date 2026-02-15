@@ -60,15 +60,15 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             <span data-i18n="nav.inventory">在庫管理</span>
           </a>
-          <a href="#" class="nav-item admin-only" data-page="procurement" style="display:none">
+          <a href="#" class="nav-item" data-page="procurement">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             <span data-i18n="nav.procurement">仕入管理</span>
           </a>
-          <a href="#" class="nav-item" data-page="forecasting">
+          <a href="#" class="nav-item admin-only" data-page="forecasting" style="display:none">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             <span data-i18n="nav.forecasting">在庫予測</span>
           </a>
-          <a href="#" class="nav-item" data-page="pricing">
+          <a href="#" class="nav-item admin-only" data-page="pricing" style="display:none">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             <span data-i18n="nav.pricing">価格管理</span>
           </a>
@@ -98,7 +98,7 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             <span data-i18n="nav.invoices">請求書</span>
           </a>
-          <a href="#" class="nav-item" data-page="financial-reports">
+          <a href="#" class="nav-item admin-only" data-page="financial-reports" style="display:none">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 17V11"/><path d="M12 17V7"/><path d="M16 17V13"/></svg>
             <span data-i18n="nav.financial_reports">財務レポート</span>
           </a>
@@ -112,7 +112,7 @@
           <span data-i18n="nav.group_crm">顧客・通信</span>
         </div>
         <div class="nav-group-items">
-          <a href="#" class="nav-item" data-page="customers">
+          <a href="#" class="nav-item admin-only" data-page="customers" style="display:none">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             <span data-i18n="nav.customers">顧客管理</span>
           </a>
@@ -130,7 +130,7 @@
           <span data-i18n="nav.group_system">システム</span>
         </div>
         <div class="nav-group-items">
-          <a href="#" class="nav-item" data-page="reports">
+          <a href="#" class="nav-item admin-only" data-page="reports" style="display:none">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 17V11"/><path d="M12 17V7"/><path d="M16 17V13"/></svg>
             <span data-i18n="nav.reports">レポート</span>
           </a>
@@ -214,22 +214,21 @@
     <div class="page-container" id="pageContainer">
       <!-- Dashboard Page -->
       <div class="page active" id="page-dashboard">
-        <div class="stats-grid">
+        <!-- Admin Dashboard Stats -->
+        <div class="stats-grid admin-view" style="display:none">
           <div class="stat-card" data-accent="purple">
             <div class="stat-icon">&#128180;</div>
             <div class="stat-info">
-              <span class="stat-label" data-i18n="dashboard.revenue">今月売上</span>
+              <span class="stat-label" data-i18n="dashboard.total_revenue">総売上</span>
               <span class="stat-value" id="stat-revenue">&yen;0</span>
             </div>
-            <div class="stat-trend up">+12.5%</div>
           </div>
           <div class="stat-card" data-accent="blue">
             <div class="stat-icon">&#128230;</div>
             <div class="stat-info">
-              <span class="stat-label" data-i18n="dashboard.active_orders">アクティブ注文</span>
+              <span class="stat-label" data-i18n="dashboard.total_orders">総注文数</span>
               <span class="stat-value" id="stat-orders">0</span>
             </div>
-            <div class="stat-trend up">+8.2%</div>
           </div>
           <div class="stat-card" data-accent="emerald">
             <div class="stat-icon">&#127978;</div>
@@ -237,15 +236,44 @@
               <span class="stat-label" data-i18n="dashboard.products">商品数</span>
               <span class="stat-value" id="stat-products">0</span>
             </div>
-            <div class="stat-trend neutral">&mdash;</div>
           </div>
           <div class="stat-card" data-accent="amber">
             <div class="stat-icon">&#128101;</div>
             <div class="stat-info">
-              <span class="stat-label" data-i18n="dashboard.distributors_count">ディストリビューター</span>
+              <span class="stat-label" data-i18n="dashboard.distributors_count">販売者数</span>
               <span class="stat-value" id="stat-distributors">0</span>
             </div>
-            <div class="stat-trend up">+2</div>
+          </div>
+        </div>
+        <!-- Distributor Dashboard Stats -->
+        <div class="stats-grid distributor-view">
+          <div class="stat-card" data-accent="purple">
+            <div class="stat-icon">&#128180;</div>
+            <div class="stat-info">
+              <span class="stat-label" data-i18n="dashboard.my_revenue">売上</span>
+              <span class="stat-value" id="stat-my-revenue">&yen;0</span>
+            </div>
+          </div>
+          <div class="stat-card" data-accent="blue">
+            <div class="stat-icon">&#128230;</div>
+            <div class="stat-info">
+              <span class="stat-label" data-i18n="dashboard.my_orders">注文数</span>
+              <span class="stat-value" id="stat-my-orders">0</span>
+            </div>
+          </div>
+          <div class="stat-card" data-accent="emerald">
+            <div class="stat-icon">&#128176;</div>
+            <div class="stat-info">
+              <span class="stat-label" data-i18n="dashboard.my_commission">佣金合計</span>
+              <span class="stat-value" id="stat-my-commission">&yen;0</span>
+            </div>
+          </div>
+          <div class="stat-card" data-accent="amber">
+            <div class="stat-icon">&#128179;</div>
+            <div class="stat-info">
+              <span class="stat-label" data-i18n="dashboard.my_balance">残高</span>
+              <span class="stat-value" id="stat-my-balance">&yen;0</span>
+            </div>
           </div>
         </div>
 
@@ -391,11 +419,11 @@
       <!-- Inventory Page -->
       <div class="page" id="page-inventory">
         <div class="page-actions">
-          <button class="btn-primary" id="addProductBtn">
+          <button class="btn-primary admin-only" id="addProductBtn" style="display:none">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span data-i18n="inventory.add_product">商品追加</span>
           </button>
-          <button class="btn-secondary" id="inboundBtn">
+          <button class="btn-secondary admin-only" id="inboundBtn" style="display:none">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span data-i18n="inventory.inbound">入庫登録</span>
           </button>

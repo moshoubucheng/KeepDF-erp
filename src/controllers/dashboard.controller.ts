@@ -32,47 +32,82 @@ const PERIOD_DAYS: Record<string, number> = {
 
 const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-/** GET /dashboard/stats - 总览统计 */
+/** GET /dashboard/stats - 总览统计 (admin=全局, distributor=个人) */
 dashboard.get('/stats', async (c) => {
     const distributorId = c.get('distributorId')
+    const role = c.get('role')
+    const isAdmin = role === 'admin'
     const cache = new CacheService(c.env.KV)
 
-    const stats = await cache.getOrFetch(`dashboard:stats:${distributorId}`, async () => {
-        // Parallel queries instead of sequential
-        const [orderStats, productStats, lowStockStats, wallet] = await Promise.all([
-            c.env.DB.prepare(`
-                SELECT
-                    COUNT(*) as total_orders,
-                    COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_orders,
-                    COUNT(CASE WHEN status = 'PROCESSING' THEN 1 END) as processing_orders,
-                    COALESCE(SUM(CASE WHEN status = 'DELIVERED' THEN total_amount ELSE 0 END), 0) as total_revenue
-                FROM orders
-                WHERE distributor_id = ?
-            `).bind(distributorId).first<OrderStats>(),
-            c.env.DB.prepare(
-                'SELECT COUNT(*) as total FROM products'
-            ).first<{ total: number }>(),
-            c.env.DB.prepare(
-                'SELECT COUNT(*) as count FROM warehouse_locations WHERE qty <= 50'
-            ).first<{ count: number }>(),
-            c.env.DB.prepare(
-                'SELECT balance, frozen_balance FROM distributors WHERE id = ?'
-            ).bind(distributorId).first<{ balance: number; frozen_balance: number }>(),
-        ])
-
-        return {
-            overview: {
-                totalOrders: orderStats?.total_orders || 0,
-                pendingOrders: orderStats?.pending_orders || 0,
-                processingOrders: orderStats?.processing_orders || 0,
-                totalRevenue: orderStats?.total_revenue || 0,
-                totalProducts: productStats?.total || 0,
-                lowStockCount: lowStockStats?.count || 0,
-            },
-            wallet: {
-                balance: wallet?.balance || 0,
-                frozen_balance: wallet?.frozen_balance || 0,
-            },
+    const stats = await cache.getOrFetch(`dashboard:stats:${distributorId}:${role}`, async () => {
+        if (isAdmin) {
+            // Admin: global stats across all distributors
+            const [orderStats, productStats, lowStockStats, distributorCount] = await Promise.all([
+                c.env.DB.prepare(`
+                    SELECT
+                        COUNT(*) as total_orders,
+                        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_orders,
+                        COUNT(CASE WHEN status = 'PROCESSING' THEN 1 END) as processing_orders,
+                        COALESCE(SUM(CASE WHEN status = 'DELIVERED' THEN total_amount ELSE 0 END), 0) as total_revenue
+                    FROM orders
+                `).first<OrderStats>(),
+                c.env.DB.prepare(
+                    'SELECT COUNT(*) as total FROM products'
+                ).first<{ total: number }>(),
+                c.env.DB.prepare(
+                    'SELECT COUNT(*) as count FROM warehouse_locations WHERE qty <= 50'
+                ).first<{ count: number }>(),
+                c.env.DB.prepare(
+                    'SELECT COUNT(*) as total FROM distributors'
+                ).first<{ total: number }>(),
+            ])
+            return {
+                role: 'admin',
+                overview: {
+                    totalOrders: orderStats?.total_orders || 0,
+                    pendingOrders: orderStats?.pending_orders || 0,
+                    processingOrders: orderStats?.processing_orders || 0,
+                    totalRevenue: orderStats?.total_revenue || 0,
+                    totalProducts: productStats?.total || 0,
+                    lowStockCount: lowStockStats?.count || 0,
+                    totalDistributors: distributorCount?.total || 0,
+                },
+            }
+        } else {
+            // Distributor: personal stats
+            const [orderStats, commissionStats, wallet] = await Promise.all([
+                c.env.DB.prepare(`
+                    SELECT
+                        COUNT(*) as total_orders,
+                        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_orders,
+                        COUNT(CASE WHEN status = 'PROCESSING' THEN 1 END) as processing_orders,
+                        COALESCE(SUM(CASE WHEN status = 'DELIVERED' THEN total_amount ELSE 0 END), 0) as total_revenue
+                    FROM orders
+                    WHERE distributor_id = ?
+                `).bind(distributorId).first<OrderStats>(),
+                c.env.DB.prepare(`
+                    SELECT COALESCE(SUM(commission_amount), 0) as total_commission
+                    FROM commission_settlements
+                    WHERE distributor_id = ? AND status = 'SETTLED'
+                `).bind(distributorId).first<{ total_commission: number }>(),
+                c.env.DB.prepare(
+                    'SELECT balance, frozen_balance FROM distributors WHERE id = ?'
+                ).bind(distributorId).first<{ balance: number; frozen_balance: number }>(),
+            ])
+            return {
+                role: 'distributor',
+                overview: {
+                    totalOrders: orderStats?.total_orders || 0,
+                    pendingOrders: orderStats?.pending_orders || 0,
+                    processingOrders: orderStats?.processing_orders || 0,
+                    totalRevenue: orderStats?.total_revenue || 0,
+                    totalCommission: commissionStats?.total_commission || 0,
+                },
+                wallet: {
+                    balance: wallet?.balance || 0,
+                    frozen_balance: wallet?.frozen_balance || 0,
+                },
+            }
         }
     }, 300) // 5 minute TTL
 
@@ -82,6 +117,8 @@ dashboard.get('/stats', async (c) => {
 /** GET /dashboard/orders-by-platform - 按平台统计 */
 dashboard.get('/orders-by-platform', async (c) => {
     const distributorId = c.get('distributorId')
+    const role = c.get('role')
+    const isAdmin = role === 'admin'
     const period = c.req.query('period') || '30d'
 
     if (!VALID_PERIODS.includes(period as typeof VALID_PERIODS[number])) {
@@ -90,30 +127,27 @@ dashboard.get('/orders-by-platform', async (c) => {
 
     let results: PlatformRow[]
     if (period === 'all') {
-        const res = await c.env.DB.prepare(`
-            SELECT
-                platform,
-                COUNT(*) as order_count,
-                COALESCE(SUM(total_amount), 0) as revenue
-            FROM orders
-            WHERE distributor_id = ?
-            GROUP BY platform
-            ORDER BY order_count DESC
-        `).bind(distributorId).all<PlatformRow>()
+        const sql = isAdmin
+            ? `SELECT platform, COUNT(*) as order_count, COALESCE(SUM(total_amount), 0) as revenue
+               FROM orders GROUP BY platform ORDER BY order_count DESC`
+            : `SELECT platform, COUNT(*) as order_count, COALESCE(SUM(total_amount), 0) as revenue
+               FROM orders WHERE distributor_id = ? GROUP BY platform ORDER BY order_count DESC`
+        const stmt = isAdmin ? c.env.DB.prepare(sql) : c.env.DB.prepare(sql).bind(distributorId)
+        const res = await stmt.all<PlatformRow>()
         results = res.results
     } else {
         const days = PERIOD_DAYS[period]
-        const res = await c.env.DB.prepare(`
-            SELECT
-                platform,
-                COUNT(*) as order_count,
-                COALESCE(SUM(total_amount), 0) as revenue
-            FROM orders
-            WHERE distributor_id = ?
-                AND created_at >= datetime('now', '-' || ? || ' days')
-            GROUP BY platform
-            ORDER BY order_count DESC
-        `).bind(distributorId, days).all<PlatformRow>()
+        const sql = isAdmin
+            ? `SELECT platform, COUNT(*) as order_count, COALESCE(SUM(total_amount), 0) as revenue
+               FROM orders WHERE created_at >= datetime('now', '-' || ? || ' days')
+               GROUP BY platform ORDER BY order_count DESC`
+            : `SELECT platform, COUNT(*) as order_count, COALESCE(SUM(total_amount), 0) as revenue
+               FROM orders WHERE distributor_id = ? AND created_at >= datetime('now', '-' || ? || ' days')
+               GROUP BY platform ORDER BY order_count DESC`
+        const stmt = isAdmin
+            ? c.env.DB.prepare(sql).bind(days)
+            : c.env.DB.prepare(sql).bind(distributorId, days)
+        const res = await stmt.all<PlatformRow>()
         results = res.results
     }
 
