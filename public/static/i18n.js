@@ -545,6 +545,20 @@ const translations = {
         'shipping.duration': '経過時間',
         'shipping.hours': '時間',
         'shipping.no_events': 'イベントがありません',
+
+        // Sprint 13: Visualization
+        'dashboard.sales_heatmap': '売上ヒートマップ',
+        'dashboard.inventory_turnover': '在庫回転率 Top 20',
+        'dashboard.turnover_rate': '回転率',
+        'dashboard.sold_qty': '販売数量',
+        'dashboard.current_stock': '現在庫数',
+        'dashboard.platform_distribution': 'プラットフォーム分布',
+        'reports.download_pdf': 'PDF出力',
+        'reports.pnl_report': '損益レポート',
+        'reports.sales_report': '売上レポート',
+        'reports.inventory_report': '在庫レポート',
+        'reports.generated_at': '生成日',
+        'reports.period': '期間',
     },
 
     en: {
@@ -1088,6 +1102,20 @@ const translations = {
         'shipping.duration': 'Duration',
         'shipping.hours': 'hours',
         'shipping.no_events': 'No events',
+
+        // Sprint 13: Visualization
+        'dashboard.sales_heatmap': 'Sales Heatmap',
+        'dashboard.inventory_turnover': 'Inventory Turnover Top 20',
+        'dashboard.turnover_rate': 'Turnover Rate',
+        'dashboard.sold_qty': 'Sold Qty',
+        'dashboard.current_stock': 'Current Stock',
+        'dashboard.platform_distribution': 'Platform Distribution',
+        'reports.download_pdf': 'Download PDF',
+        'reports.pnl_report': 'P&L Report',
+        'reports.sales_report': 'Sales Report',
+        'reports.inventory_report': 'Inventory Report',
+        'reports.generated_at': 'Generated',
+        'reports.period': 'Period',
     },
 
     zh: {
@@ -1631,6 +1659,20 @@ const translations = {
         'shipping.duration': '历时',
         'shipping.hours': '小时',
         'shipping.no_events': '暂无物流事件',
+
+        // Sprint 13: Visualization
+        'dashboard.sales_heatmap': '销售热力图',
+        'dashboard.inventory_turnover': '库存周转率 Top 20',
+        'dashboard.turnover_rate': '周转率',
+        'dashboard.sold_qty': '销售数量',
+        'dashboard.current_stock': '当前库存',
+        'dashboard.platform_distribution': '平台分布',
+        'reports.download_pdf': 'PDF下载',
+        'reports.pnl_report': '损益报表',
+        'reports.sales_report': '销售报表',
+        'reports.inventory_report': '库存报表',
+        'reports.generated_at': '生成日期',
+        'reports.period': '期间',
     },
 }
 

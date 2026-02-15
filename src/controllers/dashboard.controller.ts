@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
 import { CacheService } from '../services/cache.service'
+import { adminOnly } from '../middleware/admin'
 
 interface OrderStats {
     total_orders: number
@@ -235,6 +236,72 @@ dashboard.get('/low-stock', async (c) => {
         threshold,
         products: results,
         count: results.length,
+    })
+})
+
+/** GET /dashboard/sales-heatmap - 过去 1 年每日销售数据 (日历热力图) */
+dashboard.get('/sales-heatmap', async (c) => {
+    const distributorId = c.get('distributorId')
+    const role = c.get('role')
+    const isAdmin = role === 'admin'
+
+    const sql = isAdmin
+        ? `SELECT DATE(created_at) as date, COUNT(*) as order_count, COALESCE(SUM(total_amount), 0) as revenue
+           FROM orders
+           WHERE created_at >= date('now', '-365 days')
+             AND status IN ('PROCESSING','SHIPPED','DELIVERED')
+           GROUP BY DATE(created_at)
+           ORDER BY date ASC`
+        : `SELECT DATE(created_at) as date, COUNT(*) as order_count, COALESCE(SUM(total_amount), 0) as revenue
+           FROM orders
+           WHERE distributor_id = ?
+             AND created_at >= date('now', '-365 days')
+             AND status IN ('PROCESSING','SHIPPED','DELIVERED')
+           GROUP BY DATE(created_at)
+           ORDER BY date ASC`
+
+    const stmt = isAdmin ? c.env.DB.prepare(sql) : c.env.DB.prepare(sql).bind(distributorId)
+    const { results } = await stmt.all<{ date: string; order_count: number; revenue: number }>()
+
+    return c.json({
+        data: results.map((r) => ({
+            date: r.date,
+            orderCount: r.order_count,
+            revenue: r.revenue,
+        })),
+    })
+})
+
+/** GET /dashboard/inventory-turnover - 库存周转率 Top20 (admin-only) */
+dashboard.get('/inventory-turnover', adminOnly, async (c) => {
+    const { results } = await c.env.DB.prepare(`
+        SELECT p.sku, p.name_cn as name,
+            COALESCE(sold.total_qty, 0) as sold_qty,
+            COALESCE(wl.qty, 0) as current_stock,
+            CASE WHEN COALESCE(wl.qty, 0) > 0
+                THEN ROUND(CAST(COALESCE(sold.total_qty, 0) AS REAL) / wl.qty, 2)
+                ELSE 0 END as turnover_rate
+        FROM products p
+        LEFT JOIN (
+            SELECT oi.sku, SUM(oi.qty) as total_qty
+            FROM order_items oi
+            JOIN orders o ON o.id = oi.order_id
+            WHERE o.status = 'DELIVERED' AND o.created_at >= date('now', '-90 days')
+            GROUP BY oi.sku
+        ) sold ON sold.sku = p.sku
+        LEFT JOIN warehouse_locations wl ON wl.sku = p.sku
+        ORDER BY turnover_rate DESC
+        LIMIT 20
+    `).all<{ sku: string; name: string; sold_qty: number; current_stock: number; turnover_rate: number }>()
+
+    return c.json({
+        data: results.map((r) => ({
+            sku: r.sku,
+            name: r.name,
+            soldQty: r.sold_qty,
+            currentStock: r.current_stock,
+            turnoverRate: r.turnover_rate,
+        })),
     })
 })
 

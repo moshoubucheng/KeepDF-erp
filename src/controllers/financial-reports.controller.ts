@@ -1,7 +1,9 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
 import { FinancialReportsService } from '../services/financial-reports.service'
+import { ReportPdfService } from '../services/report-pdf.service'
 import { toCSV, csvResponse } from '../utils/csv'
+import { adminOnly } from '../middleware/admin'
 
 const financialReports = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -119,6 +121,60 @@ financialReports.get('/balance-sheet', async (c) => {
     })
 
     return c.json(balanceSheet)
+})
+
+/** GET /financial-reports/pnl/pdf - P&L PDF (admin-only) */
+financialReports.get('/pnl/pdf', adminOnly, async (c) => {
+    const service = new ReportPdfService(c.env.DB)
+    const pdfBytes = await service.generatePnlPdf({
+        distributorId: c.get('distributorId'),
+        role: c.get('role'),
+        startDate: c.req.query('start_date') || undefined,
+        endDate: c.req.query('end_date') || undefined,
+    })
+
+    return new Response(pdfBytes.buffer as ArrayBuffer, {
+        headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="pnl-report.pdf"',
+            'Content-Length': String(pdfBytes.length),
+        },
+    })
+})
+
+/** GET /financial-reports/sales/pdf - Sales PDF (admin-only) */
+financialReports.get('/sales/pdf', adminOnly, async (c) => {
+    const service = new ReportPdfService(c.env.DB)
+    const pdfBytes = await service.generateSalesPdf({
+        distributorId: c.get('distributorId'),
+        role: c.get('role'),
+        period: c.req.query('period') || undefined,
+    })
+
+    return new Response(pdfBytes.buffer as ArrayBuffer, {
+        headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="sales-report.pdf"',
+            'Content-Length': String(pdfBytes.length),
+        },
+    })
+})
+
+/** GET /financial-reports/inventory/pdf - Inventory PDF (admin-only) */
+financialReports.get('/inventory/pdf', adminOnly, async (c) => {
+    const service = new ReportPdfService(c.env.DB)
+    const pdfBytes = await service.generateInventoryPdf({
+        distributorId: c.get('distributorId'),
+        role: c.get('role'),
+    })
+
+    return new Response(pdfBytes.buffer as ArrayBuffer, {
+        headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="inventory-report.pdf"',
+            'Content-Length': String(pdfBytes.length),
+        },
+    })
 })
 
 export { financialReports }

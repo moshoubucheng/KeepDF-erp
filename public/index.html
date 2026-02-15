@@ -301,41 +301,32 @@
               </div>
             </div>
             <div class="chart-container">
-              <canvas id="ordersChart"></canvas>
+              <div id="ordersChart" style="height:300px"></div>
             </div>
           </div>
 
           <div class="card platform-card">
             <div class="card-header">
-              <h3 data-i18n="dashboard.by_platform">プラットフォーム別</h3>
+              <h3 data-i18n="dashboard.platform_distribution">プラットフォーム分布</h3>
             </div>
-            <div class="platform-list">
-              <div class="platform-item">
-                <div class="platform-icon tiktok">TK</div>
-                <div class="platform-info">
-                  <span class="platform-name">TikTok Shop</span>
-                  <div class="platform-bar"><div class="bar-fill" style="width:45%"></div></div>
-                </div>
-                <span class="platform-pct">45%</span>
-              </div>
-              <div class="platform-item">
-                <div class="platform-icon temu">TM</div>
-                <div class="platform-info">
-                  <span class="platform-name">Temu</span>
-                  <div class="platform-bar"><div class="bar-fill" style="width:35%"></div></div>
-                </div>
-                <span class="platform-pct">35%</span>
-              </div>
-              <div class="platform-item">
-                <div class="platform-icon rakuten">RK</div>
-                <div class="platform-info">
-                  <span class="platform-name">Rakuten</span>
-                  <div class="platform-bar"><div class="bar-fill" style="width:20%"></div></div>
-                </div>
-                <span class="platform-pct">20%</span>
-              </div>
-            </div>
+            <div id="platformDonut" style="height:300px"></div>
           </div>
+        </div>
+
+        <!-- Sales Heatmap -->
+        <div class="card" id="salesHeatmapCard">
+          <div class="card-header">
+            <h3 data-i18n="dashboard.sales_heatmap">销售热力图</h3>
+          </div>
+          <div id="salesHeatmap" style="height:200px"></div>
+        </div>
+
+        <!-- Inventory Turnover (admin-only) -->
+        <div class="card admin-only" id="turnoverCard" style="display:none">
+          <div class="card-header">
+            <h3 data-i18n="dashboard.inventory_turnover">库存周转率 Top 20</h3>
+          </div>
+          <div id="turnoverChart" style="height:400px"></div>
         </div>
 
         <div class="card">
@@ -863,7 +854,7 @@
                 </table>
               </div>
               <div class="chart-container" style="height:260px">
-                <canvas id="profitChart"></canvas>
+                <div id="profitChart" style="height:260px"></div>
               </div>
             </div>
           </div>
@@ -893,7 +884,7 @@
                 </table>
               </div>
               <div class="chart-container" style="height:260px">
-                <canvas id="platformChart"></canvas>
+                <div id="platformChart" style="height:260px"></div>
               </div>
             </div>
           </div>
@@ -907,7 +898,7 @@
               <div id="trendSummary" style="display:flex;gap:16px;font-size:0.85rem;color:var(--text-secondary)"></div>
             </div>
             <div class="chart-container" style="height:300px">
-              <canvas id="trendChart"></canvas>
+              <div id="trendChart" style="height:300px"></div>
             </div>
           </div>
         </div>
@@ -1492,6 +1483,10 @@
             <input type="date" id="finStartDate" onchange="loadFinancialReport()">
             <input type="date" id="finEndDate" onchange="loadFinancialReport()">
           </div>
+          <button class="btn-secondary admin-only" onclick="downloadReportPdf()" style="display:none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="reports.download_pdf">PDF下载</span>
+          </button>
         </div>
         <div class="card">
           <div class="card-header"><h3 data-i18n="financial.title">財務レポート</h3></div>
@@ -1969,6 +1964,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <script src="/static/i18n.js"></script>
   <script src="/static/app.js"></script>
 </body>

@@ -212,13 +212,39 @@ async function loadPageData(page) {
     }
 }
 
+// --- ECharts Instance Management ---
+const chartInstances = {};
+
+function getChart(containerId) {
+    if (chartInstances[containerId]) {
+        chartInstances[containerId].dispose();
+    }
+    const dom = document.getElementById(containerId);
+    if (!dom) return null;
+    const chart = echarts.init(dom, 'dark');
+    chartInstances[containerId] = chart;
+    return chart;
+}
+
+// Responsive resize
+window.addEventListener('resize', () => {
+    for (const chart of Object.values(chartInstances)) {
+        if (chart && typeof chart.resize === 'function') chart.resize();
+    }
+});
+
 // --- Dashboard ---
 let currentChartPeriod = '7d';
 
 async function loadDashboard() {
     loadDashboardStats();
-    loadPlatformStats();
+    loadPlatformDonut();
     renderChart(currentChartPeriod);
+    loadSalesHeatmap();
+    const role = localStorage.getItem('erp_role');
+    if (role === 'admin') {
+        loadInventoryTurnover();
+    }
 }
 
 async function loadDashboardStats() {
@@ -258,31 +284,127 @@ async function loadDashboardStats() {
     }
 }
 
-async function loadPlatformStats() {
+async function loadPlatformDonut() {
     const data = await apiFetch('/api/v1/dashboard/orders-by-platform?period=all');
     if (!data?.platforms) return;
 
-    const container = document.querySelector('.platform-list');
-    if (!container) return;
+    const chart = getChart('platformDonut');
+    if (!chart) return;
 
-    const platformMeta = {
-        TIKTOK: { cls: 'tiktok', abbr: 'TK', name: 'TikTok Shop' },
-        TEMU: { cls: 'temu', abbr: 'TM', name: 'Temu' },
-        RAKUTEN: { cls: 'rakuten', abbr: 'RK', name: 'Rakuten' },
-    };
+    const platformNames = { TIKTOK: 'TikTok Shop', TEMU: 'Temu', RAKUTEN: 'Rakuten' };
+    const platformColors = { TIKTOK: '#ff4d6a', TEMU: '#ff8c00', RAKUTEN: '#bf0000' };
+    const totalOrders = data.total?.orders || 0;
 
-    container.innerHTML = data.platforms.map(p => {
-        const meta = platformMeta[p.platform] || { cls: '', abbr: '??', name: p.platform };
-        return `
-        <div class="platform-item">
-          <div class="platform-icon ${meta.cls}">${meta.abbr}</div>
-          <div class="platform-info">
-            <span class="platform-name">${escapeHtml(meta.name)}</span>
-            <div class="platform-bar"><div class="bar-fill" style="width:${p.percentage}%"></div></div>
-          </div>
-          <span class="platform-pct">${p.percentage}%</span>
-        </div>`;
-    }).join('');
+    chart.setOption({
+        tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+        legend: { bottom: 0, textStyle: { color: '#94a3b8', fontSize: 11 } },
+        color: data.platforms.map(p => platformColors[p.platform] || '#8b5cf6'),
+        graphic: [{
+            type: 'text',
+            left: 'center', top: '38%',
+            style: { text: String(totalOrders), fontSize: 24, fontWeight: 'bold', fill: '#e2e8f0', textAlign: 'center' },
+        }, {
+            type: 'text',
+            left: 'center', top: '50%',
+            style: { text: t('reports.order_count'), fontSize: 11, fill: '#64748b', textAlign: 'center' },
+        }],
+        series: [{
+            type: 'pie', radius: ['45%', '70%'], center: ['50%', '45%'],
+            label: { show: false },
+            data: data.platforms.map(p => ({
+                name: platformNames[p.platform] || p.platform,
+                value: p.orderCount,
+            })),
+        }],
+    });
+}
+
+async function loadSalesHeatmap() {
+    const data = await apiFetch('/api/v1/dashboard/sales-heatmap');
+    if (!data?.data?.length) return;
+
+    const chart = getChart('salesHeatmap');
+    if (!chart) return;
+
+    const items = data.data;
+    const year = new Date().getFullYear();
+    const heatmapData = items.map(d => [d.date, d.revenue]);
+    const maxRevenue = Math.max(...items.map(d => d.revenue), 1);
+
+    chart.setOption({
+        tooltip: {
+            formatter: function(p) {
+                const item = items.find(d => d.date === p.value[0]);
+                if (!item) return '';
+                return `${p.value[0]}<br/>${t('reports.order_count')}: ${item.orderCount}<br/>${t('reports.revenue')}: ¥${item.revenue.toLocaleString()}`;
+            },
+        },
+        visualMap: {
+            min: 0, max: maxRevenue, show: false,
+            inRange: { color: ['#1e1b4b', '#4c1d95', '#6d28d9', '#8b5cf6', '#a78bfa'] },
+        },
+        calendar: {
+            range: [year + '-01-01', year + '-12-31'],
+            cellSize: ['auto', 14],
+            top: 30, left: 60, right: 30,
+            itemStyle: { borderWidth: 2, borderColor: '#1e293b' },
+            yearLabel: { show: false },
+            monthLabel: { color: '#64748b', fontSize: 10 },
+            dayLabel: { color: '#64748b', fontSize: 10, firstDay: 1 },
+            splitLine: { show: false },
+        },
+        series: [{
+            type: 'heatmap', coordinateSystem: 'calendar',
+            data: heatmapData,
+        }],
+    });
+}
+
+async function loadInventoryTurnover() {
+    const data = await apiFetch('/api/v1/dashboard/inventory-turnover');
+    if (!data?.data?.length) return;
+
+    const chart = getChart('turnoverChart');
+    if (!chart) return;
+
+    const items = data.data.slice().reverse(); // Reverse so highest at top
+
+    chart.setOption({
+        tooltip: {
+            trigger: 'axis', axisPointer: { type: 'shadow' },
+            formatter: function(params) {
+                const p = params[0];
+                const item = data.data.find(d => d.sku === p.name);
+                if (!item) return '';
+                return `<strong>${item.sku}</strong><br/>${item.name || ''}<br/>${t('dashboard.sold_qty')}: ${item.soldQty}<br/>${t('dashboard.current_stock')}: ${item.currentStock}<br/>${t('dashboard.turnover_rate')}: ${item.turnoverRate}`;
+            },
+        },
+        grid: { top: 10, right: 80, bottom: 10, left: 120, containLabel: false },
+        xAxis: {
+            type: 'value',
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+            axisLabel: { color: '#64748b', fontSize: 11 },
+        },
+        yAxis: {
+            type: 'category',
+            data: items.map(d => d.sku),
+            axisLabel: { color: '#94a3b8', fontSize: 10 },
+            axisLine: { lineStyle: { color: '#334155' } },
+        },
+        series: [{
+            type: 'bar',
+            data: items.map(d => d.turnoverRate),
+            itemStyle: {
+                borderRadius: [0, 4, 4, 0],
+                color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                    { offset: 0, color: '#6d28d9' },
+                    { offset: 1, color: '#8b5cf6' },
+                ]),
+            },
+            label: { show: true, position: 'right', color: '#94a3b8', fontSize: 10,
+                formatter: '{c}x' },
+        }],
+    });
 }
 
 function renderRecentOrders(orders) {
@@ -306,91 +428,45 @@ async function renderChart(period) {
     if (!period) period = currentChartPeriod;
     currentChartPeriod = period;
 
-    const canvas = document.getElementById('ordersChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
+    const chart = getChart('ordersChart');
+    if (!chart) return;
 
     const trendData = await apiFetch(`/api/v1/dashboard/revenue-trend?period=${period}`);
     const items = trendData?.data || [];
 
-    const labels = items.map(d => d.date);
-    const data = items.map(d => d.orderCount);
-
-    if (!data.length) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#64748b';
-        ctx.font = '13px Inter';
-        ctx.textAlign = 'center';
-        ctx.fillText(t('dashboard.no_data'), canvas.width / 2, canvas.height / 2);
+    if (!items.length) {
+        chart.setOption({
+            graphic: [{ type: 'text', left: 'center', top: 'center',
+                style: { text: t('dashboard.no_data'), fontSize: 13, fill: '#64748b' } }],
+        });
         return;
     }
 
-    const max = Math.max(...data) * 1.2 || 1;
-    const padding = { top: 20, right: 20, bottom: 40, left: 50 };
-    const chartW = canvas.width - padding.left - padding.right;
-    const chartH = canvas.height - padding.top - padding.bottom;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-        const y = padding.top + (chartH / 4) * i;
-        ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(canvas.width - padding.right, y); ctx.stroke();
-        ctx.fillStyle = '#64748b';
-        ctx.font = '11px Inter';
-        ctx.textAlign = 'right';
-        ctx.fillText(Math.round(max - (max / 4) * i), padding.left - 10, y + 4);
-    }
-
-    const step = data.length > 1 ? chartW / (data.length - 1) : 0;
-    const points = data.map((v, i) => ({
-        x: padding.left + step * i,
-        y: padding.top + chartH - (v / max) * chartH
-    }));
-
-    const gradient = ctx.createLinearGradient(0, padding.top, 0, canvas.height - padding.bottom);
-    gradient.addColorStop(0, 'rgba(139, 92, 246, 0.3)');
-    gradient.addColorStop(1, 'rgba(139, 92, 246, 0)');
-
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, canvas.height - padding.bottom);
-    points.forEach(p => ctx.lineTo(p.x, p.y));
-    ctx.lineTo(points[points.length - 1].x, canvas.height - padding.bottom);
-    ctx.fillStyle = gradient;
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    points.forEach(p => ctx.lineTo(p.x, p.y));
-    ctx.strokeStyle = '#8b5cf6';
-    ctx.lineWidth = 2.5;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-
-    points.forEach(p => {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#8b5cf6';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff';
-        ctx.fill();
-    });
-
-    ctx.fillStyle = '#64748b';
-    ctx.font = '11px Inter';
-    ctx.textAlign = 'center';
-    const labelStep = Math.max(1, Math.floor(labels.length / 7));
-    points.forEach((p, i) => {
-        if (i % labelStep === 0 || i === points.length - 1) {
-            const label = labels[i] ? labels[i].slice(5) : '';
-            ctx.fillText(label, p.x, canvas.height - padding.bottom + 20);
-        }
+    chart.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+        grid: { top: 20, right: 20, bottom: 40, left: 50 },
+        xAxis: {
+            type: 'category',
+            data: items.map(d => d.date ? d.date.slice(5) : ''),
+            axisLine: { lineStyle: { color: '#334155' } },
+            axisLabel: { color: '#64748b', fontSize: 11 },
+        },
+        yAxis: {
+            type: 'value',
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+            axisLabel: { color: '#64748b', fontSize: 11 },
+        },
+        series: [{
+            type: 'line', smooth: true,
+            data: items.map(d => d.orderCount),
+            lineStyle: { color: '#8b5cf6', width: 2.5 },
+            itemStyle: { color: '#8b5cf6' },
+            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(139, 92, 246, 0.3)' },
+                { offset: 1, color: 'rgba(139, 92, 246, 0)' },
+            ]) },
+            symbol: 'circle', symbolSize: 6,
+        }],
     });
 }
 
@@ -1134,7 +1210,7 @@ async function loadProfitAnalysis(period) {
     const tbody = document.getElementById('profitTableBody');
     if (!data?.data?.length) {
         tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${t('reports.no_data')}</td></tr>`;
-        clearCanvas('profitChart');
+        clearChart('profitChart');
         return;
     }
     const keyField = currentProfitGroupBy === 'platform' ? 'platform' : 'sku';
@@ -1159,7 +1235,7 @@ async function loadPlatformComparison(period) {
     const tbody = document.getElementById('platformTableBody');
     if (!data?.platforms?.length) {
         tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${t('reports.no_data')}</td></tr>`;
-        clearCanvas('platformChart');
+        clearChart('platformChart');
         return;
     }
     tbody.innerHTML = data.platforms.map(p => `
@@ -1180,7 +1256,7 @@ async function loadPlatformComparison(period) {
 
 async function loadTrendComparison(period) {
     if (period === 'all') {
-        clearCanvas('trendChart');
+        clearChart('trendChart');
         document.getElementById('trendSummary').innerHTML = '';
         return;
     }
@@ -1197,166 +1273,87 @@ async function loadTrendComparison(period) {
     renderDualLineChart('trendChart', data.current || [], data.previous || []);
 }
 
-function clearCanvas(canvasId) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#64748b';
-    ctx.font = '13px Inter';
-    ctx.textAlign = 'center';
-    ctx.fillText(t('reports.no_data'), canvas.width / 2, canvas.height / 2);
-}
-
-function renderBarChart(canvasId, labels, datasets) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (!labels.length) { clearCanvas(canvasId); return; }
-
-    const padding = { top: 20, right: 20, bottom: 50, left: 60 };
-    const chartW = canvas.width - padding.left - padding.right;
-    const chartH = canvas.height - padding.top - padding.bottom;
-
-    const allValues = datasets.flatMap(d => d.values);
-    const max = Math.max(...allValues, 1) * 1.2;
-    const groupCount = labels.length;
-    const barCount = datasets.length;
-    const groupWidth = chartW / groupCount;
-    const barWidth = Math.min(groupWidth / (barCount + 1), 30);
-
-    // Grid
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-        const y = padding.top + (chartH / 4) * i;
-        ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(canvas.width - padding.right, y); ctx.stroke();
-        ctx.fillStyle = '#64748b'; ctx.font = '11px Inter'; ctx.textAlign = 'right';
-        ctx.fillText(formatChartValue(max - (max / 4) * i), padding.left - 8, y + 4);
-    }
-
-    // Bars
-    for (let g = 0; g < groupCount; g++) {
-        for (let b = 0; b < barCount; b++) {
-            const val = datasets[b].values[g] || 0;
-            const barH = (val / max) * chartH;
-            const x = padding.left + g * groupWidth + (groupWidth - barCount * barWidth) / 2 + b * barWidth;
-            const y = padding.top + chartH - barH;
-
-            ctx.fillStyle = datasets[b].color;
-            ctx.globalAlpha = 0.85;
-            ctx.fillRect(x, y, barWidth - 2, barH);
-            ctx.globalAlpha = 1;
-        }
-        // Label
-        ctx.fillStyle = '#64748b'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
-        const labelX = padding.left + g * groupWidth + groupWidth / 2;
-        const label = labels[g].length > 10 ? labels[g].slice(0, 10) + '..' : labels[g];
-        ctx.fillText(label, labelX, canvas.height - padding.bottom + 16);
-    }
-
-    // Legend
-    let legendX = padding.left;
-    ctx.font = '10px Inter';
-    datasets.forEach(d => {
-        ctx.fillStyle = d.color;
-        ctx.fillRect(legendX, canvas.height - 12, 10, 10);
-        ctx.fillStyle = '#94a3b8';
-        ctx.textAlign = 'left';
-        ctx.fillText(d.label, legendX + 14, canvas.height - 3);
-        legendX += ctx.measureText(d.label).width + 28;
+function clearChart(containerId) {
+    const chart = getChart(containerId);
+    if (!chart) return;
+    chart.setOption({
+        graphic: [{ type: 'text', left: 'center', top: 'center',
+            style: { text: t('reports.no_data'), fontSize: 13, fill: '#64748b' } }],
     });
 }
 
-function renderDualLineChart(canvasId, current, previous) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function renderBarChart(containerId, labels, datasets) {
+    const chart = getChart(containerId);
+    if (!chart) return;
 
-    if (!current.length && !previous.length) { clearCanvas(canvasId); return; }
+    if (!labels.length) { clearChart(containerId); return; }
 
-    const padding = { top: 20, right: 20, bottom: 50, left: 60 };
-    const chartW = canvas.width - padding.left - padding.right;
-    const chartH = canvas.height - padding.top - padding.bottom;
-
-    const allRev = [...current.map(d => d.revenue), ...previous.map(d => d.revenue)];
-    const max = Math.max(...allRev, 1) * 1.2;
-
-    // Grid
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-    for (let i = 0; i <= 4; i++) {
-        const y = padding.top + (chartH / 4) * i;
-        ctx.beginPath(); ctx.moveTo(padding.left, y); ctx.lineTo(canvas.width - padding.right, y); ctx.stroke();
-        ctx.fillStyle = '#64748b'; ctx.font = '11px Inter'; ctx.textAlign = 'right';
-        ctx.fillText(formatChartValue(max - (max / 4) * i), padding.left - 8, y + 4);
-    }
-
-    function drawLine(data, color, dashed) {
-        if (!data.length) return;
-        const step = data.length > 1 ? chartW / (data.length - 1) : 0;
-        const points = data.map((d, i) => ({
-            x: padding.left + step * i,
-            y: padding.top + chartH - (d.revenue / max) * chartH,
-        }));
-
-        ctx.beginPath();
-        ctx.setLineDash(dashed ? [6, 4] : []);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2.5;
-        ctx.lineJoin = 'round';
-        points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        points.forEach(p => {
-            ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-            ctx.fillStyle = color; ctx.fill();
-        });
-    }
-
-    drawLine(current, '#8b5cf6', false);
-    drawLine(previous, '#64748b', true);
-
-    // X-axis labels for current period
-    if (current.length) {
-        ctx.fillStyle = '#64748b'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
-        const step = current.length > 1 ? chartW / (current.length - 1) : 0;
-        const labelStep = Math.max(1, Math.floor(current.length / 7));
-        current.forEach((d, i) => {
-            if (i % labelStep === 0 || i === current.length - 1) {
-                const x = padding.left + step * i;
-                ctx.fillText(d.date ? d.date.slice(5) : '', x, canvas.height - padding.bottom + 16);
-            }
-        });
-    }
-
-    // Legend
-    ctx.fillStyle = '#8b5cf6'; ctx.fillRect(padding.left, canvas.height - 12, 16, 3);
-    ctx.fillStyle = '#94a3b8'; ctx.font = '10px Inter'; ctx.textAlign = 'left';
-    ctx.fillText(t('reports.current_period'), padding.left + 20, canvas.height - 3);
-    ctx.fillStyle = '#64748b'; ctx.setLineDash([4, 3]);
-    ctx.beginPath(); ctx.moveTo(padding.left + 120, canvas.height - 10); ctx.lineTo(padding.left + 136, canvas.height - 10); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText(t('reports.previous_period'), padding.left + 140, canvas.height - 3);
+    chart.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { bottom: 0, textStyle: { color: '#94a3b8', fontSize: 10 } },
+        grid: { top: 20, right: 20, bottom: 40, left: 60 },
+        xAxis: {
+            type: 'category', data: labels,
+            axisLine: { lineStyle: { color: '#334155' } },
+            axisLabel: { color: '#64748b', fontSize: 11, rotate: labels.some(l => l.length > 6) ? 20 : 0 },
+        },
+        yAxis: {
+            type: 'value',
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+            axisLabel: { color: '#64748b', fontSize: 11 },
+        },
+        series: datasets.map(d => ({
+            name: d.label, type: 'bar', data: d.values,
+            itemStyle: { color: d.color, borderRadius: [2, 2, 0, 0] },
+            barMaxWidth: 30,
+        })),
+    });
 }
 
-function formatChartValue(val) {
-    if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
-    if (val >= 1000) return (val / 1000).toFixed(0) + 'K';
-    return Math.round(val).toString();
+function renderDualLineChart(containerId, current, previous) {
+    const chart = getChart(containerId);
+    if (!chart) return;
+
+    if (!current.length && !previous.length) { clearChart(containerId); return; }
+
+    const maxLen = Math.max(current.length, previous.length);
+    const xLabels = (current.length >= previous.length ? current : previous).map(d => d.date ? d.date.slice(5) : '');
+
+    chart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: {
+            bottom: 0,
+            textStyle: { color: '#94a3b8', fontSize: 10 },
+            data: [t('reports.current_period'), t('reports.previous_period')],
+        },
+        grid: { top: 20, right: 20, bottom: 40, left: 60 },
+        xAxis: {
+            type: 'category', data: xLabels,
+            axisLine: { lineStyle: { color: '#334155' } },
+            axisLabel: { color: '#64748b', fontSize: 11 },
+        },
+        yAxis: {
+            type: 'value',
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } },
+            axisLabel: { color: '#64748b', fontSize: 11 },
+        },
+        series: [
+            {
+                name: t('reports.current_period'), type: 'line', smooth: true,
+                data: current.map(d => d.revenue),
+                lineStyle: { color: '#8b5cf6', width: 2.5 },
+                itemStyle: { color: '#8b5cf6' },
+                symbol: 'circle', symbolSize: 5,
+            },
+            {
+                name: t('reports.previous_period'), type: 'line', smooth: true,
+                data: previous.map(d => d.revenue),
+                lineStyle: { color: '#64748b', width: 2, type: 'dashed' },
+                itemStyle: { color: '#64748b' },
+                symbol: 'circle', symbolSize: 4,
+            },
+        ],
+    });
 }
 
 async function buildCustomReport() {
@@ -2300,6 +2297,36 @@ async function loadFinancialReport() {
             </div>
           </div>`;
     }
+}
+
+// ===== PDF Report Download =====
+async function downloadReportPdf() {
+    const type = document.getElementById('finReportType')?.value || 'pnl';
+    const start = document.getElementById('finStartDate')?.value || '';
+    const end = document.getElementById('finEndDate')?.value || '';
+
+    let url = '';
+    let filename = '';
+    if (type === 'pnl') {
+        url = `/api/v1/financial-reports/pnl/pdf?start_date=${start}&end_date=${end}`;
+        filename = 'pnl-report.pdf';
+    } else if (type === 'tax' || type === 'reconciliation') {
+        url = `/api/v1/financial-reports/sales/pdf?period=30d`;
+        filename = 'sales-report.pdf';
+    } else {
+        url = `/api/v1/financial-reports/inventory/pdf`;
+        filename = 'inventory-report.pdf';
+    }
+
+    const blob = await apiFetchBlob(url);
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
 }
 
 // ===== Sprint 9: Forecasting =====
