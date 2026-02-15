@@ -7,6 +7,11 @@ const translations = {
     ja: {
         // Navigation
         'nav.dashboard': 'ダッシュボード',
+        'nav.group_orders': '受注・出荷',
+        'nav.group_inventory': '在庫・仕入',
+        'nav.group_finance': '販売・財務',
+        'nav.group_crm': '顧客・通信',
+        'nav.group_system': 'システム',
         'nav.orders': '注文管理',
         'nav.inventory': '在庫管理',
         'nav.wallet': 'ウォレット',
@@ -462,6 +467,11 @@ const translations = {
     en: {
         // Navigation
         'nav.dashboard': 'Dashboard',
+        'nav.group_orders': 'Orders & Fulfillment',
+        'nav.group_inventory': 'Inventory & Supply',
+        'nav.group_finance': 'Distribution & Finance',
+        'nav.group_crm': 'CRM & Messages',
+        'nav.group_system': 'System',
         'nav.orders': 'Orders',
         'nav.inventory': 'Inventory',
         'nav.wallet': 'Wallet',
@@ -917,6 +927,11 @@ const translations = {
     zh: {
         // Navigation
         'nav.dashboard': '仪表板',
+        'nav.group_orders': '订单与履约',
+        'nav.group_inventory': '库存与供应链',
+        'nav.group_finance': '分销与财务',
+        'nav.group_crm': '客户与消息',
+        'nav.group_system': '系统设置',
         'nav.orders': '订单管理',
         'nav.inventory': '库存管理',
         'nav.wallet': '钱包',

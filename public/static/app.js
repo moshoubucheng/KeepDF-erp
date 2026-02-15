@@ -44,6 +44,35 @@ function navigateTo(pageName) {
     loadPageData(pageName);
 }
 
+// ===== Nav Group Toggle =====
+function toggleNavGroup(groupName) {
+    const group = document.querySelector(`.nav-group[data-group="${groupName}"]`);
+    if (!group) return;
+    group.classList.toggle('collapsed');
+    // Save state to localStorage
+    const collapsed = JSON.parse(localStorage.getItem('navGroupState') || '{}');
+    collapsed[groupName] = group.classList.contains('collapsed');
+    localStorage.setItem('navGroupState', JSON.stringify(collapsed));
+}
+
+function restoreNavGroupState() {
+    const collapsed = JSON.parse(localStorage.getItem('navGroupState') || '{}');
+    Object.entries(collapsed).forEach(([groupName, isCollapsed]) => {
+        if (isCollapsed) {
+            const group = document.querySelector(`.nav-group[data-group="${groupName}"]`);
+            if (group) group.classList.add('collapsed');
+        }
+    });
+}
+
+function updateNavGroupVisibility() {
+    document.querySelectorAll('.nav-group').forEach(group => {
+        const items = group.querySelectorAll('.nav-group-items .nav-item');
+        const hasVisible = Array.from(items).some(item => item.style.display !== 'none');
+        group.style.display = hasVisible ? '' : 'none';
+    });
+}
+
 // ===== Sidebar Toggle =====
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
@@ -1729,6 +1758,7 @@ function closeModal(id) { document.getElementById(id)?.classList.remove('active'
 document.addEventListener('DOMContentLoaded', () => {
     createInboundModal();
     createDepositModal();
+    restoreNavGroupState();
 
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -1797,6 +1827,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window._isAdmin = true;
                 document.querySelectorAll('.admin-only').forEach(el => el.style.display = '');
             }
+            updateNavGroupVisibility();
             document.getElementById('userDisplayName').textContent = data.distributor.name || t('common.admin');
             // Initialize language from server preference
             if (typeof initLanguage === 'function') {
