@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" fill="none">
+  <rect width="192" height="192" rx="32" fill="#0a0e1a"/>
+  <rect x="8" y="8" width="176" height="176" rx="28" fill="#111827" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="96" y="78" font-family="system-ui, sans-serif" font-size="28" font-weight="700" fill="#8b5cf6" text-anchor="middle">KeepDF</text>
+  <text x="96" y="108" font-family="system-ui, sans-serif" font-size="14" fill="#94a3b8" text-anchor="middle">Keep Data Flow</text>
+  <path d="M66 130 L96 145 L126 130" stroke="#8b5cf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M66 140 L96 155 L126 140" stroke="#6d28d9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6"/>
+</svg>
