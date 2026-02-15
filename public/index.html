@@ -1164,6 +1164,340 @@
           <div class="pagination" id="auditPagination"></div>
         </div>
       </div>
+
+      <!-- Returns Page -->
+      <div class="page" id="page-returns">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="returnStatusFilter" onchange="loadReturns()">
+              <option value="">全ステータス</option>
+              <option value="REQUESTED">REQUESTED</option>
+              <option value="APPROVED">APPROVED</option>
+              <option value="RECEIVED">RECEIVED</option>
+              <option value="REFUNDED">REFUNDED</option>
+              <option value="REJECTED">REJECTED</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" onclick="exportCSV('/api/v1/returns/export','returns.csv')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span data-i18n="orders.export_csv">CSV出力</span>
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="returns.title">返品管理</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th>
+                <th data-i18n="returns.order_id">注文ID</th>
+                <th data-i18n="returns.status">ステータス</th>
+                <th data-i18n="returns.reason">理由</th>
+                <th data-i18n="returns.refund_amount">返金額</th>
+                <th data-i18n="returns.created_at">申請日</th>
+                <th data-i18n="common.actions">操作</th>
+              </tr></thead>
+              <tbody id="returnsTableBody">
+                <tr class="empty-row"><td colspan="7" data-i18n="returns.empty">返品データがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="returnsPagination"></div>
+        </div>
+      </div>
+
+      <!-- Procurement Page -->
+      <div class="page" id="page-procurement">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="poTab" onchange="switchPOTab(this.value)">
+              <option value="suppliers" data-i18n="procurement.suppliers">仕入先</option>
+              <option value="orders" data-i18n="procurement.orders">発注書</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" onclick="exportCSV('/api/v1/purchase-orders/export','purchase-orders.csv')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span data-i18n="orders.export_csv">CSV出力</span>
+            </button>
+            <button class="btn-primary" id="addSupplierBtn" onclick="openSupplierModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="procurement.add_supplier">仕入先追加</span>
+            </button>
+          </div>
+        </div>
+        <div class="card" id="suppliersSection">
+          <div class="card-header"><h3 data-i18n="procurement.suppliers">仕入先一覧</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th>
+                <th data-i18n="procurement.supplier_name">仕入先名</th>
+                <th data-i18n="procurement.contact">連絡先</th>
+                <th data-i18n="procurement.lead_time">リードタイム</th>
+                <th data-i18n="procurement.status">状態</th>
+                <th data-i18n="common.actions">操作</th>
+              </tr></thead>
+              <tbody id="suppliersTableBody">
+                <tr class="empty-row"><td colspan="6" data-i18n="procurement.empty_suppliers">仕入先がありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" id="poSection" style="display:none">
+          <div class="card-header"><h3 data-i18n="procurement.orders">発注書一覧</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th data-i18n="procurement.po_number">PO番号</th>
+                <th data-i18n="procurement.supplier_name">仕入先</th>
+                <th data-i18n="procurement.status">ステータス</th>
+                <th data-i18n="procurement.total">合計</th>
+                <th data-i18n="procurement.expected_delivery">納期</th>
+                <th data-i18n="common.actions">操作</th>
+              </tr></thead>
+              <tbody id="poTableBody">
+                <tr class="empty-row"><td colspan="6" data-i18n="procurement.empty_orders">発注書がありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pricing Page -->
+      <div class="page" id="page-pricing">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="pricingPlatformFilter" onchange="loadPricing()">
+              <option value="">全プラットフォーム</option>
+              <option value="TIKTOK">TikTok</option>
+              <option value="TEMU">Temu</option>
+              <option value="RAKUTEN">Rakuten</option>
+              <option value="ALL">ALL</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" onclick="exportCSV('/api/v1/pricing/export','price-rules.csv')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span data-i18n="orders.export_csv">CSV出力</span>
+            </button>
+            <button class="btn-primary admin-only" onclick="openPricingModal()" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="pricing.add">価格ルール追加</span>
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="pricing.title">価格ルール</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>SKU</th>
+                <th data-i18n="pricing.platform">プラットフォーム</th>
+                <th data-i18n="pricing.base_price">基本価格</th>
+                <th data-i18n="pricing.sale_price">セール価格</th>
+                <th data-i18n="pricing.margin">利益率</th>
+                <th data-i18n="pricing.status">状態</th>
+                <th data-i18n="common.actions">操作</th>
+              </tr></thead>
+              <tbody id="pricingTableBody">
+                <tr class="empty-row"><td colspan="7" data-i18n="pricing.empty">価格ルールがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="pricingPagination"></div>
+        </div>
+      </div>
+
+      <!-- Communications Page -->
+      <div class="page" id="page-communications">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="commTab" onchange="switchCommTab(this.value)">
+              <option value="templates" data-i18n="communications.templates">テンプレート</option>
+              <option value="messages" data-i18n="communications.messages">メッセージ</option>
+              <option value="triggers" data-i18n="communications.triggers">トリガー</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-primary" id="addTemplateBtn" onclick="openTemplateModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="communications.add_template">テンプレート追加</span>
+            </button>
+          </div>
+        </div>
+        <div class="card" id="templatesSection">
+          <div class="card-header"><h3 data-i18n="communications.templates">テンプレート一覧</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th>
+                <th data-i18n="communications.template_name">名前</th>
+                <th data-i18n="communications.type">タイプ</th>
+                <th data-i18n="communications.channel">チャネル</th>
+                <th data-i18n="communications.active">有効</th>
+                <th data-i18n="common.actions">操作</th>
+              </tr></thead>
+              <tbody id="templatesTableBody">
+                <tr class="empty-row"><td colspan="6" data-i18n="communications.empty_templates">テンプレートがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" id="messagesSection" style="display:none">
+          <div class="card-header"><h3 data-i18n="communications.messages">メッセージ履歴</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th>
+                <th data-i18n="communications.customer">顧客</th>
+                <th data-i18n="communications.type">タイプ</th>
+                <th data-i18n="communications.channel">チャネル</th>
+                <th data-i18n="communications.status">ステータス</th>
+                <th data-i18n="communications.sent_at">送信日</th>
+              </tr></thead>
+              <tbody id="messagesTableBody">
+                <tr class="empty-row"><td colspan="6" data-i18n="communications.empty_messages">メッセージがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="messagesPagination"></div>
+        </div>
+        <div class="card" id="triggersSection" style="display:none">
+          <div class="card-header"><h3 data-i18n="communications.triggers">自動トリガー</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th>
+                <th data-i18n="communications.event">イベント</th>
+                <th data-i18n="communications.template_name">テンプレート</th>
+                <th data-i18n="communications.active">有効</th>
+                <th data-i18n="common.actions">操作</th>
+              </tr></thead>
+              <tbody id="triggersTableBody">
+                <tr class="empty-row"><td colspan="5" data-i18n="communications.empty_triggers">トリガーがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Reports Page -->
+      <div class="page" id="page-financial-reports">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="finReportType" onchange="loadFinancialReport()">
+              <option value="pnl" data-i18n="financial.pnl">損益計算書</option>
+              <option value="tax" data-i18n="financial.tax_summary">税務サマリー</option>
+              <option value="reconciliation" data-i18n="financial.reconciliation">ウォレット照合</option>
+              <option value="balance" data-i18n="financial.balance_sheet">貸借対照表</option>
+            </select>
+            <input type="date" id="finStartDate" onchange="loadFinancialReport()">
+            <input type="date" id="finEndDate" onchange="loadFinancialReport()">
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="financial.title">財務レポート</h3></div>
+          <div id="financialReportContent" style="padding:16px">
+            <p style="color:var(--text-muted)" data-i18n="common.loading">読み込み中...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Forecasting Page -->
+      <div class="page" id="page-forecasting">
+        <div class="page-actions">
+          <div class="filter-group"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" onclick="exportCSV('/api/v1/forecasting/export','forecasts.csv')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span data-i18n="orders.export_csv">CSV出力</span>
+            </button>
+            <button class="btn-primary admin-only" onclick="recalculateForecasts()" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              <span data-i18n="forecasting.recalculate">再計算</span>
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="forecasting.title">在庫予測</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>SKU</th>
+                <th data-i18n="forecasting.product">商品名</th>
+                <th data-i18n="forecasting.stock">現在庫</th>
+                <th data-i18n="forecasting.daily_velocity">日販数</th>
+                <th data-i18n="forecasting.days_of_stock">在庫日数</th>
+                <th data-i18n="forecasting.reorder_point">発注点</th>
+                <th data-i18n="forecasting.status">状態</th>
+              </tr></thead>
+              <tbody id="forecastingTableBody">
+                <tr class="empty-row"><td colspan="7" data-i18n="forecasting.empty">予測データがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="forecastingPagination"></div>
+        </div>
+      </div>
+
+      <!-- Automation Page -->
+      <div class="page" id="page-automation">
+        <div class="page-actions">
+          <div class="filter-group"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" onclick="evaluateAllRules()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span data-i18n="automation.run_all">全ルール実行</span>
+            </button>
+            <button class="btn-primary" onclick="openModal('addAutomationModal')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="automation.add_rule">ルール追加</span>
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="automation.rules">自動化ルール</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th>
+                <th data-i18n="automation.name">名前</th>
+                <th data-i18n="automation.type">タイプ</th>
+                <th data-i18n="automation.status">状態</th>
+                <th data-i18n="automation.run_count">実行回数</th>
+                <th data-i18n="automation.last_run">最終実行</th>
+                <th data-i18n="automation.actions_col">操作</th>
+              </tr></thead>
+              <tbody id="automationTableBody">
+                <tr class="empty-row"><td colspan="7" data-i18n="automation.empty">ルールがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-header"><h3 data-i18n="automation.logs">実行ログ</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th data-i18n="automation.rule_name">ルール名</th>
+                <th data-i18n="automation.trigger">トリガー</th>
+                <th data-i18n="automation.log_status">結果</th>
+                <th data-i18n="automation.details">詳細</th>
+                <th data-i18n="automation.affected">影響数</th>
+                <th data-i18n="automation.time">実行時間</th>
+                <th data-i18n="automation.date">日時</th>
+              </tr></thead>
+              <tbody id="automationLogsBody">
+                <tr class="empty-row"><td colspan="7" data-i18n="automation.logs_empty">ログがありません</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="automationLogsPagination"></div>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -1202,339 +1536,6 @@
       <div style="padding:24px" id="twoFAContent">
         <p style="color:var(--text-muted)" data-i18n="common.loading">読み込み中...</p>
       </div>
-    </div>
-  </div>
-
-  <!-- Returns Page -->
-  <div class="page" id="page-returns">
-    <div class="page-actions">
-      <div class="filter-group">
-        <select id="returnStatusFilter" onchange="loadReturns()">
-          <option value="">全ステータス</option>
-          <option value="REQUESTED">REQUESTED</option>
-          <option value="APPROVED">APPROVED</option>
-          <option value="RECEIVED">RECEIVED</option>
-          <option value="REFUNDED">REFUNDED</option>
-          <option value="REJECTED">REJECTED</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-secondary" onclick="exportCSV('/api/v1/returns/export','returns.csv')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span data-i18n="orders.export_csv">CSV出力</span>
-        </button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h3 data-i18n="returns.title">返品管理</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th>ID</th>
-            <th data-i18n="returns.order_id">注文ID</th>
-            <th data-i18n="returns.status">ステータス</th>
-            <th data-i18n="returns.reason">理由</th>
-            <th data-i18n="returns.refund_amount">返金額</th>
-            <th data-i18n="returns.created_at">申請日</th>
-            <th data-i18n="common.actions">操作</th>
-          </tr></thead>
-          <tbody id="returnsTableBody">
-            <tr class="empty-row"><td colspan="7" data-i18n="returns.empty">返品データがありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="pagination" id="returnsPagination"></div>
-    </div>
-  </div>
-
-  <!-- Procurement Page -->
-  <div class="page" id="page-procurement">
-    <div class="page-actions">
-      <div class="filter-group">
-        <select id="poTab" onchange="switchPOTab(this.value)">
-          <option value="suppliers" data-i18n="procurement.suppliers">仕入先</option>
-          <option value="orders" data-i18n="procurement.orders">発注書</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-secondary" onclick="exportCSV('/api/v1/purchase-orders/export','purchase-orders.csv')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span data-i18n="orders.export_csv">CSV出力</span>
-        </button>
-        <button class="btn-primary" id="addSupplierBtn" onclick="openSupplierModal()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span data-i18n="procurement.add_supplier">仕入先追加</span>
-        </button>
-      </div>
-    </div>
-    <div class="card" id="suppliersSection">
-      <div class="card-header"><h3 data-i18n="procurement.suppliers">仕入先一覧</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th>ID</th>
-            <th data-i18n="procurement.supplier_name">仕入先名</th>
-            <th data-i18n="procurement.contact">連絡先</th>
-            <th data-i18n="procurement.lead_time">リードタイム</th>
-            <th data-i18n="procurement.status">状態</th>
-            <th data-i18n="common.actions">操作</th>
-          </tr></thead>
-          <tbody id="suppliersTableBody">
-            <tr class="empty-row"><td colspan="6" data-i18n="procurement.empty_suppliers">仕入先がありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card" id="poSection" style="display:none">
-      <div class="card-header"><h3 data-i18n="procurement.orders">発注書一覧</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th data-i18n="procurement.po_number">PO番号</th>
-            <th data-i18n="procurement.supplier_name">仕入先</th>
-            <th data-i18n="procurement.status">ステータス</th>
-            <th data-i18n="procurement.total">合計</th>
-            <th data-i18n="procurement.expected_delivery">納期</th>
-            <th data-i18n="common.actions">操作</th>
-          </tr></thead>
-          <tbody id="poTableBody">
-            <tr class="empty-row"><td colspan="6" data-i18n="procurement.empty_orders">発注書がありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Pricing Page -->
-  <div class="page" id="page-pricing">
-    <div class="page-actions">
-      <div class="filter-group">
-        <select id="pricingPlatformFilter" onchange="loadPricing()">
-          <option value="">全プラットフォーム</option>
-          <option value="TIKTOK">TikTok</option>
-          <option value="TEMU">Temu</option>
-          <option value="RAKUTEN">Rakuten</option>
-          <option value="ALL">ALL</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-secondary" onclick="exportCSV('/api/v1/pricing/export','price-rules.csv')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span data-i18n="orders.export_csv">CSV出力</span>
-        </button>
-        <button class="btn-primary admin-only" onclick="openPricingModal()" style="display:none">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span data-i18n="pricing.add">価格ルール追加</span>
-        </button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h3 data-i18n="pricing.title">価格ルール</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th>SKU</th>
-            <th data-i18n="pricing.platform">プラットフォーム</th>
-            <th data-i18n="pricing.base_price">基本価格</th>
-            <th data-i18n="pricing.sale_price">セール価格</th>
-            <th data-i18n="pricing.margin">利益率</th>
-            <th data-i18n="pricing.status">状態</th>
-            <th data-i18n="common.actions">操作</th>
-          </tr></thead>
-          <tbody id="pricingTableBody">
-            <tr class="empty-row"><td colspan="7" data-i18n="pricing.empty">価格ルールがありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="pagination" id="pricingPagination"></div>
-    </div>
-  </div>
-
-  <!-- Communications Page -->
-  <div class="page" id="page-communications">
-    <div class="page-actions">
-      <div class="filter-group">
-        <select id="commTab" onchange="switchCommTab(this.value)">
-          <option value="templates" data-i18n="communications.templates">テンプレート</option>
-          <option value="messages" data-i18n="communications.messages">メッセージ</option>
-          <option value="triggers" data-i18n="communications.triggers">トリガー</option>
-        </select>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-primary" id="addTemplateBtn" onclick="openTemplateModal()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span data-i18n="communications.add_template">テンプレート追加</span>
-        </button>
-      </div>
-    </div>
-    <div class="card" id="templatesSection">
-      <div class="card-header"><h3 data-i18n="communications.templates">テンプレート一覧</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th>ID</th>
-            <th data-i18n="communications.template_name">名前</th>
-            <th data-i18n="communications.type">タイプ</th>
-            <th data-i18n="communications.channel">チャネル</th>
-            <th data-i18n="communications.active">有効</th>
-            <th data-i18n="common.actions">操作</th>
-          </tr></thead>
-          <tbody id="templatesTableBody">
-            <tr class="empty-row"><td colspan="6" data-i18n="communications.empty_templates">テンプレートがありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card" id="messagesSection" style="display:none">
-      <div class="card-header"><h3 data-i18n="communications.messages">メッセージ履歴</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th>ID</th>
-            <th data-i18n="communications.customer">顧客</th>
-            <th data-i18n="communications.type">タイプ</th>
-            <th data-i18n="communications.channel">チャネル</th>
-            <th data-i18n="communications.status">ステータス</th>
-            <th data-i18n="communications.sent_at">送信日</th>
-          </tr></thead>
-          <tbody id="messagesTableBody">
-            <tr class="empty-row"><td colspan="6" data-i18n="communications.empty_messages">メッセージがありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="pagination" id="messagesPagination"></div>
-    </div>
-    <div class="card" id="triggersSection" style="display:none">
-      <div class="card-header"><h3 data-i18n="communications.triggers">自動トリガー</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th>ID</th>
-            <th data-i18n="communications.event">イベント</th>
-            <th data-i18n="communications.template_name">テンプレート</th>
-            <th data-i18n="communications.active">有効</th>
-            <th data-i18n="common.actions">操作</th>
-          </tr></thead>
-          <tbody id="triggersTableBody">
-            <tr class="empty-row"><td colspan="5" data-i18n="communications.empty_triggers">トリガーがありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Financial Reports Page -->
-  <div class="page" id="page-financial-reports">
-    <div class="page-actions">
-      <div class="filter-group">
-        <select id="finReportType" onchange="loadFinancialReport()">
-          <option value="pnl" data-i18n="financial.pnl">損益計算書</option>
-          <option value="tax" data-i18n="financial.tax_summary">税務サマリー</option>
-          <option value="reconciliation" data-i18n="financial.reconciliation">ウォレット照合</option>
-          <option value="balance" data-i18n="financial.balance_sheet">貸借対照表</option>
-        </select>
-        <input type="date" id="finStartDate" onchange="loadFinancialReport()">
-        <input type="date" id="finEndDate" onchange="loadFinancialReport()">
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h3 data-i18n="financial.title">財務レポート</h3></div>
-      <div id="financialReportContent" style="padding:16px">
-        <p style="color:var(--text-muted)" data-i18n="common.loading">読み込み中...</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Forecasting Page -->
-  <div class="page" id="page-forecasting">
-    <div class="page-actions">
-      <div class="filter-group"></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-secondary" onclick="exportCSV('/api/v1/forecasting/export','forecasts.csv')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span data-i18n="orders.export_csv">CSV出力</span>
-        </button>
-        <button class="btn-primary admin-only" onclick="recalculateForecasts()" style="display:none">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-          <span data-i18n="forecasting.recalculate">再計算</span>
-        </button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h3 data-i18n="forecasting.title">在庫予測</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th>SKU</th>
-            <th data-i18n="forecasting.product">商品名</th>
-            <th data-i18n="forecasting.stock">現在庫</th>
-            <th data-i18n="forecasting.daily_velocity">日販数</th>
-            <th data-i18n="forecasting.days_of_stock">在庫日数</th>
-            <th data-i18n="forecasting.reorder_point">発注点</th>
-            <th data-i18n="forecasting.status">状態</th>
-          </tr></thead>
-          <tbody id="forecastingTableBody">
-            <tr class="empty-row"><td colspan="7" data-i18n="forecasting.empty">予測データがありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="pagination" id="forecastingPagination"></div>
-    </div>
-  </div>
-
-  <!-- Automation Page -->
-  <div class="page" id="page-automation">
-    <div class="page-actions">
-      <div class="filter-group"></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-secondary" onclick="evaluateAllRules()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          <span data-i18n="automation.run_all">全ルール実行</span>
-        </button>
-        <button class="btn-primary" onclick="openModal('addAutomationModal')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span data-i18n="automation.add_rule">ルール追加</span>
-        </button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header"><h3 data-i18n="automation.rules">自動化ルール</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th>ID</th>
-            <th data-i18n="automation.name">名前</th>
-            <th data-i18n="automation.type">タイプ</th>
-            <th data-i18n="automation.status">状態</th>
-            <th data-i18n="automation.run_count">実行回数</th>
-            <th data-i18n="automation.last_run">最終実行</th>
-            <th data-i18n="automation.actions_col">操作</th>
-          </tr></thead>
-          <tbody id="automationTableBody">
-            <tr class="empty-row"><td colspan="7" data-i18n="automation.empty">ルールがありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card" style="margin-top:20px">
-      <div class="card-header"><h3 data-i18n="automation.logs">実行ログ</h3></div>
-      <div class="table-container">
-        <table class="data-table">
-          <thead><tr>
-            <th data-i18n="automation.rule_name">ルール名</th>
-            <th data-i18n="automation.trigger">トリガー</th>
-            <th data-i18n="automation.log_status">結果</th>
-            <th data-i18n="automation.details">詳細</th>
-            <th data-i18n="automation.affected">影響数</th>
-            <th data-i18n="automation.time">実行時間</th>
-            <th data-i18n="automation.date">日時</th>
-          </tr></thead>
-          <tbody id="automationLogsBody">
-            <tr class="empty-row"><td colspan="7" data-i18n="automation.logs_empty">ログがありません</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="pagination" id="automationLogsPagination"></div>
     </div>
   </div>
 
