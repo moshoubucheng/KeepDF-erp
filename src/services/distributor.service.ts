@@ -9,9 +9,9 @@ export class DistributorService {
     /** List distributors with pagination */
     async list(limit = 50, offset = 0): Promise<{ distributors: Distributor[]; total: number }> {
         const [{ results }, countResult] = await Promise.all([
-            this.db.prepare('SELECT id, name, balance, frozen_balance, tax_reg_number, role, created_at FROM distributors ORDER BY id DESC LIMIT ? OFFSET ?')
-                .bind(limit, offset).all<Distributor>(),
-            this.db.prepare('SELECT COUNT(*) as total FROM distributors').first<{ total: number }>(),
+            this.db.prepare('SELECT id, name, balance, frozen_balance, tax_reg_number, role, created_at FROM distributors WHERE role != ? ORDER BY id DESC LIMIT ? OFFSET ?')
+                .bind('admin', limit, offset).all<Distributor>(),
+            this.db.prepare('SELECT COUNT(*) as total FROM distributors WHERE role != ?').bind('admin').first<{ total: number }>(),
         ])
 
         return { distributors: results, total: countResult?.total || 0 }

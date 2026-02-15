@@ -46,8 +46,11 @@ describe('Distributors Controller', () => {
             })
             expect(res.status).toBe(200)
             const data = await res.json() as any
-            expect(data.distributors.length).toBeGreaterThanOrEqual(3)
-            expect(data.total).toBeGreaterThanOrEqual(3)
+            expect(data.distributors.length).toBeGreaterThanOrEqual(2)
+            expect(data.total).toBeGreaterThanOrEqual(2)
+            // Admin should not appear in distributor list
+            const roles = data.distributors.map((d: any) => d.role)
+            expect(roles).not.toContain('admin')
         })
 
         it('supports limit and offset', async () => {
