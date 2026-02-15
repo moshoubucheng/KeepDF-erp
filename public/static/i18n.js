@@ -1427,7 +1427,7 @@ const translations = {
     },
 }
 
-let currentLang = localStorage.getItem('erp_lang') || 'ja'
+let currentLang = localStorage.getItem('erp_lang') || 'zh'
 
 /**
  * Get translation for key, with optional parameter substitution

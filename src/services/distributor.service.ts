@@ -64,7 +64,7 @@ export class DistributorService {
             password_hash: null,
             totp_secret: null,
             totp_enabled: 0,
-            language: 'ja',
+            language: 'zh',
             balance: 0,
             frozen_balance: 0,
             tax_reg_number: params.tax_reg_number || null,

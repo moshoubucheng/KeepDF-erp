@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS distributors (
   password_hash TEXT,
   totp_secret TEXT,
   totp_enabled INTEGER DEFAULT 0,
-  language TEXT DEFAULT 'ja',
+  language TEXT DEFAULT 'zh',
   balance REAL DEFAULT 0.0,
   frozen_balance REAL DEFAULT 0.0,
   tax_reg_number TEXT,
