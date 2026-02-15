@@ -50,6 +50,7 @@ import { AutomationService } from './services/automation.service'
 const ALLOWED_ORIGINS = [
     'http://localhost:8787',
     'http://127.0.0.1:8787',
+    'http://localhost:5173',
     'https://erp.keepdf.com',
 ]
 
@@ -121,7 +122,16 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal Server Error' }, 500)
 })
 
-app.notFound((c) => c.json({ error: 'Not Found' }, 404))
+app.notFound(async (c) => {
+  // API routes: return JSON 404
+  if (c.req.path.startsWith('/api/')) {
+    return c.json({ error: 'Not Found' }, 404)
+  }
+  // SPA fallback: serve index.html for client-side routes
+  const url = new URL(c.req.url)
+  url.pathname = '/index.html'
+  return c.env.ASSETS.fetch(new Request(url))
+})
 
 // ===== Export =====
 export default {

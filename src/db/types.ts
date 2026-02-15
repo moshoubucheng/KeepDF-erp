@@ -5,6 +5,7 @@ export type Bindings = {
     KV: KVNamespace
     ORDER_QUEUE: Queue
     ENCRYPTION_KEY: string
+    ASSETS: Fetcher
 }
 
 // ===== Hono Context Variables =====
