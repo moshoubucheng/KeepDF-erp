@@ -166,6 +166,12 @@ async function loadPageData(page) {
         case 'shipping': return loadShipping();
         case 'customers': return loadCustomers();
         case 'settings': return loadSettings();
+        case 'returns': return loadReturns();
+        case 'procurement': return loadProcurement();
+        case 'pricing': return loadPricing();
+        case 'communications': return loadCommunications();
+        case 'financial-reports': return loadFinancialReport();
+        case 'forecasting': return loadForecasting();
     }
 }
 
@@ -1889,3 +1895,323 @@ document.addEventListener('DOMContentLoaded', () => {
     // Apply initial translations
     if (typeof applyTranslations === 'function') applyTranslations();
 });
+
+// ===== Sprint 9: Returns =====
+async function loadReturns(offset = 0) {
+    const status = document.getElementById('returnStatusFilter')?.value || '';
+    let url = `/api/v1/returns?limit=20&offset=${offset}`;
+    if (status) url += `&status=${status}`;
+
+    const data = await apiFetch(url);
+    const tbody = document.getElementById('returnsTableBody');
+    if (!data?.returns?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('returns.empty')}</td></tr>`;
+        document.getElementById('returnsPagination').innerHTML = '';
+        return;
+    }
+    tbody.innerHTML = data.returns.map(r => `
+        <tr>
+          <td>#${r.id}</td>
+          <td>#${r.order_id}</td>
+          <td><span class="status-badge status-${(r.status||'').toLowerCase()}">${r.status}</span></td>
+          <td class="col-hide-mobile">${escapeHtml(r.reason) || '\u2014'}</td>
+          <td>\u00A5${(r.refund_amount||0).toLocaleString()}</td>
+          <td class="col-hide-mobile">${formatDate(r.created_at)}</td>
+          <td>
+            ${r.status === 'REQUESTED' && currentRole === 'admin' ? `<button class="btn-sm btn-success" onclick="approveReturn(${r.id})">${t('returns.approve')}</button> <button class="btn-sm btn-danger" onclick="rejectReturn(${r.id})">${t('returns.reject')}</button>` : ''}
+            ${r.status === 'APPROVED' && currentRole === 'admin' ? `<button class="btn-sm" onclick="receiveReturn(${r.id})">${t('returns.receive')}</button>` : ''}
+            ${r.status === 'RECEIVED' && currentRole === 'admin' ? `<button class="btn-sm btn-success" onclick="refundReturn(${r.id})">${t('returns.refund')}</button>` : ''}
+          </td>
+        </tr>`).join('');
+    renderPagination('returnsPagination', offset, 20, data.total, (o) => loadReturns(o));
+}
+async function approveReturn(id) { await apiFetch(`/api/v1/returns/${id}/approve`, { method: 'PATCH' }); loadReturns(); }
+async function rejectReturn(id) { const reason = prompt(t('returns.reject_reason')); await apiFetch(`/api/v1/returns/${id}/reject`, { method: 'PATCH', body: JSON.stringify({ reason }) }); loadReturns(); }
+async function receiveReturn(id) { await apiFetch(`/api/v1/returns/${id}/receive`, { method: 'PATCH' }); loadReturns(); }
+async function refundReturn(id) { if (!confirm(t('returns.confirm_refund'))) return; await apiFetch(`/api/v1/returns/${id}/refund`, { method: 'PATCH' }); loadReturns(); }
+
+// ===== Sprint 9: Procurement =====
+function switchPOTab(tab) {
+    document.getElementById('suppliersSection').style.display = tab === 'suppliers' ? '' : 'none';
+    document.getElementById('poSection').style.display = tab === 'orders' ? '' : 'none';
+    document.getElementById('addSupplierBtn').style.display = tab === 'suppliers' ? '' : 'none';
+    if (tab === 'suppliers') loadSuppliers(); else loadPurchaseOrders();
+}
+async function loadProcurement() { loadSuppliers(); }
+async function loadSuppliers() {
+    const data = await apiFetch('/api/v1/suppliers?limit=50');
+    const tbody = document.getElementById('suppliersTableBody');
+    if (!data?.suppliers?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('procurement.empty_suppliers')}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = data.suppliers.map(s => `
+        <tr>
+          <td>#${s.id}</td>
+          <td><strong>${escapeHtml(s.name)}</strong></td>
+          <td class="col-hide-mobile">${escapeHtml(s.contact_email || s.contact_phone || '\u2014')}</td>
+          <td>${s.lead_time_days}${t('procurement.days')}</td>
+          <td><span class="status-badge ${s.is_active ? 'status-active' : 'status-inactive'}">${s.is_active ? t('common.active') : t('common.inactive')}</span></td>
+          <td><button class="btn-sm" onclick="editSupplier(${s.id})">${t('distributors.edit')}</button></td>
+        </tr>`).join('');
+}
+async function loadPurchaseOrders() {
+    const data = await apiFetch('/api/v1/purchase-orders?limit=50');
+    const tbody = document.getElementById('poTableBody');
+    if (!data?.orders?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('procurement.empty_orders')}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = data.orders.map(po => `
+        <tr>
+          <td>${escapeHtml(po.po_number)}</td>
+          <td>${escapeHtml(po.supplier_name || '\u2014')}</td>
+          <td><span class="status-badge status-${(po.status||'').toLowerCase()}">${po.status}</span></td>
+          <td>\u00A5${(po.total_amount||0).toLocaleString()}</td>
+          <td class="col-hide-mobile">${po.expected_delivery ? formatDate(po.expected_delivery) : '\u2014'}</td>
+          <td><button class="btn-sm" onclick="viewPO(${po.id})">${t('common.view')}</button></td>
+        </tr>`).join('');
+}
+function openSupplierModal() { alert('Supplier modal - TODO'); }
+function editSupplier(id) { alert('Edit supplier ' + id + ' - TODO'); }
+function viewPO(id) { alert('View PO ' + id + ' - TODO'); }
+
+// ===== Sprint 9: Pricing =====
+async function loadPricing(offset = 0) {
+    const platform = document.getElementById('pricingPlatformFilter')?.value || '';
+    let url = `/api/v1/pricing?limit=20&offset=${offset}`;
+    if (platform) url += `&platform=${platform}`;
+
+    const data = await apiFetch(url);
+    const tbody = document.getElementById('pricingTableBody');
+    if (!data?.rules?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('pricing.empty')}</td></tr>`;
+        document.getElementById('pricingPagination').innerHTML = '';
+        return;
+    }
+    // Also fetch margins for display
+    let margins = {};
+    try {
+        const mData = await apiFetch('/api/v1/pricing/margins');
+        if (mData?.margins) mData.margins.forEach(m => { margins[m.sku + '/' + m.platform] = m; });
+    } catch(e) {}
+
+    tbody.innerHTML = data.rules.map(r => {
+        const m = margins[r.sku + '/' + r.platform];
+        const marginPct = m ? m.margin_pct + '%' : '\u2014';
+        return `
+        <tr>
+          <td>${escapeHtml(r.sku)}</td>
+          <td>${r.platform}</td>
+          <td>\u00A5${(r.base_price||0).toLocaleString()}</td>
+          <td>${r.sale_price ? '\u00A5' + r.sale_price.toLocaleString() : '\u2014'}</td>
+          <td>${marginPct}</td>
+          <td><span class="status-badge ${r.is_active ? 'status-active' : 'status-inactive'}">${r.is_active ? t('common.active') : t('common.inactive')}</span></td>
+          <td>
+            ${currentRole === 'admin' ? `<button class="btn-sm" onclick="editPriceRule(${r.id})">${t('distributors.edit')}</button>` : ''}
+          </td>
+        </tr>`;
+    }).join('');
+    renderPagination('pricingPagination', offset, 20, data.total, (o) => loadPricing(o));
+}
+function openPricingModal() { alert('Pricing modal - TODO'); }
+function editPriceRule(id) { alert('Edit price rule ' + id + ' - TODO'); }
+
+// ===== Sprint 9: Communications =====
+function switchCommTab(tab) {
+    document.getElementById('templatesSection').style.display = tab === 'templates' ? '' : 'none';
+    document.getElementById('messagesSection').style.display = tab === 'messages' ? '' : 'none';
+    document.getElementById('triggersSection').style.display = tab === 'triggers' ? '' : 'none';
+    document.getElementById('addTemplateBtn').style.display = tab === 'templates' ? '' : 'none';
+    if (tab === 'templates') loadTemplates();
+    else if (tab === 'messages') loadMessages();
+    else loadTriggers();
+}
+async function loadCommunications() { loadTemplates(); }
+async function loadTemplates() {
+    const data = await apiFetch('/api/v1/communications/templates?limit=50');
+    const tbody = document.getElementById('templatesTableBody');
+    if (!data?.templates?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('communications.empty_templates')}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = data.templates.map(tp => `
+        <tr>
+          <td>#${tp.id}</td>
+          <td>${escapeHtml(tp.name)}</td>
+          <td>${tp.type}</td>
+          <td>${tp.channel}</td>
+          <td><span class="status-badge ${tp.is_active ? 'status-active' : 'status-inactive'}">${tp.is_active ? t('common.active') : t('common.inactive')}</span></td>
+          <td><button class="btn-sm" onclick="editTemplate(${tp.id})">${t('distributors.edit')}</button></td>
+        </tr>`).join('');
+}
+async function loadMessages(offset = 0) {
+    const data = await apiFetch(`/api/v1/communications/messages?limit=20&offset=${offset}`);
+    const tbody = document.getElementById('messagesTableBody');
+    if (!data?.messages?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('communications.empty_messages')}</td></tr>`;
+        document.getElementById('messagesPagination').innerHTML = '';
+        return;
+    }
+    tbody.innerHTML = data.messages.map(m => `
+        <tr>
+          <td>#${m.id}</td>
+          <td>#${m.customer_id}</td>
+          <td>${m.type}</td>
+          <td>${m.channel}</td>
+          <td><span class="status-badge status-${(m.status||'').toLowerCase()}">${m.status}</span></td>
+          <td>${formatDate(m.sent_at)}</td>
+        </tr>`).join('');
+    renderPagination('messagesPagination', offset, 20, data.total, (o) => loadMessages(o));
+}
+async function loadTriggers() {
+    const data = await apiFetch('/api/v1/communications/triggers');
+    const tbody = document.getElementById('triggersTableBody');
+    if (!data?.triggers?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${t('communications.empty_triggers')}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = data.triggers.map(tr => `
+        <tr>
+          <td>#${tr.id}</td>
+          <td>${tr.event_type}</td>
+          <td>${escapeHtml(tr.template_name || '#' + tr.template_id)}</td>
+          <td><span class="status-badge ${tr.is_active ? 'status-active' : 'status-inactive'}">${tr.is_active ? t('common.active') : t('common.inactive')}</span></td>
+          <td><button class="btn-sm btn-danger" onclick="deleteTrigger(${tr.id})">${t('common.delete')}</button></td>
+        </tr>`).join('');
+}
+function openTemplateModal() { alert('Template modal - TODO'); }
+function editTemplate(id) { alert('Edit template ' + id + ' - TODO'); }
+async function deleteTrigger(id) { if (!confirm(t('common.confirm_delete'))) return; await apiFetch(`/api/v1/communications/triggers/${id}`, { method: 'DELETE' }); loadTriggers(); }
+
+// ===== Sprint 9: Financial Reports =====
+async function loadFinancialReport() {
+    const type = document.getElementById('finReportType')?.value || 'pnl';
+    const start = document.getElementById('finStartDate')?.value || '';
+    const end = document.getElementById('finEndDate')?.value || '';
+    const content = document.getElementById('financialReportContent');
+
+    let params = '';
+    if (start) params += `&start_date=${start}`;
+    if (end) params += `&end_date=${end}`;
+
+    if (type === 'pnl') {
+        const data = await apiFetch(`/api/v1/financial-reports/pnl?${params}`);
+        if (!data) return;
+        content.innerHTML = `
+          <div class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+            <div class="stat-card"><div class="stat-label">${t('financial.revenue')}</div><div class="stat-value">\u00A5${(data.revenue?.total||0).toLocaleString()}</div></div>
+            <div class="stat-card"><div class="stat-label">${t('financial.cogs')}</div><div class="stat-value">\u00A5${(data.cogs||0).toLocaleString()}</div></div>
+            <div class="stat-card"><div class="stat-label">${t('financial.gross_profit')}</div><div class="stat-value">\u00A5${(data.gross_profit||0).toLocaleString()} (${data.gross_margin||0}%)</div></div>
+            <div class="stat-card"><div class="stat-label">${t('financial.net_profit')}</div><div class="stat-value" style="color:${data.net_profit >= 0 ? 'var(--success)' : 'var(--danger)'};">\u00A5${(data.net_profit||0).toLocaleString()} (${data.net_margin||0}%)</div></div>
+          </div>
+          <table class="data-table"><thead><tr><th>${t('financial.item')}</th><th>${t('financial.amount')}</th></tr></thead><tbody>
+            <tr><td>${t('financial.revenue')}</td><td>\u00A5${(data.revenue?.total||0).toLocaleString()}</td></tr>
+            <tr><td>${t('financial.cogs')}</td><td>-\u00A5${(data.cogs||0).toLocaleString()}</td></tr>
+            <tr><td><strong>${t('financial.gross_profit')}</strong></td><td><strong>\u00A5${(data.gross_profit||0).toLocaleString()}</strong></td></tr>
+            <tr><td>${t('financial.commission')}</td><td>-\u00A5${(data.expenses?.commission||0).toLocaleString()}</td></tr>
+            <tr><td>${t('financial.refunds')}</td><td>-\u00A5${(data.expenses?.refunds||0).toLocaleString()}</td></tr>
+            <tr style="font-weight:bold;background:var(--bg-card)"><td>${t('financial.net_profit')}</td><td style="color:${data.net_profit >= 0 ? 'var(--success)' : 'var(--danger)'};">\u00A5${(data.net_profit||0).toLocaleString()}</td></tr>
+          </tbody></table>`;
+    } else if (type === 'tax') {
+        const data = await apiFetch(`/api/v1/financial-reports/tax-summary?${params}`);
+        if (!data) return;
+        content.innerHTML = `
+          <div class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+            <div class="stat-card"><div class="stat-label">${t('financial.total_taxable')}</div><div class="stat-value">\u00A5${(data.total_taxable||0).toLocaleString()}</div></div>
+            <div class="stat-card"><div class="stat-label">${t('financial.total_tax')}</div><div class="stat-value">\u00A5${(data.total_tax||0).toLocaleString()}</div></div>
+          </div>
+          <table class="data-table"><thead><tr><th>${t('financial.tax_rate')}</th><th>${t('financial.orders')}</th><th>${t('financial.taxable')}</th><th>${t('financial.tax')}</th></tr></thead><tbody>
+            ${(data.breakdown||[]).map(b => `<tr><td>${b.rate_label}</td><td>${b.order_count}</td><td>\u00A5${(b.taxable_amount||0).toLocaleString()}</td><td>\u00A5${(b.tax_amount||0).toLocaleString()}</td></tr>`).join('')}
+          </tbody></table>`;
+    } else if (type === 'reconciliation') {
+        const data = await apiFetch(`/api/v1/financial-reports/reconciliation?${params}`);
+        if (!data) return;
+        content.innerHTML = `
+          <div class="stats-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+            <div class="stat-card"><div class="stat-label">${t('financial.current_balance')}</div><div class="stat-value">\u00A5${(data.current_balance||0).toLocaleString()}</div></div>
+            <div class="stat-card"><div class="stat-label">${t('financial.frozen')}</div><div class="stat-value">\u00A5${(data.current_frozen||0).toLocaleString()}</div></div>
+          </div>
+          <table class="data-table"><thead><tr><th>${t('financial.tx_type')}</th><th>${t('financial.count')}</th><th>${t('financial.total')}</th></tr></thead><tbody>
+            ${(data.transactions||[]).map(tx => `<tr><td>${tx.type}</td><td>${tx.count}</td><td>\u00A5${(tx.total||0).toLocaleString()}</td></tr>`).join('')}
+          </tbody></table>`;
+    } else if (type === 'balance') {
+        const data = await apiFetch('/api/v1/financial-reports/balance-sheet');
+        if (!data) return;
+        content.innerHTML = `
+          <p style="color:var(--text-muted);margin-bottom:16px">${t('financial.as_of')}: ${data.as_of}</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+            <div class="card" style="padding:16px">
+              <h4>${t('financial.assets')}</h4>
+              <table class="data-table"><tbody>
+                <tr><td>${t('financial.cash')}</td><td>\u00A5${(data.assets?.cash||0).toLocaleString()}</td></tr>
+                <tr><td>${t('financial.frozen')}</td><td>\u00A5${(data.assets?.frozen||0).toLocaleString()}</td></tr>
+                <tr><td>${t('financial.inventory')}</td><td>\u00A5${(data.assets?.inventory||0).toLocaleString()}</td></tr>
+                <tr style="font-weight:bold"><td>${t('financial.total')}</td><td>\u00A5${(data.assets?.total||0).toLocaleString()}</td></tr>
+              </tbody></table>
+            </div>
+            <div class="card" style="padding:16px">
+              <h4>${t('financial.liabilities')}</h4>
+              <table class="data-table"><tbody>
+                <tr><td>${t('financial.pending_refunds')}</td><td>\u00A5${(data.liabilities?.pending_refunds||0).toLocaleString()}</td></tr>
+                <tr><td>${t('financial.pending_commissions')}</td><td>\u00A5${(data.liabilities?.pending_commissions||0).toLocaleString()}</td></tr>
+                <tr style="font-weight:bold"><td>${t('financial.total')}</td><td>\u00A5${(data.liabilities?.total||0).toLocaleString()}</td></tr>
+              </tbody></table>
+              <div style="margin-top:16px;padding-top:16px;border-top:2px solid var(--border)">
+                <strong>${t('financial.equity')}: \u00A5${(data.equity||0).toLocaleString()}</strong>
+              </div>
+            </div>
+          </div>`;
+    }
+}
+
+// ===== Sprint 9: Forecasting =====
+async function loadForecasting(offset = 0) {
+    const data = await apiFetch(`/api/v1/forecasting?limit=20&offset=${offset}`);
+    const tbody = document.getElementById('forecastingTableBody');
+    if (!data?.forecasts?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('forecasting.empty')}</td></tr>`;
+        document.getElementById('forecastingPagination').innerHTML = '';
+        return;
+    }
+    tbody.innerHTML = data.forecasts.map(f => {
+        const stock = f.current_stock || 0;
+        const rp = f.reorder_point || 0;
+        let statusClass = 'status-active';
+        let statusText = t('forecasting.ok');
+        if (stock <= rp) { statusClass = 'status-danger'; statusText = t('forecasting.reorder'); }
+        else if (f.days_of_stock < 14) { statusClass = 'status-warning'; statusText = t('forecasting.low'); }
+        return `
+        <tr>
+          <td>${escapeHtml(f.sku)}</td>
+          <td class="col-hide-mobile">${escapeHtml(f.product_name || '\u2014')}</td>
+          <td>${stock}</td>
+          <td>${f.daily_velocity}</td>
+          <td>${f.days_of_stock}</td>
+          <td>${rp}</td>
+          <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+        </tr>`;
+    }).join('');
+    renderPagination('forecastingPagination', offset, 20, data.total, (o) => loadForecasting(o));
+}
+async function recalculateForecasts() {
+    const data = await apiFetch('/api/v1/forecasting/calculate', { method: 'POST' });
+    if (data?.success) { alert(t('forecasting.recalculated', { count: data.calculated })); loadForecasting(); }
+}
+
+// ===== Utility: CSV export helper =====
+async function exportCSV(url, filename) {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+        if (!res.ok) throw new Error('Export failed');
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    } catch(e) {
+        alert(t('common.error') + ': ' + e.message);
+    }
+}

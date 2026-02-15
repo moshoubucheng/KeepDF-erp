@@ -21,10 +21,18 @@ import { customers } from './controllers/customers.controller'
 import { importCtrl } from './controllers/import.controller'
 import { notifications } from './controllers/notifications.controller'
 import { settings } from './controllers/settings.controller'
+import { returns } from './controllers/returns.controller'
+import { suppliers } from './controllers/suppliers.controller'
+import { purchaseOrders } from './controllers/purchase-orders.controller'
+import { pricing } from './controllers/pricing.controller'
+import { communications } from './controllers/communications.controller'
+import { financialReports } from './controllers/financial-reports.controller'
+import { forecasting } from './controllers/forecasting.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
 import { PlatformSyncService } from './services/platform-sync.service'
+import { ForecastingService } from './services/forecasting.service'
 
 const ALLOWED_ORIGINS = [
     'http://localhost:8787',
@@ -73,6 +81,13 @@ app.route('/api/v1/customers', customers)
 app.route('/api/v1/import', importCtrl)
 app.route('/api/v1/notifications', notifications)
 app.route('/api/v1/settings', settings)
+app.route('/api/v1/returns', returns)
+app.route('/api/v1/suppliers', suppliers)
+app.route('/api/v1/purchase-orders', purchaseOrders)
+app.route('/api/v1/pricing', pricing)
+app.route('/api/v1/communications', communications)
+app.route('/api/v1/financial-reports', financialReports)
+app.route('/api/v1/forecasting', forecasting)
 
 // ===== Error Handler =====
 app.onError((err, c) => {
@@ -163,7 +178,16 @@ export default {
       console.error('[CRON] Low stock check failed:', e)
     }
 
-    // 3. 三平台自动同步
+    // 3. 库存预测重算
+    try {
+      const forecastService = new ForecastingService(env.DB)
+      const forecastResult = await forecastService.calculate()
+      console.log(`[CRON] Forecast: ${forecastResult.calculated} SKUs calculated`)
+    } catch (e) {
+      console.error('[CRON] Forecast calculation failed:', e)
+    }
+
+    // 4. 三平台自动同步
     const platforms = ['TIKTOK', 'TEMU', 'RAKUTEN'] as const
     const syncService = new PlatformSyncService(env.DB, env.ORDER_QUEUE)
     for (const platform of platforms) {

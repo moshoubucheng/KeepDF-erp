@@ -6,6 +6,7 @@ import { WalletService } from '../services/wallet.service'
 import { CommissionService } from '../services/commission.service'
 import { getAuthorizedOrder } from '../utils/auth-helpers'
 import { NotificationCenterService } from '../services/notification-center.service'
+import { CommunicationService } from '../services/communication.service'
 import { toCSV, csvResponse } from '../utils/csv'
 
 const orders = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -144,6 +145,14 @@ orders.patch('/:id/ship', async (c) => {
         console.error('Notification failed:', e)
     }
 
+    // Customer communication trigger (best-effort)
+    try {
+        const commService = new CommunicationService(c.env.DB)
+        await commService.triggerOnEvent('ORDER_SHIPPED', id, order.distributor_id)
+    } catch (e) {
+        console.error('[SHIP] Communication trigger failed:', e)
+    }
+
     const audit = new AuditService(c.env.DB)
     audit.log({
         distributorId: c.get('distributorId'),
@@ -207,6 +216,14 @@ orders.patch('/:id/deliver', async (c) => {
         console.error('[DELIVER] Notification failed:', e)
     }
 
+    // Customer communication trigger (best-effort)
+    try {
+        const commService = new CommunicationService(c.env.DB)
+        await commService.triggerOnEvent('ORDER_DELIVERED', id, order.distributor_id)
+    } catch (e) {
+        console.error('[DELIVER] Communication trigger failed:', e)
+    }
+
     const audit = new AuditService(c.env.DB)
     audit.log({
         distributorId: c.get('distributorId'),
@@ -268,6 +285,14 @@ orders.patch('/:id/cancel', async (c) => {
         await nc.notifyOrderCancelled(order.distributor_id, id)
     } catch (e) {
         console.error('[CANCEL] Notification failed:', e)
+    }
+
+    // Customer communication trigger (best-effort)
+    try {
+        const commService = new CommunicationService(c.env.DB)
+        await commService.triggerOnEvent('ORDER_CANCELLED', id, order.distributor_id)
+    } catch (e) {
+        console.error('[CANCEL] Communication trigger failed:', e)
     }
 
     const audit = new AuditService(c.env.DB)

@@ -261,6 +261,150 @@ export interface OrderSyncMessage {
     receivedAt: string
 }
 
+// ===== Sprint 9: Returns =====
+
+export interface Return {
+    id: number
+    order_id: number
+    shipment_id: number | null
+    distributor_id: number
+    status: 'REQUESTED' | 'APPROVED' | 'RECEIVED' | 'REFUNDED' | 'REJECTED'
+    reason: string | null
+    notes: string | null
+    refund_type: 'FULL' | 'PARTIAL' | null
+    refund_amount: number | null
+    wallet_tx_id: number | null
+    created_at: string
+    updated_at: string
+}
+
+export interface ReturnItem {
+    id: number
+    return_id: number
+    sku: string
+    qty: number
+    unit_price: number
+    reason: string | null
+}
+
+// ===== Sprint 9: Suppliers & Procurement =====
+
+export interface Supplier {
+    id: number
+    name: string
+    contact_name: string | null
+    contact_email: string | null
+    contact_phone: string | null
+    address: string | null
+    payment_terms: string | null
+    lead_time_days: number
+    notes: string | null
+    is_active: number
+    created_at: string
+    updated_at: string
+}
+
+export interface PurchaseOrder {
+    id: number
+    po_number: string
+    supplier_id: number
+    status: 'DRAFT' | 'SUBMITTED' | 'CONFIRMED' | 'SHIPPED' | 'RECEIVED' | 'CLOSED'
+    total_amount: number
+    notes: string | null
+    expected_delivery: string | null
+    received_at: string | null
+    created_by: number
+    created_at: string
+    updated_at: string
+}
+
+export interface PurchaseOrderItem {
+    id: number
+    po_id: number
+    sku: string
+    qty: number
+    unit_cost: number
+    received_qty: number
+}
+
+// ===== Sprint 9: Price Management =====
+
+export interface PriceRule {
+    id: number
+    sku: string
+    platform: 'TIKTOK' | 'TEMU' | 'RAKUTEN' | 'ALL'
+    base_price: number
+    sale_price: number | null
+    valid_from: string | null
+    valid_to: string | null
+    is_active: number
+    created_at: string
+    updated_at: string
+}
+
+export interface PriceHistory {
+    id: number
+    sku: string
+    platform: string
+    old_price: number | null
+    new_price: number
+    change_type: 'BASE' | 'SALE' | 'COST'
+    changed_by: number | null
+    created_at: string
+}
+
+// ===== Sprint 9: Communication =====
+
+export interface MessageTemplate {
+    id: number
+    name: string
+    type: 'ORDER_CONFIRMATION' | 'SHIPPING_NOTIFICATION' | 'DELIVERY_CONFIRMATION' | 'RETURN_APPROVED' | 'RETURN_REJECTED' | 'CUSTOM'
+    subject: string | null
+    body: string
+    channel: 'EMAIL' | 'SMS' | 'IN_APP'
+    is_active: number
+    distributor_id: number
+    created_at: string
+    updated_at: string
+}
+
+export interface CustomerMessage {
+    id: number
+    customer_id: number
+    template_id: number | null
+    type: string
+    subject: string | null
+    content: string
+    channel: string
+    status: 'SENT' | 'DELIVERED' | 'FAILED'
+    related_order_id: number | null
+    distributor_id: number
+    sent_at: string
+}
+
+export interface MessageTrigger {
+    id: number
+    event_type: 'ORDER_CREATED' | 'ORDER_SHIPPED' | 'ORDER_DELIVERED' | 'ORDER_CANCELLED' | 'RETURN_APPROVED' | 'RETURN_REJECTED'
+    template_id: number
+    is_active: number
+    distributor_id: number
+    created_at: string
+}
+
+// ===== Sprint 9: Inventory Forecasting =====
+
+export interface InventoryForecast {
+    id: number
+    sku: string
+    daily_velocity: number
+    weekly_velocity: number
+    days_of_stock: number
+    reorder_point: number
+    safety_stock: number
+    lead_time_days: number
+    calculated_at: string
+}
+
 // ===== Report Types =====
 
 export interface ReportParams {
