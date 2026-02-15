@@ -28,11 +28,14 @@ import { pricing } from './controllers/pricing.controller'
 import { communications } from './controllers/communications.controller'
 import { financialReports } from './controllers/financial-reports.controller'
 import { forecasting } from './controllers/forecasting.controller'
+import { automation } from './controllers/automation.controller'
+import { batch } from './controllers/batch.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
 import { PlatformSyncService } from './services/platform-sync.service'
 import { ForecastingService } from './services/forecasting.service'
+import { AutomationService } from './services/automation.service'
 
 const ALLOWED_ORIGINS = [
     'http://localhost:8787',
@@ -88,6 +91,8 @@ app.route('/api/v1/pricing', pricing)
 app.route('/api/v1/communications', communications)
 app.route('/api/v1/financial-reports', financialReports)
 app.route('/api/v1/forecasting', forecasting)
+app.route('/api/v1/automation', automation)
+app.route('/api/v1/batch', batch)
 
 // ===== Error Handler =====
 app.onError((err, c) => {
@@ -187,7 +192,16 @@ export default {
       console.error('[CRON] Forecast calculation failed:', e)
     }
 
-    // 4. 三平台自动同步
+    // 4. Automation rules evaluation (after forecasting)
+    try {
+        const automationService = new AutomationService(env.DB)
+        const autoResult = await automationService.evaluateAllRules('CRON')
+        console.log(`[CRON] Automation: evaluated=${autoResult.evaluated}, executed=${autoResult.executed}`)
+    } catch (e) {
+        console.error('[CRON] Automation failed:', e)
+    }
+
+    // 5. 三平台自动同步
     const platforms = ['TIKTOK', 'TEMU', 'RAKUTEN'] as const
     const syncService = new PlatformSyncService(env.DB, env.ORDER_QUEUE)
     for (const platform of platforms) {

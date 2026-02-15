@@ -81,6 +81,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         <span data-i18n="nav.forecasting">在庫予測</span>
       </a>
+      <a href="#" class="nav-item admin-only" data-page="automation" style="display:none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        <span data-i18n="nav.automation">自動化ルール</span>
+      </a>
       <a href="#" class="nav-item admin-only" data-page="distributors" style="display:none">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span data-i18n="nav.distributors">販売者管理</span>
@@ -296,11 +300,25 @@
             </button>
           </div>
         </div>
+        <!-- Batch actions (admin only) -->
+        <div class="admin-only" id="orderBatchBar" style="display:none;margin-bottom:12px">
+          <div class="card" style="padding:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span data-i18n="batch.update_status" style="font-weight:500">一括ステータス更新</span>
+            <select id="batchStatusSelect" class="select-input" style="width:auto">
+              <option value="PROCESSING">PROCESSING</option>
+              <option value="SHIPPED">SHIPPED</option>
+              <option value="DELIVERED">DELIVERED</option>
+              <option value="CANCELLED">CANCELLED</option>
+            </select>
+            <button class="btn-primary btn-sm" onclick="batchUpdateOrderStatus()" data-i18n="batch.update_status">一括更新</button>
+          </div>
+        </div>
         <div class="card">
           <div class="table-container">
             <table class="data-table">
               <thead>
                 <tr>
+                  <th class="admin-only" style="display:none;width:40px"><input type="checkbox" id="selectAllOrders"></th>
                   <th>ID</th>
                   <th data-i18n="orders.platform">プラットフォーム</th>
                   <th data-i18n="orders.order_number">注文番号</th>
@@ -1461,6 +1479,92 @@
         </table>
       </div>
       <div class="pagination" id="forecastingPagination"></div>
+    </div>
+  </div>
+
+  <!-- Automation Page -->
+  <div class="page" id="page-automation">
+    <div class="page-actions">
+      <div class="filter-group"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secondary" onclick="evaluateAllRules()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span data-i18n="automation.run_all">全ルール実行</span>
+        </button>
+        <button class="btn-primary" onclick="openModal('addAutomationModal')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span data-i18n="automation.add_rule">ルール追加</span>
+        </button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3 data-i18n="automation.rules">自動化ルール</h3></div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr>
+            <th>ID</th>
+            <th data-i18n="automation.name">名前</th>
+            <th data-i18n="automation.type">タイプ</th>
+            <th data-i18n="automation.status">状態</th>
+            <th data-i18n="automation.run_count">実行回数</th>
+            <th data-i18n="automation.last_run">最終実行</th>
+            <th data-i18n="automation.actions_col">操作</th>
+          </tr></thead>
+          <tbody id="automationTableBody">
+            <tr class="empty-row"><td colspan="7" data-i18n="automation.empty">ルールがありません</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <div class="card-header"><h3 data-i18n="automation.logs">実行ログ</h3></div>
+      <div class="table-container">
+        <table class="data-table">
+          <thead><tr>
+            <th data-i18n="automation.rule_name">ルール名</th>
+            <th data-i18n="automation.trigger">トリガー</th>
+            <th data-i18n="automation.log_status">結果</th>
+            <th data-i18n="automation.details">詳細</th>
+            <th data-i18n="automation.affected">影響数</th>
+            <th data-i18n="automation.time">実行時間</th>
+            <th data-i18n="automation.date">日時</th>
+          </tr></thead>
+          <tbody id="automationLogsBody">
+            <tr class="empty-row"><td colspan="7" data-i18n="automation.logs_empty">ログがありません</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="automationLogsPagination"></div>
+    </div>
+  </div>
+
+  <!-- Add Automation Rule Modal -->
+  <div class="modal-overlay" id="addAutomationModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 data-i18n="automation.add_rule">ルール追加</h3>
+        <button class="modal-close" data-close="addAutomationModal">&#10005;</button>
+      </div>
+      <form id="addAutomationForm">
+        <div class="form-group">
+          <label data-i18n="automation.name">名前</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="form-group">
+          <label data-i18n="automation.type">タイプ</label>
+          <select name="type" id="automationTypeSelect" required>
+            <option value="AUTO_REORDER" data-i18n="automation.type_reorder">自動発注</option>
+            <option value="AUTO_PRICE_ADJUST" data-i18n="automation.type_price">価格自動調整</option>
+            <option value="STOCK_ALERT" data-i18n="automation.type_alert">在庫アラート</option>
+          </select>
+        </div>
+        <div id="automationConditionsFields"></div>
+        <div id="automationActionsFields"></div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" data-close="addAutomationModal" data-i18n="common.cancel">キャンセル</button>
+          <button type="submit" class="btn-primary" data-i18n="common.save">保存</button>
+        </div>
+      </form>
     </div>
   </div>
 

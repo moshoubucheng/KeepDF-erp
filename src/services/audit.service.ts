@@ -54,6 +54,13 @@ export type AuditAction =
     | 'DELETE_TEMPLATE'
     | 'SEND_MESSAGE'
     | 'CALCULATE_FORECAST'
+    | 'CREATE_AUTOMATION_RULE'
+    | 'UPDATE_AUTOMATION_RULE'
+    | 'DELETE_AUTOMATION_RULE'
+    | 'RUN_AUTOMATION_RULE'
+    | 'BATCH_ORDER_STATUS'
+    | 'BATCH_PRODUCT_UPDATE'
+    | 'BATCH_STOCK_ADJUST'
 
 export type ResourceType =
     | 'order'
@@ -74,6 +81,9 @@ export type ResourceType =
     | 'message_template'
     | 'customer_message'
     | 'forecast'
+    | 'automation_rule'
+    | 'automation_log'
+    | 'batch_operation'
 
 export interface AuditLogParams {
     distributorId?: number | null

@@ -23,6 +23,7 @@ const pageTitles = {
     shipping: { title: 'shipping.title', sub: 'shipping.subtitle' },
     customers: { title: 'customers.title', sub: 'customers.subtitle' },
     settings: { title: 'settings.title', sub: 'settings.subtitle' },
+    automation: { title: 'automation.title', sub: 'automation.subtitle' },
 };
 
 function navigateTo(pageName) {
@@ -172,6 +173,7 @@ async function loadPageData(page) {
         case 'communications': return loadCommunications();
         case 'financial-reports': return loadFinancialReport();
         case 'forecasting': return loadForecasting();
+        case 'automation': return loadAutomation();
     }
 }
 
@@ -356,8 +358,10 @@ async function loadOrders() {
         return;
     }
 
+    const isAdmin = window._isAdmin;
     tbody.innerHTML = data.orders.map(o => `
     <tr>
+      ${isAdmin ? `<td><input type="checkbox" class="order-checkbox" value="${o.id}"></td>` : ''}
       <td><strong>#${escapeHtml(o.id)}</strong></td>
       <td>${platformBadge(o.platform)}</td>
       <td>${escapeHtml(o.platform_order_id)}</td>
@@ -2221,6 +2225,138 @@ async function recalculateForecasts() {
     const data = await apiFetch('/api/v1/forecasting/calculate', { method: 'POST' });
     if (data?.success) { alert(t('forecasting.recalculated', { count: data.calculated })); loadForecasting(); }
 }
+
+// ===== Sprint 11: Automation =====
+async function loadAutomation() {
+    loadAutomationRules();
+    loadAutomationLogs();
+}
+
+async function loadAutomationRules() {
+    const data = await apiFetch('/api/v1/automation');
+    const tbody = document.getElementById('automationTableBody');
+    if (!data?.rules?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('automation.empty')}</td></tr>`;
+        return;
+    }
+    const typeLabels = { AUTO_REORDER: t('automation.type_reorder'), AUTO_PRICE_ADJUST: t('automation.type_price'), STOCK_ALERT: t('automation.type_alert') };
+    tbody.innerHTML = data.rules.map(r => `
+    <tr>
+      <td>${r.id}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td><span class="status-badge">${typeLabels[r.type] || r.type}</span></td>
+      <td><span class="status-badge ${r.is_active ? 'status-active' : 'status-danger'}">${r.is_active ? t('common.active') : t('common.inactive')}</span></td>
+      <td>${r.run_count}</td>
+      <td class="col-hide-mobile">${r.last_run_at ? formatDate(r.last_run_at) : '\u2014'}</td>
+      <td>
+        <button class="btn-sm btn-primary" onclick="runAutomationRule(${r.id})">${t('automation.run')}</button>
+        <button class="btn-sm btn-danger" onclick="deleteAutomationRule(${r.id})">${t('common.delete')}</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function loadAutomationLogs(offset = 0) {
+    const data = await apiFetch(`/api/v1/automation/logs?limit=20&offset=${offset}`);
+    const tbody = document.getElementById('automationLogsBody');
+    if (!data?.logs?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${t('automation.logs_empty')}</td></tr>`;
+        document.getElementById('automationLogsPagination').innerHTML = '';
+        return;
+    }
+    const statusClass = { SUCCESS: 'status-active', FAILED: 'status-danger', SKIPPED: 'status-warning', NO_MATCH: 'status-warning' };
+    tbody.innerHTML = data.logs.map(l => `
+    <tr>
+      <td>${escapeHtml(l.rule_name)}</td>
+      <td>${l.trigger_type}</td>
+      <td><span class="status-badge ${statusClass[l.status] || ''}">${l.status}</span></td>
+      <td class="col-hide-mobile">${escapeHtml(l.details || '\u2014')}</td>
+      <td>${l.items_affected}</td>
+      <td>${l.execution_time_ms}ms</td>
+      <td>${formatDate(l.created_at)}</td>
+    </tr>`).join('');
+    renderPagination('automationLogsPagination', offset, 20, data.total, (o) => loadAutomationLogs(o));
+}
+
+async function runAutomationRule(id) {
+    const data = await apiFetch(`/api/v1/automation/${id}/run`, { method: 'POST' });
+    if (data?.log) { loadAutomation(); }
+}
+
+async function deleteAutomationRule(id) {
+    if (!confirm(t('common.confirm_delete'))) return;
+    const data = await apiFetch(`/api/v1/automation/${id}`, { method: 'DELETE' });
+    if (data?.success) { alert(t('automation.deleted')); loadAutomation(); }
+}
+
+async function evaluateAllRules() {
+    const data = await apiFetch('/api/v1/automation/evaluate-all', { method: 'POST' });
+    if (data) { alert(`${t('automation.evaluated')}: evaluated=${data.evaluated}, executed=${data.executed}`); loadAutomation(); }
+}
+
+// Dynamic form fields for automation type
+document.getElementById('automationTypeSelect')?.addEventListener('change', function() {
+    const type = this.value;
+    const condDiv = document.getElementById('automationConditionsFields');
+    const actDiv = document.getElementById('automationActionsFields');
+    if (type === 'AUTO_REORDER') {
+        condDiv.innerHTML = `<div class="form-group"><label>Min Daily Velocity</label><input type="number" name="min_daily_velocity" step="0.1" value="0.5"></div>`;
+        actDiv.innerHTML = `<div class="form-row"><div class="form-group"><label>Qty Multiplier</label><input type="number" name="qty_multiplier" step="0.1" value="1"></div><div class="form-group"><label>Supplier ID</label><input type="number" name="supplier_id"></div></div>`;
+    } else if (type === 'AUTO_PRICE_ADJUST') {
+        condDiv.innerHTML = `<div class="form-row"><div class="form-group"><label>Margin Type</label><select name="margin_type"><option value="min_margin_pct">Min Margin %</option><option value="min_margin_abs">Min Margin Abs</option></select></div><div class="form-group"><label>Threshold</label><input type="number" name="threshold" step="0.1" value="10"></div></div>`;
+        actDiv.innerHTML = `<div class="form-row"><div class="form-group"><label>Adjust Type</label><select name="adjust_type"><option value="set_margin_pct">Set Margin %</option><option value="increase_pct">Increase %</option><option value="increase_abs">Increase Abs</option></select></div><div class="form-group"><label>Adjust Value</label><input type="number" name="adjust_value" step="0.1" value="20"></div></div><div class="form-group"><label>Max Price</label><input type="number" name="max_price"></div>`;
+    } else {
+        condDiv.innerHTML = `<div class="form-row"><div class="form-group"><label>Threshold Type</label><select name="threshold_type"><option value="days_of_stock">Days of Stock</option><option value="fixed_qty">Fixed Qty</option></select></div><div class="form-group"><label>Threshold Value</label><input type="number" name="threshold_value" value="7"></div></div>`;
+        actDiv.innerHTML = `<div class="form-group"><label>Notification Level</label><select name="notification_level"><option value="WARNING">WARNING</option><option value="CRITICAL">CRITICAL</option><option value="INFO">INFO</option></select></div>`;
+    }
+});
+// Initialize form fields
+document.getElementById('automationTypeSelect')?.dispatchEvent(new Event('change'));
+
+document.getElementById('addAutomationForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const type = fd.get('type');
+    let conditions = {}, actions = {};
+    if (type === 'AUTO_REORDER') {
+        conditions = { threshold_type: 'reorder_point', min_daily_velocity: Number(fd.get('min_daily_velocity')) || 0 };
+        actions = { supplier_id: Number(fd.get('supplier_id')) || undefined, qty_multiplier: Number(fd.get('qty_multiplier')) || 1, notify: true };
+    } else if (type === 'AUTO_PRICE_ADJUST') {
+        conditions = { margin_type: fd.get('margin_type'), threshold: Number(fd.get('threshold')) || 10 };
+        actions = { adjust_type: fd.get('adjust_type'), adjust_value: Number(fd.get('adjust_value')) || 0, max_price: Number(fd.get('max_price')) || undefined, notify: true };
+    } else {
+        conditions = { threshold_type: fd.get('threshold_type'), threshold_value: Number(fd.get('threshold_value')) || 7 };
+        actions = { notify: true, notification_level: fd.get('notification_level') || 'WARNING' };
+    }
+    const data = await apiFetch('/api/v1/automation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: fd.get('name'), type, conditions, actions }),
+    });
+    if (data?.rule) { alert(t('automation.created')); closeModal('addAutomationModal'); e.target.reset(); loadAutomation(); }
+});
+
+// ===== Sprint 11: Batch Order Status =====
+async function batchUpdateOrderStatus() {
+    const checkboxes = document.querySelectorAll('.order-checkbox:checked');
+    if (checkboxes.length === 0) { alert(t('batch.select_orders')); return; }
+    const status = document.getElementById('batchStatusSelect')?.value;
+    if (!status) return;
+    const orderIds = Array.from(checkboxes).map(cb => Number(cb.value));
+    const data = await apiFetch('/api/v1/batch/orders/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_ids: orderIds, status }),
+    });
+    if (data) {
+        alert(`${t('batch.status_updated')}: success=${data.success}, errors=${data.errors?.length || 0}`);
+        loadOrders();
+    }
+}
+
+// Select all orders checkbox
+document.getElementById('selectAllOrders')?.addEventListener('change', function() {
+    document.querySelectorAll('.order-checkbox').forEach(cb => { cb.checked = this.checked; });
+});
 
 // ===== Utility: CSV export helper =====
 async function exportCSV(url, filename) {

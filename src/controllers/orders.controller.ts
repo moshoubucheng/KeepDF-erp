@@ -8,6 +8,7 @@ import { getAuthorizedOrder } from '../utils/auth-helpers'
 import { NotificationCenterService } from '../services/notification-center.service'
 import { CommunicationService } from '../services/communication.service'
 import { CacheService } from '../services/cache.service'
+import { AutomationService } from '../services/automation.service'
 import { decodeCursor, buildCursorWhere, encodeCursor } from '../utils/cursor'
 import { toCSV, csvResponse } from '../utils/csv'
 
@@ -248,6 +249,14 @@ orders.patch('/:id/deliver', async (c) => {
         console.error('[DELIVER] Communication trigger failed:', e)
     }
 
+    // Automation rules evaluation (best-effort)
+    try {
+        const autoService = new AutomationService(c.env.DB)
+        await autoService.evaluateAllRules('EVENT')
+    } catch (e) {
+        console.error('[DELIVER] Automation trigger failed:', e)
+    }
+
     const audit = new AuditService(c.env.DB)
     audit.log({
         distributorId: c.get('distributorId'),
@@ -321,6 +330,14 @@ orders.patch('/:id/cancel', async (c) => {
         await commService.triggerOnEvent('ORDER_CANCELLED', id, order.distributor_id)
     } catch (e) {
         console.error('[CANCEL] Communication trigger failed:', e)
+    }
+
+    // Automation rules evaluation (best-effort)
+    try {
+        const autoService = new AutomationService(c.env.DB)
+        await autoService.evaluateAllRules('EVENT')
+    } catch (e) {
+        console.error('[CANCEL] Automation trigger failed:', e)
     }
 
     const audit = new AuditService(c.env.DB)

@@ -405,6 +405,72 @@ export interface InventoryForecast {
     calculated_at: string
 }
 
+// ===== Sprint 11: Automation Rules =====
+
+export interface AutomationRule {
+    id: number
+    name: string
+    type: 'AUTO_REORDER' | 'AUTO_PRICE_ADJUST' | 'STOCK_ALERT'
+    conditions: string  // JSON
+    actions: string     // JSON
+    is_active: number
+    distributor_id: number
+    last_run_at: string | null
+    run_count: number
+    created_at: string
+    updated_at: string
+}
+
+export interface AutomationLog {
+    id: number
+    rule_id: number
+    rule_name: string
+    trigger_type: 'CRON' | 'EVENT' | 'MANUAL'
+    status: 'SUCCESS' | 'FAILED' | 'SKIPPED' | 'NO_MATCH'
+    details: string | null
+    items_affected: number
+    execution_time_ms: number
+    created_at: string
+}
+
+export interface AutoReorderConditions {
+    threshold_type: 'reorder_point' | 'fixed'
+    threshold_value?: number
+    min_daily_velocity?: number
+    sku_filter?: string[]
+}
+
+export interface AutoReorderActions {
+    supplier_id?: number
+    qty_multiplier?: number
+    notify?: boolean
+}
+
+export interface AutoPriceAdjustConditions {
+    margin_type: 'min_margin_pct' | 'min_margin_abs'
+    threshold: number
+    platform_filter?: string[]
+    sku_filter?: string[]
+}
+
+export interface AutoPriceAdjustActions {
+    adjust_type: 'set_margin_pct' | 'increase_pct' | 'increase_abs'
+    adjust_value: number
+    max_price?: number
+    notify?: boolean
+}
+
+export interface StockAlertConditions {
+    threshold_type: 'days_of_stock' | 'fixed_qty'
+    threshold_value: number
+    sku_filter?: string[]
+}
+
+export interface StockAlertActions {
+    notify: boolean
+    notification_level?: 'INFO' | 'WARNING' | 'CRITICAL'
+}
+
 // ===== Report Types =====
 
 export interface ReportParams {
