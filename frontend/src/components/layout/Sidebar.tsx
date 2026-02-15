@@ -14,6 +14,24 @@ import {
   Settings,
   LogOut,
   Lock,
+  FileText,
+  ClipboardList,
+  Factory,
+  TrendingUp,
+  DollarSign,
+  Coins,
+  Tag,
+  Gift,
+  Calculator,
+  MessageSquare,
+  UserCheck,
+  Shield,
+  Bell,
+  Activity,
+  CheckCircle,
+  Webhook,
+  Link2,
+  Boxes,
 } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -56,6 +74,11 @@ const NAV_GROUPS: NavGroupDef[] = [
     labelKey: 'nav.group.inventory',
     items: [
       { key: 'inventory', labelKey: 'nav.inventory', path: '/inventory', icon: <Package className="h-4 w-4" /> },
+      { key: 'purchase-orders', labelKey: 'nav.purchaseOrders', path: '/purchase-orders', icon: <ClipboardList className="h-4 w-4" /> },
+      { key: 'suppliers', labelKey: 'nav.suppliers', path: '/suppliers', icon: <Factory className="h-4 w-4" /> },
+      { key: 'stocktakes', labelKey: 'nav.stocktakes', path: '/stocktakes', icon: <Boxes className="h-4 w-4" /> },
+      { key: 'sku-mappings', labelKey: 'nav.skuMappings', path: '/sku-mappings', icon: <Link2 className="h-4 w-4" /> },
+      { key: 'forecasting', labelKey: 'nav.forecasting', path: '/forecasting', icon: <TrendingUp className="h-4 w-4" /> },
     ],
   },
   {
@@ -64,6 +87,12 @@ const NAV_GROUPS: NavGroupDef[] = [
     items: [
       { key: 'wallet', labelKey: 'nav.wallet', path: '/wallet', icon: <Wallet className="h-4 w-4" /> },
       { key: 'commissions', labelKey: 'nav.commissions', path: '/commissions', icon: <BarChart3 className="h-4 w-4" /> },
+      { key: 'pricing', labelKey: 'nav.pricing', path: '/pricing', icon: <DollarSign className="h-4 w-4" /> },
+      { key: 'currency', labelKey: 'nav.currency', path: '/currency', icon: <Coins className="h-4 w-4" /> },
+      { key: 'coupons', labelKey: 'nav.coupons', path: '/coupons', icon: <Tag className="h-4 w-4" /> },
+      { key: 'promotions', labelKey: 'nav.promotions', path: '/promotions', icon: <Gift className="h-4 w-4" /> },
+      { key: 'shipping-fees', labelKey: 'nav.shippingFees', path: '/shipping-fees', icon: <Calculator className="h-4 w-4" /> },
+      { key: 'financial-reports', labelKey: 'nav.financialReports', path: '/financial-reports', icon: <FileText className="h-4 w-4" /> },
     ],
   },
   {
@@ -71,6 +100,15 @@ const NAV_GROUPS: NavGroupDef[] = [
     labelKey: 'nav.group.crm',
     items: [
       { key: 'customers', labelKey: 'nav.customers', path: '/customers', icon: <Users className="h-4 w-4" /> },
+      { key: 'customer-segments', labelKey: 'nav.customerSegments', path: '/customer-segments', icon: <UserCheck className="h-4 w-4" /> },
+      { key: 'communications', labelKey: 'nav.communications', path: '/communications', icon: <MessageSquare className="h-4 w-4" /> },
+    ],
+  },
+  {
+    key: 'analytics',
+    labelKey: 'nav.group.analytics',
+    items: [
+      { key: 'reports', labelKey: 'nav.reports', path: '/reports', icon: <BarChart3 className="h-4 w-4" /> },
     ],
   },
   {
@@ -78,8 +116,12 @@ const NAV_GROUPS: NavGroupDef[] = [
     labelKey: 'nav.group.system',
     items: [
       { key: 'settings', labelKey: 'nav.settings', path: '/settings', icon: <Settings className="h-4 w-4" /> },
-      // Sprint 16: coming-soon placeholders
-      { key: 'reports', labelKey: 'nav.reports', path: '/reports', icon: <BarChart3 className="h-4 w-4" />, disabled: true },
+      { key: 'distributors', labelKey: 'nav.distributors', path: '/distributors', icon: <Shield className="h-4 w-4" /> },
+      { key: 'notifications', labelKey: 'nav.notifications', path: '/notifications', icon: <Bell className="h-4 w-4" /> },
+      { key: 'audit', labelKey: 'nav.audit', path: '/audit', icon: <Activity className="h-4 w-4" /> },
+      { key: 'automation', labelKey: 'nav.automation', path: '/automation', icon: <Zap className="h-4 w-4" /> },
+      { key: 'approvals', labelKey: 'nav.approvals', path: '/approvals', icon: <CheckCircle className="h-4 w-4" /> },
+      { key: 'webhooks', labelKey: 'nav.webhooks', path: '/webhooks', icon: <Webhook className="h-4 w-4" /> },
     ],
   },
 ]

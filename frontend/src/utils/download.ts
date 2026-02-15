@@ -17,3 +17,12 @@ export function arrayToCsv(headers: string[], rows: string[][]): string {
   const dataLines = rows.map(row => row.map(escape).join(','))
   return [headerLine, ...dataLines].join('\n')
 }
+
+export function downloadObjectsCsv(rows: Record<string, unknown>[], filename: string) {
+  if (rows.length === 0) return
+  const headers = Object.keys(rows[0])
+  const escape = (val: unknown) => `"${String(val ?? '').replace(/"/g, '""')}"`
+  const headerLine = headers.map(escape).join(',')
+  const dataLines = rows.map(row => headers.map(h => escape(row[h])).join(','))
+  downloadCsv(filename, [headerLine, ...dataLines].join('\n'))
+}
