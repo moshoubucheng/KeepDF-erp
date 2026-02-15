@@ -598,5 +598,17 @@
   "pwa.offline": "当前离线，部分功能可能受限。",
   "error.page_not_found": "页面未找到",
   "error.page_not_found_desc": "您访问的页面不存在或已被移动。",
-  "error.coming_soon": "部分页面将在 Sprint 16 中上线。"
+  "error.coming_soon": "部分页面将在 Sprint 16 中上线。",
+  "nav.group.orders": "订单管理",
+  "nav.group.inventory": "库存管理",
+  "nav.group.finance": "财务",
+  "nav.group.crm": "客户管理",
+  "nav.group.system": "系统",
+  "notification.title": "通知",
+  "notification.empty": "暂无通知",
+  "notification.markAllRead": "全部标为已读",
+  "notification.justNow": "刚刚",
+  "notification.minutesAgo": "{count}分钟前",
+  "notification.hoursAgo": "{count}小时前",
+  "notification.daysAgo": "{count}天前"
 }

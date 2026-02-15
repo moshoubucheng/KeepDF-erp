@@ -598,5 +598,17 @@
   "pwa.offline": "You are offline. Some features may be limited.",
   "error.page_not_found": "Page not found",
   "error.page_not_found_desc": "The page you are looking for does not exist or has been moved.",
-  "error.coming_soon": "Some pages are coming soon in Sprint 16."
+  "error.coming_soon": "Some pages are coming soon in Sprint 16.",
+  "nav.group.orders": "Orders",
+  "nav.group.inventory": "Inventory",
+  "nav.group.finance": "Finance",
+  "nav.group.crm": "CRM",
+  "nav.group.system": "System",
+  "notification.title": "Notifications",
+  "notification.empty": "No notifications",
+  "notification.markAllRead": "Mark all read",
+  "notification.justNow": "Just now",
+  "notification.minutesAgo": "{count} min ago",
+  "notification.hoursAgo": "{count} hours ago",
+  "notification.daysAgo": "{count} days ago"
 }

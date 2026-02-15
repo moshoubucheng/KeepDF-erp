@@ -20,7 +20,6 @@ import { PlatformBadge } from '@/components/data/PlatformBadge'
 import { LineChart } from '@/components/charts/LineChart'
 import { PieChart } from '@/components/charts/PieChart'
 import { BarChart } from '@/components/charts/BarChart'
-import { HeatmapChart } from '@/components/charts/HeatmapChart'
 import { cn } from '@/utils/cn'
 
 // ---------- Period selector ----------
@@ -83,14 +82,14 @@ export default function DashboardPage() {
   })
 
   const trendQuery = useQuery({
-    queryKey: ['dashboard', 'order-trend', period],
-    queryFn: () => dashboardApi.orderTrend(period),
+    queryKey: ['dashboard', 'revenue-trend', period],
+    queryFn: () => dashboardApi.revenueTrend(period),
     staleTime: 60_000,
   })
 
   const platformQuery = useQuery({
-    queryKey: ['dashboard', 'platform-breakdown'],
-    queryFn: () => dashboardApi.platformBreakdown(),
+    queryKey: ['dashboard', 'orders-by-platform'],
+    queryFn: () => dashboardApi.ordersByPlatform(),
     staleTime: 60_000,
   })
 
@@ -116,11 +115,12 @@ export default function DashboardPage() {
 
   // ---------- Derived data ----------
 
-  const stats = statsQuery.data
+  const overview = statsQuery.data?.overview
+  const walletData = statsQuery.data?.wallet
 
-  const trendData = trendQuery.data?.trend?.map((d) => ({
+  const trendData = trendQuery.data?.data?.map((d) => ({
     date: d.date,
-    count: d.count,
+    count: d.orderCount,
     revenue: d.revenue,
   })) ?? []
 
@@ -134,8 +134,8 @@ export default function DashboardPage() {
   const heatmapData = heatmapQuery.data?.data ?? []
 
   const turnoverData = turnoverQuery.data?.data?.map((d) => ({
-    name: d.name.length > 12 ? d.name.slice(0, 12) + '...' : d.name,
-    turnover_rate: Number(d.turnover_rate.toFixed(2)),
+    name: (d.name || d.sku || '').length > 12 ? (d.name || d.sku || '').slice(0, 12) + '...' : (d.name || d.sku || ''),
+    turnover_rate: Number((d.turnoverRate ?? 0).toFixed(2)),
   })) ?? []
 
   // ---------- Render ----------
@@ -162,25 +162,25 @@ export default function DashboardPage() {
             <StatCard
               icon={<DollarSign className="h-5 w-5" />}
               title={t('dashboard.total_revenue')}
-              value={formatCurrency(stats?.totalRevenue ?? 0)}
+              value={formatCurrency(overview?.totalRevenue ?? 0)}
               accent="purple"
             />
             <StatCard
               icon={<ShoppingCart className="h-5 w-5" />}
               title={t('dashboard.total_orders')}
-              value={formatNumber(stats?.totalOrders ?? 0)}
+              value={formatNumber(overview?.totalOrders ?? 0)}
               accent="blue"
             />
             <StatCard
               icon={<PackageCheck className="h-5 w-5" />}
               title={t('dashboard.active_orders')}
-              value={formatNumber(stats?.activeOrders ?? 0)}
+              value={formatNumber((overview?.pendingOrders ?? 0) + (overview?.processingOrders ?? 0))}
               accent="emerald"
             />
             <StatCard
               icon={<Package className="h-5 w-5" />}
               title={t('dashboard.products')}
-              value={formatNumber(stats?.totalProducts ?? 0)}
+              value={formatNumber(overview?.totalProducts ?? 0)}
               accent="amber"
             />
           </>
@@ -189,25 +189,25 @@ export default function DashboardPage() {
             <StatCard
               icon={<DollarSign className="h-5 w-5" />}
               title={t('dashboard.my_revenue')}
-              value={formatCurrency(stats?.myRevenue ?? 0)}
+              value={formatCurrency(overview?.totalRevenue ?? 0)}
               accent="purple"
             />
             <StatCard
               icon={<ShoppingCart className="h-5 w-5" />}
               title={t('dashboard.my_orders')}
-              value={formatNumber(stats?.myOrders ?? 0)}
+              value={formatNumber(overview?.totalOrders ?? 0)}
               accent="blue"
             />
             <StatCard
               icon={<TrendingUp className="h-5 w-5" />}
               title={t('dashboard.my_commission')}
-              value={formatCurrency(stats?.myCommission ?? 0)}
+              value={formatCurrency(overview?.totalCommission ?? 0)}
               accent="emerald"
             />
             <StatCard
               icon={<Wallet className="h-5 w-5" />}
               title={t('dashboard.my_balance')}
-              value={formatCurrency(stats?.myBalance ?? 0)}
+              value={formatCurrency(walletData?.balance ?? 0)}
               accent="amber"
             />
           </>
@@ -290,8 +290,11 @@ export default function DashboardPage() {
               {heatmapQuery.isLoading ? (
                 <div className="h-[280px] animate-pulse rounded bg-bg-input/30" />
               ) : (
-                <HeatmapChart
-                  data={heatmapData}
+                <BarChart
+                  data={heatmapData.slice(-14).map((d) => ({
+                    name: d.date,
+                    value: d.orderCount,
+                  }))}
                   height="280px"
                   loading={heatmapQuery.isFetching}
                 />

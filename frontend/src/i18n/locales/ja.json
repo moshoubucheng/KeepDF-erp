@@ -598,5 +598,17 @@
   "pwa.offline": "オフラインです。一部機能が制限される場合があります。",
   "error.page_not_found": "ページが見つかりません",
   "error.page_not_found_desc": "お探しのページは存在しないか、移動されました。",
-  "error.coming_soon": "一部のページはSprint 16で公開予定です。"
+  "error.coming_soon": "一部のページはSprint 16で公開予定です。",
+  "nav.group.orders": "注文管理",
+  "nav.group.inventory": "在庫管理",
+  "nav.group.finance": "財務",
+  "nav.group.crm": "顧客管理",
+  "nav.group.system": "システム",
+  "notification.title": "通知",
+  "notification.empty": "通知はありません",
+  "notification.markAllRead": "全て既読にする",
+  "notification.justNow": "たった今",
+  "notification.minutesAgo": "{count}分前",
+  "notification.hoursAgo": "{count}時間前",
+  "notification.daysAgo": "{count}日前"
 }
