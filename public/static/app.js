@@ -24,6 +24,9 @@ const pageTitles = {
     customers: { title: 'customers.title', sub: 'customers.subtitle' },
     settings: { title: 'settings.title', sub: 'settings.subtitle' },
     automation: { title: 'automation.title', sub: 'automation.subtitle' },
+    currency: { title: 'currency.title', sub: 'currency.subtitle' },
+    'sku-mappings': { title: 'skuMappings.title', sub: 'skuMappings.subtitle' },
+    coupons: { title: 'coupons.title', sub: 'coupons.subtitle' },
 };
 
 function navigateTo(pageName) {
@@ -203,6 +206,9 @@ async function loadPageData(page) {
         case 'financial-reports': return loadFinancialReport();
         case 'forecasting': return loadForecasting();
         case 'automation': return loadAutomation();
+        case 'currency': return loadCurrency();
+        case 'sku-mappings': return loadSkuMappings();
+        case 'coupons': return loadCoupons();
     }
 }
 
@@ -660,20 +666,22 @@ async function loadDistributors(offset = 0) {
 function openDistributorModal(id) {
     const form = document.getElementById('distributorForm');
     form.reset();
+    const credRow = document.getElementById('distributorCredentialsRow');
 
     if (id) {
         document.getElementById('distributorModalTitle').textContent = t('distributors.modal_edit');
         document.getElementById('distributorFormId').value = id;
+        credRow.style.display = 'none';
         apiFetch(`/api/v1/distributors/${Number(id)}`).then(data => {
             if (data?.distributor) {
                 document.getElementById('distributorFormName').value = data.distributor.name || '';
-                document.getElementById('distributorFormRole').value = data.distributor.role || 'distributor';
                 document.getElementById('distributorFormTaxReg').value = data.distributor.tax_reg_number || '';
             }
         });
     } else {
         document.getElementById('distributorModalTitle').textContent = t('distributors.modal_new');
         document.getElementById('distributorFormId').value = '';
+        credRow.style.display = '';
     }
     openModal('distributorModal');
 }
@@ -681,26 +689,29 @@ function openDistributorModal(id) {
 async function saveDistributor() {
     const id = document.getElementById('distributorFormId').value;
     const name = document.getElementById('distributorFormName').value.trim();
-    const role = document.getElementById('distributorFormRole').value;
     const taxReg = document.getElementById('distributorFormTaxReg').value.trim();
 
     if (!name) { alert(t('error.required_name')); return; }
 
-    const payload = { name, role, tax_reg_number: taxReg || undefined };
-
     if (id) {
+        const payload = { name, tax_reg_number: taxReg || undefined };
         const result = await apiFetch(`/api/v1/distributors/${Number(id)}`, {
             method: 'PUT', body: JSON.stringify(payload),
         });
         if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
     } else {
+        const username = document.getElementById('distributorFormUsername').value.trim();
+        const password = document.getElementById('distributorFormPassword').value;
+
+        if (!username) { alert(t('distributors.username_required')); return; }
+        if (!password || password.length < 8) { alert(t('distributors.password_min')); return; }
+
+        const payload = { name, username, password, tax_reg_number: taxReg || undefined };
         const result = await apiFetch('/api/v1/distributors', {
             method: 'POST', body: JSON.stringify(payload),
         });
         if (result?.error) { alert(`${t('common.error')}: ${result.error}`); return; }
-        if (result?.distributor?.token) {
-            alert(`Token: ${result.distributor.token}`);
-        }
+        alert(t('distributors.created_success', { username }));
     }
 
     closeModal('distributorModal');
@@ -1421,6 +1432,7 @@ async function loadShipping(offset = 0) {
       <td>${shipStatusBadge(s.status)}</td>
       <td class="col-hide-mobile">${s.platform ? platformBadge(s.platform) : '\u2014'}</td>
       <td class="col-hide-mobile">${formatDate(s.shipped_at)}</td>
+      <td><button class="btn-sm" onclick="loadShipmentTimeline(${Number(s.id)})">${t('shipping.timeline')}</button></td>
     </tr>`).join('');
 
     renderPagination('shippingPagination', offset, 20, data.total, (newOffset) => loadShipping(newOffset));
@@ -2455,6 +2467,264 @@ async function batchUpdateOrderStatus() {
 document.getElementById('selectAllOrders')?.addEventListener('change', function() {
     document.querySelectorAll('.order-checkbox').forEach(cb => { cb.checked = this.checked; });
 });
+
+// ===== Sprint 12: Currency Management =====
+async function loadCurrency() {
+    const data = await apiFetch('/api/v1/currency/rates');
+    const tbody = document.getElementById('currencyTableBody');
+    if (!data?.rates?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('currency.empty')}</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = data.rates.map(r => `
+    <tr>
+      <td><strong>${escapeHtml(r.from_currency)}</strong></td>
+      <td><strong>${escapeHtml(r.to_currency)}</strong></td>
+      <td>${r.rate}</td>
+      <td>${escapeHtml(r.source)}</td>
+      <td class="col-hide-mobile">${formatDate(r.updated_at)}</td>
+      <td>${window._userRole === 'admin' ? `<button class="btn-sm" onclick="updateExchangeRate('${escapeHtml(r.from_currency)}','${escapeHtml(r.to_currency)}',${r.rate})">${t('distributors.edit')}</button>` : '\u2014'}</td>
+    </tr>`).join('');
+}
+
+async function updateExchangeRate(from, to, currentRate) {
+    const newRate = prompt(`${t('currency.new_rate')} (${from} → ${to}):`, currentRate);
+    if (!newRate || isNaN(Number(newRate))) return;
+    const data = await apiFetch('/api/v1/currency/rates', {
+        method: 'POST',
+        body: JSON.stringify({ from, to, rate: Number(newRate) }),
+    });
+    if (data?.error) { alert(data.error); return; }
+    loadCurrency();
+}
+
+async function convertCurrency() {
+    const amount = document.getElementById('convertAmount').value;
+    const from = document.getElementById('convertFrom').value;
+    const to = document.getElementById('convertTo').value;
+    const data = await apiFetch(`/api/v1/currency/convert?amount=${amount}&from=${from}&to=${to}`);
+    if (data?.error) { document.getElementById('convertResult').textContent = data.error; return; }
+    document.getElementById('convertResult').textContent = `${formatCurrency(Number(amount), from)} = ${formatCurrency(data.converted, to)} (${t('currency.rate')}: ${data.rate})`;
+}
+
+function formatCurrency(amount, currency) {
+    if (!currency || currency === 'JPY') return `¥${Math.floor(amount).toLocaleString()}`;
+    if (currency === 'USD') return `$${amount.toFixed(2)}`;
+    if (currency === 'CNY') return `¥${amount.toFixed(2)}`;
+    return `${amount} ${currency}`;
+}
+
+// ===== Sprint 12: SKU Mappings =====
+async function loadSkuMappings(offset = 0) {
+    const platform = document.getElementById('skuPlatformFilter')?.value || '';
+    let url = `/api/v1/sku-mappings?limit=20&offset=${offset}`;
+    if (platform) url += `&platform=${platform}`;
+
+    const data = await apiFetch(url);
+    const tbody = document.getElementById('skuMappingsTableBody');
+    if (!data?.mappings?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${t('skuMappings.empty')}</td></tr>`;
+        document.getElementById('skuMappingsPagination').innerHTML = '';
+        return;
+    }
+    tbody.innerHTML = data.mappings.map(m => `
+    <tr>
+      <td>#${m.id}</td>
+      <td><strong>${escapeHtml(m.local_sku)}</strong></td>
+      <td>${platformBadge(m.platform)}</td>
+      <td>${escapeHtml(m.platform_sku)}</td>
+      <td class="col-hide-mobile">${escapeHtml(m.platform_title) || '\u2014'}</td>
+      <td class="col-hide-mobile">${m.price_sync ? '\u2705' : '\u274C'}</td>
+      <td class="col-hide-mobile">${m.stock_sync ? '\u2705' : '\u274C'}</td>
+      <td>${window._userRole === 'admin' ? `<button class="btn-sm" onclick="openSkuMappingModal(${m.id})">${t('distributors.edit')}</button> <button class="btn-sm btn-danger" onclick="deleteSkuMapping(${m.id})">${t('common.delete')}</button>` : '\u2014'}</td>
+    </tr>`).join('');
+
+    renderPagination('skuMappingsPagination', offset, 20, data.total, (newOffset) => loadSkuMappings(newOffset));
+}
+
+function openSkuMappingModal(id) {
+    const form = document.getElementById('skuMappingForm');
+    form.reset();
+    document.getElementById('skuMappingFormId').value = '';
+
+    if (id) {
+        document.getElementById('skuMappingModalTitle').textContent = t('skuMappings.edit');
+        document.getElementById('skuMappingFormId').value = id;
+        apiFetch(`/api/v1/sku-mappings/${Number(id)}`).then(data => {
+            if (data?.mapping) {
+                const m = data.mapping;
+                document.getElementById('skuMappingLocalSku').value = m.local_sku;
+                document.getElementById('skuMappingPlatform').value = m.platform;
+                document.getElementById('skuMappingPlatformSku').value = m.platform_sku;
+                document.getElementById('skuMappingTitle').value = m.platform_title || '';
+                document.getElementById('skuMappingPriceSync').checked = !!m.price_sync;
+                document.getElementById('skuMappingStockSync').checked = !!m.stock_sync;
+            }
+        });
+    } else {
+        document.getElementById('skuMappingModalTitle').textContent = t('skuMappings.add');
+    }
+    openModal('skuMappingModal');
+}
+
+async function saveSkuMapping(e) {
+    e.preventDefault();
+    const id = document.getElementById('skuMappingFormId').value;
+    const payload = {
+        local_sku: document.getElementById('skuMappingLocalSku').value,
+        platform: document.getElementById('skuMappingPlatform').value,
+        platform_sku: document.getElementById('skuMappingPlatformSku').value,
+        platform_title: document.getElementById('skuMappingTitle').value || null,
+        price_sync: document.getElementById('skuMappingPriceSync').checked ? 1 : 0,
+        stock_sync: document.getElementById('skuMappingStockSync').checked ? 1 : 0,
+    };
+    const url = id ? `/api/v1/sku-mappings/${id}` : '/api/v1/sku-mappings';
+    const method = id ? 'PUT' : 'POST';
+    const data = await apiFetch(url, { method, body: JSON.stringify(payload) });
+    if (data?.error) { alert(data.error); return; }
+    closeModal('skuMappingModal');
+    loadSkuMappings();
+}
+document.getElementById('skuMappingForm')?.addEventListener('submit', saveSkuMapping);
+
+async function deleteSkuMapping(id) {
+    if (!confirm(t('common.confirm_delete'))) return;
+    await apiFetch(`/api/v1/sku-mappings/${id}`, { method: 'DELETE' });
+    loadSkuMappings();
+}
+
+// ===== Sprint 12: Coupons =====
+async function loadCoupons(offset = 0) {
+    const data = await apiFetch(`/api/v1/coupons?limit=20&offset=${offset}`);
+    const tbody = document.getElementById('couponsTableBody');
+    if (!data?.coupons?.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="10">${t('coupons.empty')}</td></tr>`;
+        document.getElementById('couponsPagination').innerHTML = '';
+        return;
+    }
+    tbody.innerHTML = data.coupons.map(c => {
+        const typeLabels = { PERCENTAGE: '%', FIXED_AMOUNT: '¥', FREE_SHIPPING: t('coupons.free_ship') };
+        const statusBadge = c.is_active ? `<span class="badge badge-delivered">${t('coupons.active')}</span>` : `<span class="badge badge-cancelled">${t('coupons.inactive')}</span>`;
+        const usageText = c.usage_limit > 0 ? `${c.usage_count}/${c.usage_limit}` : `${c.usage_count}/${t('coupons.unlimited')}`;
+        return `
+        <tr>
+          <td>#${c.id}</td>
+          <td><strong>${escapeHtml(c.code)}</strong></td>
+          <td>${escapeHtml(c.name)}</td>
+          <td>${typeLabels[c.type] || c.type}</td>
+          <td>${c.type === 'PERCENTAGE' ? c.value + '%' : formatCurrency(c.value, c.currency)}</td>
+          <td class="col-hide-mobile">${c.platform === 'ALL' ? t('coupons.all_platforms') : platformBadge(c.platform)}</td>
+          <td class="col-hide-mobile">${usageText}</td>
+          <td>${formatDate(c.valid_to)}</td>
+          <td>${statusBadge}</td>
+          <td>${window._userRole === 'admin' ? `<button class="btn-sm" onclick="openCouponModal(${c.id})">${t('distributors.edit')}</button>` : '\u2014'}</td>
+        </tr>`;
+    }).join('');
+
+    renderPagination('couponsPagination', offset, 20, data.total, (newOffset) => loadCoupons(newOffset));
+}
+
+function openCouponModal(id) {
+    const form = document.getElementById('couponForm');
+    form.reset();
+    document.getElementById('couponFormId').value = '';
+
+    if (id) {
+        document.getElementById('couponModalTitle').textContent = t('coupons.edit');
+        document.getElementById('couponFormId').value = id;
+        apiFetch(`/api/v1/coupons/${Number(id)}`).then(data => {
+            if (data?.coupon) {
+                const c = data.coupon;
+                document.getElementById('couponCode').value = c.code;
+                document.getElementById('couponCode').readOnly = true;
+                document.getElementById('couponName').value = c.name;
+                document.getElementById('couponType').value = c.type;
+                document.getElementById('couponValue').value = c.value;
+                document.getElementById('couponMinOrder').value = c.min_order_amount;
+                document.getElementById('couponMaxDiscount').value = c.max_discount || '';
+                document.getElementById('couponValidFrom').value = c.valid_from?.slice(0, 16) || '';
+                document.getElementById('couponValidTo').value = c.valid_to?.slice(0, 16) || '';
+                document.getElementById('couponUsageLimit').value = c.usage_limit;
+                document.getElementById('couponPerUserLimit').value = c.per_user_limit;
+                document.getElementById('couponPlatform').value = c.platform;
+            }
+        });
+    } else {
+        document.getElementById('couponModalTitle').textContent = t('coupons.add');
+        document.getElementById('couponCode').readOnly = false;
+    }
+    openModal('couponModal');
+}
+
+async function saveCoupon(e) {
+    e.preventDefault();
+    const id = document.getElementById('couponFormId').value;
+    const payload = {
+        code: document.getElementById('couponCode').value || undefined,
+        name: document.getElementById('couponName').value,
+        type: document.getElementById('couponType').value,
+        value: Number(document.getElementById('couponValue').value),
+        min_order_amount: Number(document.getElementById('couponMinOrder').value) || 0,
+        max_discount: Number(document.getElementById('couponMaxDiscount').value) || null,
+        valid_from: document.getElementById('couponValidFrom').value ? new Date(document.getElementById('couponValidFrom').value).toISOString() : undefined,
+        valid_to: document.getElementById('couponValidTo').value ? new Date(document.getElementById('couponValidTo').value).toISOString() : undefined,
+        usage_limit: Number(document.getElementById('couponUsageLimit').value) || 0,
+        per_user_limit: Number(document.getElementById('couponPerUserLimit').value) || 1,
+        platform: document.getElementById('couponPlatform').value,
+    };
+    const url = id ? `/api/v1/coupons/${id}` : '/api/v1/coupons';
+    const method = id ? 'PUT' : 'POST';
+    const data = await apiFetch(url, { method, body: JSON.stringify(payload) });
+    if (data?.error) { alert(data.error); return; }
+    closeModal('couponModal');
+    loadCoupons();
+}
+document.getElementById('couponForm')?.addEventListener('submit', saveCoupon);
+
+// ===== Sprint 12: Shipment Timeline =====
+async function loadShipmentTimeline(shipmentId) {
+    openModal('shipmentTimelineModal');
+    const content = document.getElementById('shipmentTimelineContent');
+    content.innerHTML = `<p style="color:var(--text-muted)">${t('common.loading')}</p>`;
+
+    const data = await apiFetch(`/api/v1/shipping/${shipmentId}/timeline`);
+    if (!data?.shipment) {
+        content.innerHTML = `<p style="color:var(--danger)">${t('common.error')}</p>`;
+        return;
+    }
+
+    const s = data.shipment;
+    let html = `<div style="margin-bottom:16px">
+        <p><strong>${t('shipping.tracking')}:</strong> ${escapeHtml(s.tracking_number)}</p>
+        <p><strong>${t('shipping.carrier')}:</strong> ${escapeHtml(s.carrier)}</p>
+        <p><strong>${t('orders.status')}:</strong> ${shipStatusBadge(s.status)}</p>`;
+    if (data.tracking_url) {
+        html += `<p><a href="${escapeHtml(data.tracking_url)}" target="_blank" rel="noopener" class="btn-sm" style="display:inline-block;margin-top:8px">${t('shipping.tracking_url')}</a></p>`;
+    }
+    if (data.duration_hours !== null) {
+        html += `<p><strong>${t('shipping.duration')}:</strong> ${data.duration_hours} ${t('shipping.hours')}</p>`;
+    }
+    html += `</div>`;
+
+    if (data.events?.length) {
+        html += `<div class="timeline">`;
+        data.events.forEach(ev => {
+            html += `<div class="timeline-item" style="display:flex;gap:12px;margin-bottom:16px;padding-left:16px;border-left:3px solid var(--primary)">
+                <div style="flex:1">
+                    <div style="font-weight:600">${shipStatusBadge(ev.status)}</div>
+                    ${ev.location ? `<div style="color:var(--text-muted);font-size:13px">${escapeHtml(ev.location)}</div>` : ''}
+                    ${ev.description ? `<div style="font-size:13px">${escapeHtml(ev.description)}</div>` : ''}
+                    <div style="color:var(--text-muted);font-size:12px;margin-top:4px">${formatDate(ev.event_time)}</div>
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
+    } else {
+        html += `<p style="color:var(--text-muted)">${t('shipping.no_events')}</p>`;
+    }
+
+    content.innerHTML = html;
+}
 
 // ===== Utility: CSV export helper =====
 async function exportCSV(url, filename) {

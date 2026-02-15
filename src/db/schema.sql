@@ -50,6 +50,12 @@ CREATE TABLE IF NOT EXISTS platform_mappings (
   local_sku TEXT NOT NULL,
   platform TEXT NOT NULL CHECK(platform IN ('TIKTOK', 'TEMU', 'RAKUTEN')),
   platform_sku TEXT NOT NULL,
+  price_sync INTEGER DEFAULT 0,
+  stock_sync INTEGER DEFAULT 0,
+  platform_title TEXT,
+  platform_description TEXT,
+  is_active INTEGER DEFAULT 1,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(platform, platform_sku)
 );
 
@@ -67,6 +73,11 @@ CREATE TABLE IF NOT EXISTS orders (
   delivered_at DATETIME,
   cancelled_at DATETIME,
   customer_id INTEGER,
+  currency TEXT DEFAULT 'JPY',
+  total_amount_jpy REAL,
+  exchange_rate REAL DEFAULT 1.0,
+  coupon_id INTEGER,
+  discount_amount REAL DEFAULT 0,
   FOREIGN KEY (distributor_id) REFERENCES distributors(id),
   FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
@@ -220,8 +231,72 @@ CREATE TABLE IF NOT EXISTS shipments (
   status TEXT DEFAULT 'SHIPPED' CHECK(status IN ('SHIPPED','IN_TRANSIT','DELIVERED','RETURNED')),
   shipped_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   estimated_delivery DATETIME,
+  actual_delivery DATETIME,
+  delivery_notes TEXT,
   distributor_id INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id),
+  FOREIGN KEY (distributor_id) REFERENCES distributors(id)
+);
+
+-- ===== Exchange Rates =====
+CREATE TABLE IF NOT EXISTS exchange_rates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_currency TEXT NOT NULL CHECK(from_currency IN ('JPY','USD','CNY')),
+  to_currency TEXT NOT NULL CHECK(to_currency IN ('JPY','USD','CNY')),
+  rate REAL NOT NULL,
+  source TEXT DEFAULT 'MANUAL',
+  updated_by INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(from_currency, to_currency)
+);
+
+-- ===== Shipment Events Timeline =====
+CREATE TABLE IF NOT EXISTS shipment_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  shipment_id INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('SHIPPED','PICKED_UP','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','RETURNED','EXCEPTION')),
+  location TEXT,
+  description TEXT,
+  event_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (shipment_id) REFERENCES shipments(id)
+);
+
+-- ===== Coupons =====
+CREATE TABLE IF NOT EXISTS coupons (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK(type IN ('PERCENTAGE','FIXED_AMOUNT','FREE_SHIPPING')),
+  value REAL NOT NULL,
+  currency TEXT DEFAULT 'JPY',
+  min_order_amount REAL DEFAULT 0,
+  max_discount REAL,
+  usage_limit INTEGER DEFAULT 0,
+  usage_count INTEGER DEFAULT 0,
+  per_user_limit INTEGER DEFAULT 1,
+  platform TEXT DEFAULT 'ALL',
+  valid_from DATETIME NOT NULL,
+  valid_to DATETIME NOT NULL,
+  is_active INTEGER DEFAULT 1,
+  created_by INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES distributors(id)
+);
+
+-- ===== Coupon Usage =====
+CREATE TABLE IF NOT EXISTS coupon_usage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  coupon_id INTEGER NOT NULL,
+  order_id INTEGER NOT NULL,
+  distributor_id INTEGER NOT NULL,
+  discount_amount REAL NOT NULL,
+  discount_amount_jpy REAL NOT NULL,
+  used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (coupon_id) REFERENCES coupons(id),
   FOREIGN KEY (order_id) REFERENCES orders(id),
   FOREIGN KEY (distributor_id) REFERENCES distributors(id)
 );
@@ -503,3 +578,11 @@ CREATE INDEX IF NOT EXISTS idx_automation_rules_type ON automation_rules(type, i
 CREATE INDEX IF NOT EXISTS idx_automation_rules_distributor ON automation_rules(distributor_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_automation_logs_rule ON automation_logs(rule_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_automation_logs_status ON automation_logs(status, created_at);
+
+-- ===== V13: Multi-currency, Tracking, Coupons =====
+CREATE INDEX IF NOT EXISTS idx_exchange_rates_pair ON exchange_rates(from_currency, to_currency);
+CREATE INDEX IF NOT EXISTS idx_shipment_events_shipment ON shipment_events(shipment_id, event_time);
+CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(code, is_active);
+CREATE INDEX IF NOT EXISTS idx_coupons_platform ON coupons(platform, is_active);
+CREATE INDEX IF NOT EXISTS idx_coupon_usage_coupon ON coupon_usage(coupon_id);
+CREATE INDEX IF NOT EXISTS idx_coupon_usage_order ON coupon_usage(order_id);

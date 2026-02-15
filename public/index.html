@@ -72,6 +72,14 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             <span data-i18n="nav.pricing">価格管理</span>
           </a>
+          <a href="#" class="nav-item admin-only" data-page="currency" style="display:none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+            <span data-i18n="nav.currency">汇率管理</span>
+          </a>
+          <a href="#" class="nav-item" data-page="sku-mappings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span data-i18n="nav.sku_mappings">SKU映射</span>
+          </a>
         </div>
       </div>
 
@@ -101,6 +109,10 @@
           <a href="#" class="nav-item admin-only" data-page="financial-reports" style="display:none">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M8 17V11"/><path d="M12 17V7"/><path d="M16 17V13"/></svg>
             <span data-i18n="nav.financial_reports">財務レポート</span>
+          </a>
+          <a href="#" class="nav-item" data-page="coupons">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h6"/><path d="M14 4h6v6"/><path d="M10 14L20 4"/></svg>
+            <span data-i18n="nav.coupons">优惠券</span>
           </a>
         </div>
       </div>
@@ -756,14 +768,17 @@
               <label data-i18n="distributors.name">名前</label>
               <input type="text" name="name" id="distributorFormName" required placeholder="例: 東京物産株式会社" maxlength="100">
             </div>
-            <div class="form-row">
+            <div class="form-row" id="distributorCredentialsRow">
               <div class="form-group">
-                <label data-i18n="distributors.role">ロール</label>
-                <select name="role" id="distributorFormRole">
-                  <option value="distributor">Distributor</option>
-                  <option value="admin">Admin</option>
-                </select>
+                <label data-i18n="distributors.username">用户名</label>
+                <input type="text" name="username" id="distributorFormUsername" placeholder="例: distributor1" minlength="3" maxlength="50" pattern="[a-zA-Z0-9_]+">
               </div>
+              <div class="form-group">
+                <label data-i18n="distributors.password">密码</label>
+                <input type="password" name="password" id="distributorFormPassword" placeholder="至少8位" minlength="8">
+              </div>
+            </div>
+            <div class="form-row">
               <div class="form-group">
                 <label data-i18n="distributors.tax_reg">登録番号 (任意)</label>
                 <input type="text" name="tax_reg_number" id="distributorFormTaxReg" placeholder="T1234567890123">
@@ -1003,10 +1018,11 @@
                   <th data-i18n="orders.status">ステータス</th>
                   <th class="col-hide-mobile" data-i18n="orders.platform">プラットフォーム</th>
                   <th class="col-hide-mobile" data-i18n="shipping.shipped_at">発送日</th>
+                  <th data-i18n="orders.actions">操作</th>
                 </tr>
               </thead>
               <tbody id="shippingTableBody">
-                <tr class="empty-row"><td colspan="7" data-i18n="shipping.empty">出荷データがありません</td></tr>
+                <tr class="empty-row"><td colspan="8" data-i18n="shipping.empty">出荷データがありません</td></tr>
               </tbody>
             </table>
           </div>
@@ -1578,8 +1594,268 @@
         </div>
       </div>
 
+      <!-- Currency Page -->
+      <div class="page" id="page-currency">
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="currency.rates_title">汇率管理</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th data-i18n="currency.from">源币种</th>
+                <th data-i18n="currency.to">目标币种</th>
+                <th data-i18n="currency.rate">汇率</th>
+                <th data-i18n="currency.source">来源</th>
+                <th data-i18n="currency.updated">更新时间</th>
+                <th data-i18n="orders.actions">操作</th>
+              </tr></thead>
+              <tbody id="currencyTableBody">
+                <tr class="empty-row"><td colspan="6" data-i18n="currency.empty">暂无汇率数据</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-header"><h3 data-i18n="currency.converter">汇率换算</h3></div>
+          <div style="padding:20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div class="form-group" style="margin:0;flex:1;min-width:120px">
+              <label data-i18n="currency.amount">金额</label>
+              <input type="number" id="convertAmount" value="100" min="0" step="0.01" class="form-input">
+            </div>
+            <div class="form-group" style="margin:0;flex:1;min-width:100px">
+              <label data-i18n="currency.from">源币种</label>
+              <select id="convertFrom" class="select-input"><option value="USD">USD</option><option value="CNY">CNY</option><option value="JPY">JPY</option></select>
+            </div>
+            <div class="form-group" style="margin:0;flex:1;min-width:100px">
+              <label data-i18n="currency.to">目标币种</label>
+              <select id="convertTo" class="select-input"><option value="JPY">JPY</option><option value="USD">USD</option><option value="CNY">CNY</option></select>
+            </div>
+            <button class="btn-primary" onclick="convertCurrency()" data-i18n="currency.convert">换算</button>
+          </div>
+          <div id="convertResult" style="padding:0 20px 20px;font-size:18px;font-weight:600;color:var(--primary)"></div>
+        </div>
+      </div>
+
+      <!-- SKU Mappings Page -->
+      <div class="page" id="page-sku-mappings">
+        <div class="page-actions">
+          <div class="filter-group">
+            <select id="skuPlatformFilter" class="select-input" onchange="loadSkuMappings()">
+              <option value="" data-i18n="orders.all_platforms">全平台</option>
+              <option value="TIKTOK">TikTok</option>
+              <option value="TEMU">Temu</option>
+              <option value="RAKUTEN">Rakuten</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" onclick="downloadCSV('/api/v1/sku-mappings/export')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span data-i18n="orders.export_csv">CSV导出</span>
+            </button>
+            <button class="btn-primary admin-only" onclick="openSkuMappingModal()" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="skuMappings.add">添加映射</span>
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="skuMappings.list">SKU映射列表</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th>
+                <th data-i18n="skuMappings.local_sku">本地SKU</th>
+                <th data-i18n="skuMappings.platform">平台</th>
+                <th data-i18n="skuMappings.platform_sku">平台SKU</th>
+                <th data-i18n="skuMappings.title">平台标题</th>
+                <th class="col-hide-mobile" data-i18n="skuMappings.price_sync">价格同步</th>
+                <th class="col-hide-mobile" data-i18n="skuMappings.stock_sync">库存同步</th>
+                <th data-i18n="orders.actions">操作</th>
+              </tr></thead>
+              <tbody id="skuMappingsTableBody">
+                <tr class="empty-row"><td colspan="8" data-i18n="skuMappings.empty">暂无映射数据</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="skuMappingsPagination"></div>
+        </div>
+      </div>
+
+      <!-- Coupons Page -->
+      <div class="page" id="page-coupons">
+        <div class="page-actions">
+          <div class="filter-group"></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn-primary admin-only" onclick="openCouponModal()" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="coupons.add">创建优惠券</span>
+            </button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h3 data-i18n="coupons.list">优惠券列表</h3></div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead><tr>
+                <th>ID</th>
+                <th data-i18n="coupons.code">券码</th>
+                <th data-i18n="coupons.name_label">名称</th>
+                <th data-i18n="coupons.type">类型</th>
+                <th data-i18n="coupons.value">值</th>
+                <th class="col-hide-mobile" data-i18n="coupons.platform">平台</th>
+                <th class="col-hide-mobile" data-i18n="coupons.usage">使用量</th>
+                <th data-i18n="coupons.valid_to">有效期至</th>
+                <th data-i18n="orders.status">状态</th>
+                <th data-i18n="orders.actions">操作</th>
+              </tr></thead>
+              <tbody id="couponsTableBody">
+                <tr class="empty-row"><td colspan="10" data-i18n="coupons.empty">暂无优惠券</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination" id="couponsPagination"></div>
+        </div>
+      </div>
+
     </div>
   </main>
+
+  <!-- SKU Mapping Modal -->
+  <div class="modal-overlay" id="skuMappingModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="skuMappingModalTitle" data-i18n="skuMappings.add">添加映射</h3>
+        <button class="modal-close" data-close="skuMappingModal">&#10005;</button>
+      </div>
+      <form id="skuMappingForm">
+        <input type="hidden" id="skuMappingFormId">
+        <div class="form-group">
+          <label data-i18n="skuMappings.local_sku">本地SKU</label>
+          <input type="text" id="skuMappingLocalSku" required>
+        </div>
+        <div class="form-group">
+          <label data-i18n="skuMappings.platform">平台</label>
+          <select id="skuMappingPlatform" required class="select-input">
+            <option value="TIKTOK">TikTok</option>
+            <option value="TEMU">Temu</option>
+            <option value="RAKUTEN">Rakuten</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label data-i18n="skuMappings.platform_sku">平台SKU</label>
+          <input type="text" id="skuMappingPlatformSku" required>
+        </div>
+        <div class="form-group">
+          <label data-i18n="skuMappings.title">平台标题</label>
+          <input type="text" id="skuMappingTitle">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label><input type="checkbox" id="skuMappingPriceSync"> <span data-i18n="skuMappings.price_sync">价格同步</span></label>
+          </div>
+          <div class="form-group">
+            <label><input type="checkbox" id="skuMappingStockSync"> <span data-i18n="skuMappings.stock_sync">库存同步</span></label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" data-close="skuMappingModal" data-i18n="common.cancel">取消</button>
+          <button type="submit" class="btn-primary" data-i18n="common.save">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Coupon Modal -->
+  <div class="modal-overlay" id="couponModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="couponModalTitle" data-i18n="coupons.add">创建优惠券</h3>
+        <button class="modal-close" data-close="couponModal">&#10005;</button>
+      </div>
+      <form id="couponForm">
+        <input type="hidden" id="couponFormId">
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="coupons.code">券码 (空=自动生成)</label>
+            <input type="text" id="couponCode" placeholder="KDF-XXXXXXXX">
+          </div>
+          <div class="form-group">
+            <label data-i18n="coupons.name_label">名称</label>
+            <input type="text" id="couponName" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="coupons.type">类型</label>
+            <select id="couponType" required class="select-input">
+              <option value="PERCENTAGE">百分比折扣</option>
+              <option value="FIXED_AMOUNT">固定金额</option>
+              <option value="FREE_SHIPPING">免运费</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="coupons.value">值</label>
+            <input type="number" id="couponValue" required min="0" step="0.01">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="coupons.min_order">最低订单金额</label>
+            <input type="number" id="couponMinOrder" value="0" min="0">
+          </div>
+          <div class="form-group">
+            <label data-i18n="coupons.max_discount">最大折扣</label>
+            <input type="number" id="couponMaxDiscount" min="0">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="coupons.valid_from">有效期开始</label>
+            <input type="datetime-local" id="couponValidFrom" required>
+          </div>
+          <div class="form-group">
+            <label data-i18n="coupons.valid_to">有效期截止</label>
+            <input type="datetime-local" id="couponValidTo" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label data-i18n="coupons.usage_limit">总使用上限 (0=无限)</label>
+            <input type="number" id="couponUsageLimit" value="0" min="0">
+          </div>
+          <div class="form-group">
+            <label data-i18n="coupons.per_user_limit">每人上限</label>
+            <input type="number" id="couponPerUserLimit" value="1" min="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label data-i18n="coupons.platform">适用平台</label>
+          <select id="couponPlatform" class="select-input">
+            <option value="ALL">全部</option>
+            <option value="TIKTOK">TikTok</option>
+            <option value="TEMU">Temu</option>
+            <option value="RAKUTEN">Rakuten</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" data-close="couponModal" data-i18n="common.cancel">取消</button>
+          <button type="submit" class="btn-primary" data-i18n="common.save">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Shipment Timeline Modal -->
+  <div class="modal-overlay" id="shipmentTimelineModal">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header">
+        <h3 data-i18n="shipping.timeline">物流时间线</h3>
+        <button class="modal-close" data-close="shipmentTimelineModal">&#10005;</button>
+      </div>
+      <div id="shipmentTimelineContent" style="padding:24px">
+        <p style="color:var(--text-muted)" data-i18n="common.loading">加载中...</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Company Profile Modal -->
   <div class="modal-overlay" id="profileModal">

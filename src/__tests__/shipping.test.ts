@@ -9,6 +9,8 @@ const TOKEN = 'tok_dev_abc123'   // admin (distributor_id=1)
 const TOKEN_2 = 'tok_dev_def456' // distributor (distributor_id=2)
 
 const TABLE_NAMES = [
+    'coupon_usage', 'coupons', 'shipment_events', 'exchange_rates',
+    'automation_logs', 'automation_rules',
     'notification_preferences', 'notifications', 'import_logs', 'shipments', 'customers',
     'audit_logs', 'platform_sync_logs', 'backup_snapshots', 'notification_logs', 'api_logs', 'invoices',
     'commission_settlements', 'commissions', 'wallet_transactions', 'outbound_records',

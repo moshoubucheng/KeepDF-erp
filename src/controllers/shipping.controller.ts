@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
 import { ShippingService } from '../services/shipping.service'
+import { ShipmentTrackingService } from '../services/shipment-tracking.service'
 import { AuditService } from '../services/audit.service'
 import { toCSV, csvResponse } from '../utils/csv'
 
@@ -164,6 +165,60 @@ shipping.patch('/:id/status', async (c) => {
         return c.json({ success: true, shipment })
     } catch (e: any) {
         return c.json({ error: e.message }, 400)
+    }
+})
+
+/** GET /shipping/:id/events - Get shipment events timeline */
+shipping.get('/:id/events', async (c) => {
+    const id = Number(c.req.param('id'))
+    const trackingService = new ShipmentTrackingService(c.env.DB)
+    const events = await trackingService.getEvents(id)
+    return c.json({ events })
+})
+
+/** POST /shipping/:id/events - Add tracking event (admin) */
+shipping.post('/:id/events', async (c) => {
+    const role = c.get('role')
+    if (role !== 'admin') {
+        return c.json({ error: 'Admin access required' }, 403)
+    }
+
+    const id = Number(c.req.param('id'))
+    const body = await c.req.json<{ status: string; location?: string; description?: string }>()
+
+    if (!body.status) {
+        return c.json({ error: 'status is required' }, 400)
+    }
+
+    const trackingService = new ShipmentTrackingService(c.env.DB)
+    try {
+        const event = await trackingService.addEvent(id, body.status, body.location, body.description)
+        return c.json({ success: true, event }, 201)
+    } catch (e: any) {
+        return c.json({ error: e.message }, 400)
+    }
+})
+
+/** GET /shipping/:id/tracking-url - Get tracking URL */
+shipping.get('/:id/tracking-url', async (c) => {
+    const id = Number(c.req.param('id'))
+    const shipment = await c.env.DB.prepare('SELECT carrier, tracking_number FROM shipments WHERE id = ?').bind(id).first()
+    if (!shipment) return c.json({ error: 'Shipment not found' }, 404)
+
+    const trackingService = new ShipmentTrackingService(c.env.DB)
+    const url = trackingService.getTrackingUrl(shipment.carrier as string, shipment.tracking_number as string)
+    return c.json({ tracking_url: url })
+})
+
+/** GET /shipping/:id/timeline - Full timeline with tracking URL and duration */
+shipping.get('/:id/timeline', async (c) => {
+    const id = Number(c.req.param('id'))
+    const trackingService = new ShipmentTrackingService(c.env.DB)
+    try {
+        const timeline = await trackingService.getTimeline(id)
+        return c.json(timeline)
+    } catch (e: any) {
+        return c.json({ error: e.message }, 404)
     }
 })
 

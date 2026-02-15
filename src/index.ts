@@ -30,6 +30,9 @@ import { financialReports } from './controllers/financial-reports.controller'
 import { forecasting } from './controllers/forecasting.controller'
 import { automation } from './controllers/automation.controller'
 import { batch } from './controllers/batch.controller'
+import { currency } from './controllers/currency.controller'
+import { skuMappings } from './controllers/sku-mapping.controller'
+import { coupons } from './controllers/coupons.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
@@ -93,6 +96,9 @@ app.route('/api/v1/financial-reports', financialReports)
 app.route('/api/v1/forecasting', forecasting)
 app.route('/api/v1/automation', automation)
 app.route('/api/v1/batch', batch)
+app.route('/api/v1/currency', currency)
+app.route('/api/v1/sku-mappings', skuMappings)
+app.route('/api/v1/coupons', coupons)
 
 // ===== Error Handler =====
 app.onError((err, c) => {

@@ -59,6 +59,12 @@ export interface PlatformMapping {
     local_sku: string
     platform: 'TIKTOK' | 'TEMU' | 'RAKUTEN'
     platform_sku: string
+    price_sync: number
+    stock_sync: number
+    platform_title: string | null
+    platform_description: string | null
+    is_active: number
+    updated_at: string
 }
 
 export interface Order {
@@ -73,6 +79,11 @@ export interface Order {
     delivered_at: string | null
     cancelled_at: string | null
     customer_id: number | null
+    currency: string
+    total_amount_jpy: number | null
+    exchange_rate: number
+    coupon_id: number | null
+    discount_amount: number
 }
 
 export interface OrderItem {
@@ -167,6 +178,8 @@ export interface Shipment {
     status: 'SHIPPED' | 'IN_TRANSIT' | 'DELIVERED' | 'RETURNED'
     shipped_at: string
     estimated_delivery: string | null
+    actual_delivery: string | null
+    delivery_notes: string | null
     distributor_id: number
     created_at: string
 }
@@ -473,6 +486,64 @@ export interface StockAlertConditions {
 export interface StockAlertActions {
     notify: boolean
     notification_level?: 'INFO' | 'WARNING' | 'CRITICAL'
+}
+
+// ===== Sprint 12: Exchange Rates =====
+
+export interface ExchangeRate {
+    id: number
+    from_currency: 'JPY' | 'USD' | 'CNY'
+    to_currency: 'JPY' | 'USD' | 'CNY'
+    rate: number
+    source: string
+    updated_by: number | null
+    created_at: string
+    updated_at: string
+}
+
+// ===== Sprint 12: Shipment Events =====
+
+export interface ShipmentEvent {
+    id: number
+    shipment_id: number
+    status: 'SHIPPED' | 'PICKED_UP' | 'IN_TRANSIT' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'RETURNED' | 'EXCEPTION'
+    location: string | null
+    description: string | null
+    event_time: string
+    created_at: string
+}
+
+// ===== Sprint 12: Coupons =====
+
+export interface Coupon {
+    id: number
+    code: string
+    name: string
+    type: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_SHIPPING'
+    value: number
+    currency: string
+    min_order_amount: number
+    max_discount: number | null
+    usage_limit: number
+    usage_count: number
+    per_user_limit: number
+    platform: string
+    valid_from: string
+    valid_to: string
+    is_active: number
+    created_by: number
+    created_at: string
+    updated_at: string
+}
+
+export interface CouponUsage {
+    id: number
+    coupon_id: number
+    order_id: number
+    distributor_id: number
+    discount_amount: number
+    discount_amount_jpy: number
+    used_at: string
 }
 
 // ===== Report Types =====

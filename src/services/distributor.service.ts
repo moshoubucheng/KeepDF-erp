@@ -1,4 +1,5 @@
 import type { Distributor } from '../db/types'
+import { PasswordService } from './password.service'
 
 export class DistributorService {
     constructor(
@@ -46,22 +47,34 @@ export class DistributorService {
     /** Create a new distributor with auto-generated token */
     async create(params: {
         name: string
+        username?: string
+        password?: string
         tax_reg_number?: string
         role?: 'admin' | 'distributor'
     }): Promise<Distributor> {
         const token = 'tok_' + this.generateHex(32)
         const role = params.role || 'distributor'
 
+        // Check username uniqueness
+        if (params.username) {
+            const existing = await this.db.prepare(
+                'SELECT id FROM distributors WHERE username = ?'
+            ).bind(params.username).first()
+            if (existing) throw new Error('Username already exists')
+        }
+
+        const passwordHash = params.password ? await PasswordService.hash(params.password) : null
+
         const { meta } = await this.db.prepare(
-            'INSERT INTO distributors (name, token, tax_reg_number, role) VALUES (?, ?, ?, ?)'
-        ).bind(params.name, token, params.tax_reg_number || null, role).run()
+            'INSERT INTO distributors (name, token, username, password_hash, tax_reg_number, role) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(params.name, token, params.username || null, passwordHash, params.tax_reg_number || null, role).run()
 
         return {
             id: meta.last_row_id as number,
             name: params.name,
             token,
-            username: null,
-            password_hash: null,
+            username: params.username || null,
+            password_hash: passwordHash,
             totp_secret: null,
             totp_enabled: 0,
             language: 'zh',

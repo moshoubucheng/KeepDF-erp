@@ -119,7 +119,7 @@ distributors.get('/', async (c) => {
 
 /** POST /distributors - Create */
 distributors.post('/', async (c) => {
-    const body = await c.req.json<{ name: string; tax_reg_number?: string; role?: string }>()
+    const body = await c.req.json<{ name: string; username?: string; password?: string; tax_reg_number?: string; role?: string }>()
 
     if (!body.name || typeof body.name !== 'string' || body.name.length < 1 || body.name.length > 100) {
         return c.json({ error: 'Name is required (1-100 characters)' }, 400)
@@ -127,24 +127,42 @@ distributors.post('/', async (c) => {
     if (body.role && !['admin', 'distributor'].includes(body.role)) {
         return c.json({ error: 'Role must be admin or distributor' }, 400)
     }
+    if (body.username && (body.username.length < 3 || body.username.length > 50)) {
+        return c.json({ error: 'Username must be 3-50 characters' }, 400)
+    }
+    if (body.username && !/^[a-zA-Z0-9_]+$/.test(body.username)) {
+        return c.json({ error: 'Username can only contain letters, numbers, and underscores' }, 400)
+    }
+    if (body.password && body.password.length < 8) {
+        return c.json({ error: 'Password must be at least 8 characters' }, 400)
+    }
 
     const service = new DistributorService(c.env.DB, c.env.KV)
-    const distributor = await service.create({
-        name: body.name,
-        tax_reg_number: body.tax_reg_number,
-        role: (body.role as 'admin' | 'distributor') || 'distributor',
-    })
+    try {
+        const distributor = await service.create({
+            name: body.name,
+            username: body.username,
+            password: body.password,
+            tax_reg_number: body.tax_reg_number,
+            role: (body.role as 'admin' | 'distributor') || 'distributor',
+        })
 
-    const audit = new AuditService(c.env.DB)
-    audit.log({
-        distributorId: c.get('distributorId'),
-        action: 'CREATE_DISTRIBUTOR',
-        resourceType: 'distributor',
-        resourceId: String(distributor.id),
-        ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
-    })
+        const audit = new AuditService(c.env.DB)
+        audit.log({
+            distributorId: c.get('distributorId'),
+            action: 'CREATE_DISTRIBUTOR',
+            resourceType: 'distributor',
+            resourceId: String(distributor.id),
+            ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
+        })
 
-    return c.json({ success: true, distributor }, 201)
+        return c.json({ success: true, distributor }, 201)
+    } catch (e: any) {
+        if (e.message === 'Username already exists') {
+            return c.json({ error: e.message }, 409)
+        }
+        return c.json({ error: e.message }, 500)
+    }
 })
 
 export { distributors }

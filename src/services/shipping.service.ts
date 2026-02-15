@@ -2,15 +2,18 @@
  * ShippingService - Shipment creation, stock deduction, batch shipping
  */
 import { NotificationCenterService } from './notification-center.service'
+import { ShipmentTrackingService } from './shipment-tracking.service'
 
 const VALID_CARRIERS = ['YAMATO', 'SAGAWA', 'JAPAN_POST', 'FEDEX', 'DHL', 'OTHER'] as const
 const VALID_STATUSES = ['SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'RETURNED'] as const
 
 export class ShippingService {
     private notificationCenter: NotificationCenterService
+    private trackingService: ShipmentTrackingService
 
     constructor(private db: D1Database) {
         this.notificationCenter = new NotificationCenterService(db)
+        this.trackingService = new ShipmentTrackingService(db)
     }
 
     /** List shipments with filters */
@@ -154,9 +157,20 @@ export class ShippingService {
         }
 
         // Return created shipment
-        return this.db.prepare(
+        const created = await this.db.prepare(
             'SELECT * FROM shipments WHERE order_id = ? AND tracking_number = ? ORDER BY id DESC LIMIT 1'
         ).bind(orderId, trackingNumber).first()
+
+        // Add initial SHIPPED event (best effort)
+        if (created) {
+            try {
+                await this.trackingService.addEvent(created.id as number, 'SHIPPED', undefined, 'Shipment created')
+            } catch (e) {
+                console.error('[SHIPPING] Event tracking failed:', e)
+            }
+        }
+
+        return created
     }
 
     /** Batch create shipments */
@@ -192,6 +206,13 @@ export class ShippingService {
         if (!shipment) return null
 
         await this.db.prepare('UPDATE shipments SET status = ? WHERE id = ?').bind(status, id).run()
+
+        // Add tracking event (best effort)
+        try {
+            await this.trackingService.addEvent(id, status, undefined, `Status updated to ${status}`)
+        } catch (e) {
+            console.error('[SHIPPING] Event tracking failed:', e)
+        }
 
         return this.db.prepare('SELECT * FROM shipments WHERE id = ?').bind(id).first()
     }
