@@ -112,15 +112,21 @@ communications.delete('/templates/:id', async (c) => {
 communications.get('/messages', async (c) => {
     const service = new CommunicationService(c.env.DB)
     const type = c.req.query('type')
+    const cursor = c.req.query('cursor')
     const limit = Number(c.req.query('limit') || 50)
     const offset = Number(c.req.query('offset') || 0)
 
     const result = await service.listMessages(
         c.get('distributorId'), c.get('role'),
-        { type: type || undefined, limit, offset }
+        { type: type || undefined, limit, offset, cursor: cursor || undefined }
     )
 
-    return c.json({ messages: result.messages, total: result.total })
+    return c.json({
+        messages: result.messages,
+        total: result.total,
+        ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
+        ...(result.hasMore !== undefined ? { hasMore: result.hasMore } : {}),
+    })
 })
 
 /** GET /communications/messages/customer/:id - Customer messages */

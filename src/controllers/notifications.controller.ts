@@ -9,9 +9,10 @@ notifications.get('/', async (c) => {
     const distributorId = c.get('distributorId')
     const limit = Number(c.req.query('limit') || 50)
     const offset = Number(c.req.query('offset') || 0)
+    const cursor = c.req.query('cursor')
 
     const service = new NotificationCenterService(c.env.DB)
-    const result = await service.list(distributorId, limit, offset)
+    const result = await service.list(distributorId, limit, offset, cursor || undefined)
 
     return c.json(result)
 })

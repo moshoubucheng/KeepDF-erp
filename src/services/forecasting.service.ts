@@ -75,46 +75,43 @@ export class ForecastingService {
     }
 
     async calculate(): Promise<{ calculated: number }> {
-        // Get all SKUs with warehouse stock
-        const { results: skus } = await this.db.prepare(
-            'SELECT DISTINCT sku FROM warehouse_locations'
-        ).all<{ sku: string }>()
+        // Batch-fetch all data in 3+1 parallel queries instead of 3N sequential queries
+        const [{ results: skus }, salesRes, stockRes, supplierRes] = await Promise.all([
+            this.db.prepare('SELECT DISTINCT sku FROM warehouse_locations').all<{ sku: string }>(),
+            this.db.prepare(
+                `SELECT oi.sku, COALESCE(SUM(oi.qty), 0) as total_qty
+                 FROM order_items oi JOIN orders o ON o.id = oi.order_id
+                 WHERE o.status IN ('SHIPPED','DELIVERED') AND o.created_at >= datetime('now', '-30 days')
+                 GROUP BY oi.sku`
+            ).all<{ sku: string; total_qty: number }>(),
+            this.db.prepare(
+                'SELECT sku, COALESCE(SUM(qty), 0) as total FROM warehouse_locations GROUP BY sku'
+            ).all<{ sku: string; total: number }>(),
+            this.db.prepare(
+                `SELECT poi.sku, MIN(s.lead_time_days) as min_lead
+                 FROM purchase_order_items poi JOIN purchase_orders po ON po.id = poi.po_id
+                 JOIN suppliers s ON s.id = po.supplier_id WHERE s.is_active = 1
+                 GROUP BY poi.sku`
+            ).all<{ sku: string; min_lead: number | null }>(),
+        ])
+
+        // Build lookup maps
+        const salesMap = new Map(salesRes.results.map(r => [r.sku, r.total_qty]))
+        const stockMap = new Map(stockRes.results.map(r => [r.sku, r.total]))
+        const leadMap = new Map(supplierRes.results.map(r => [r.sku, r.min_lead]))
 
         let calculated = 0
         const stmts: D1PreparedStatement[] = []
 
         for (const { sku } of skus) {
-            // Calculate daily velocity from last 30 days
-            const salesResult = await this.db.prepare(
-                `SELECT COALESCE(SUM(oi.qty), 0) as total_qty
-                 FROM order_items oi
-                 JOIN orders o ON o.id = oi.order_id
-                 WHERE oi.sku = ? AND o.status IN ('SHIPPED','DELIVERED')
-                   AND o.created_at >= datetime('now', '-30 days')`
-            ).bind(sku).first<{ total_qty: number }>()
-
-            const totalQty = salesResult?.total_qty || 0
+            const totalQty = salesMap.get(sku) || 0
             const dailyVelocity = totalQty / 30
             const weeklyVelocity = dailyVelocity * 7
 
-            // Get current stock
-            const stock = await this.db.prepare(
-                'SELECT COALESCE(SUM(qty), 0) as total FROM warehouse_locations WHERE sku = ?'
-            ).bind(sku).first<{ total: number }>()
-
-            const currentStock = stock?.total || 0
+            const currentStock = stockMap.get(sku) || 0
             const daysOfStock = dailyVelocity > 0 ? currentStock / dailyVelocity : 9999
 
-            // Get lead time from suppliers or default
-            const supplierLead = await this.db.prepare(
-                `SELECT MIN(s.lead_time_days) as min_lead
-                 FROM purchase_order_items poi
-                 JOIN purchase_orders po ON po.id = poi.po_id
-                 JOIN suppliers s ON s.id = po.supplier_id
-                 WHERE poi.sku = ? AND s.is_active = 1`
-            ).bind(sku).first<{ min_lead: number | null }>()
-
-            const leadTimeDays = supplierLead?.min_lead || 7
+            const leadTimeDays = leadMap.get(sku) || 7
             const safetyStock = Math.ceil(dailyVelocity * 3) // 3 days safety
             const reorderPoint = Math.ceil(dailyVelocity * leadTimeDays) + safetyStock
 

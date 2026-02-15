@@ -1,3 +1,5 @@
+import { decodeCursor, buildCursorWhere, encodeCursor } from '../utils/cursor'
+
 /**
  * NotificationCenterService - In-app notifications (站内通知)
  * Different from NotificationService which handles external webhooks
@@ -32,26 +34,49 @@ export class NotificationCenterService {
     }
 
     /** List notifications for a distributor */
-    async list(distributorId: number, limit = 50, offset = 0): Promise<{ notifications: any[]; total: number; unreadCount: number }> {
+    async list(distributorId: number, limit = 50, offset = 0, cursor?: string): Promise<{ notifications: any[]; total: number; unreadCount: number; nextCursor?: string; hasMore?: boolean }> {
         const safeLimit = Math.min(Math.max(1, limit), 200)
         const safeOffset = Math.max(0, offset)
 
-        const [{ results }, countResult, unreadResult] = await Promise.all([
-            this.db.prepare(
-                'SELECT * FROM notifications WHERE distributor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
-            ).bind(distributorId, safeLimit, safeOffset).all(),
-            this.db.prepare(
-                'SELECT COUNT(*) as total FROM notifications WHERE distributor_id = ?'
-            ).bind(distributorId).first<{ total: number }>(),
-            this.db.prepare(
-                'SELECT COUNT(*) as count FROM notifications WHERE distributor_id = ? AND is_read = 0'
-            ).bind(distributorId).first<{ count: number }>(),
-        ])
+        // Merged count query: total + unread in a single query (was 2 separate queries)
+        const countsResult = await this.db.prepare(
+            'SELECT COUNT(*) as total, COUNT(CASE WHEN is_read = 0 THEN 1 END) as unread_count FROM notifications WHERE distributor_id = ?'
+        ).bind(distributorId).first<{ total: number; unread_count: number }>()
+
+        // Cursor-based pagination
+        if (cursor) {
+            const decoded = decodeCursor(cursor)
+            if (decoded) {
+                const { clause, binds } = buildCursorWhere(decoded)
+                const { results } = await this.db.prepare(
+                    `SELECT * FROM notifications WHERE distributor_id = ? AND ${clause} ORDER BY created_at DESC, id DESC LIMIT ?`
+                ).bind(distributorId, ...binds, safeLimit + 1).all()
+
+                const hasMore = results.length > safeLimit
+                const page = hasMore ? results.slice(0, safeLimit) : results
+                const nextCursor = hasMore && page.length > 0
+                    ? encodeCursor((page[page.length - 1] as any).created_at, (page[page.length - 1] as any).id)
+                    : undefined
+
+                return {
+                    notifications: page,
+                    total: countsResult?.total || 0,
+                    unreadCount: countsResult?.unread_count || 0,
+                    nextCursor,
+                    hasMore,
+                }
+            }
+        }
+
+        // Offset-based fallback
+        const { results } = await this.db.prepare(
+            'SELECT * FROM notifications WHERE distributor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+        ).bind(distributorId, safeLimit, safeOffset).all()
 
         return {
             notifications: results,
-            total: countResult?.total || 0,
-            unreadCount: unreadResult?.count || 0,
+            total: countsResult?.total || 0,
+            unreadCount: countsResult?.unread_count || 0,
         }
     }
 

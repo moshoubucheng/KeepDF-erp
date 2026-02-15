@@ -22,13 +22,14 @@ auditLogs.get('/export', async (c) => {
 auditLogs.get('/', async (c) => {
     const filters = parseFilters(c)
     const service = new AuditService(c.env.DB)
-    const { logs, total } = await service.query(filters)
+    const result = await service.query(filters)
 
     return c.json({
-        logs,
-        total,
-        count: logs.length,
-        hasMore: (filters.offset || 0) + logs.length < total,
+        logs: result.logs,
+        total: result.total,
+        count: result.logs.length,
+        hasMore: result.hasMore ?? ((filters.offset || 0) + result.logs.length < result.total),
+        ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
     })
 })
 
@@ -44,6 +45,7 @@ function parseFilters(c: any) {
         endDate: c.req.query('end_date') || undefined,
         limit: Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 200)),
         offset: Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset),
+        cursor: c.req.query('cursor') || undefined,
     }
 }
 

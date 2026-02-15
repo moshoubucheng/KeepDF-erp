@@ -1,4 +1,5 @@
 import type { Commission, CommissionSettlement, Order } from '../db/types'
+import { decodeCursor, buildCursorWhere, encodeCursor } from '../utils/cursor'
 
 export class CommissionService {
     constructor(private db: D1Database) {}
@@ -75,14 +76,16 @@ export class CommissionService {
         const details: Array<{ orderId: number; status: 'SETTLED' | 'FAILED'; amount: number; error?: string }> = []
         const settlementStmts: D1PreparedStatement[] = []
 
+        // Batch pre-fetch: which orders are already settled
+        const settledRes = await this.db.prepare(
+            `SELECT DISTINCT order_id FROM commission_settlements WHERE order_id IN (${placeholders}) AND distributor_id = ? AND status = 'SETTLED'`
+        ).bind(...orderIds, distributorId).all<{ order_id: number }>()
+        const settledSet = new Set(settledRes.results.map(r => r.order_id))
+
         for (const order of orders) {
             const { items, totalCommission } = await this.calculateOrderCommission(order.id, order.platform)
 
-            const existing = await this.db.prepare(
-                'SELECT id FROM commission_settlements WHERE order_id = ? AND distributor_id = ? AND status = ?'
-            ).bind(order.id, distributorId, 'SETTLED').first()
-
-            if (existing) {
+            if (settledSet.has(order.id)) {
                 details.push({ orderId: order.id, status: 'FAILED', amount: 0, error: 'Already settled' })
                 continue
             }
@@ -186,30 +189,46 @@ export class CommissionService {
         status?: string
         limit?: number
         offset?: number
-    }): Promise<{ settlements: CommissionSettlement[]; total: number }> {
+        cursor?: string
+    }): Promise<{ settlements: CommissionSettlement[]; total: number; nextCursor?: string; hasMore?: boolean }> {
         const limit = Math.min(filters?.limit || 50, 200)
         const offset = filters?.offset || 0
 
-        let sql = 'SELECT * FROM commission_settlements WHERE distributor_id = ?'
-        let countSql = 'SELECT COUNT(*) as total FROM commission_settlements WHERE distributor_id = ?'
-        const params: any[] = [distributorId]
-        const countParams: any[] = [distributorId]
+        let where = 'WHERE distributor_id = ?'
+        const baseParams: any[] = [distributorId]
 
         if (filters?.status) {
-            sql += ' AND status = ?'
-            countSql += ' AND status = ?'
-            params.push(filters.status.toUpperCase())
-            countParams.push(filters.status.toUpperCase())
+            where += ' AND status = ?'
+            baseParams.push(filters.status.toUpperCase())
         }
 
-        sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
-        params.push(limit, offset)
+        const countSql = `SELECT COUNT(*) as total FROM commission_settlements ${where}`
+        const countResult = await this.db.prepare(countSql).bind(...baseParams).first<{ total: number }>()
+        const total = countResult?.total || 0
 
-        const [{ results }, countResult] = await Promise.all([
-            this.db.prepare(sql).bind(...params).all<CommissionSettlement>(),
-            this.db.prepare(countSql).bind(...countParams).first<{ total: number }>(),
-        ])
+        // Cursor-based pagination
+        if (filters?.cursor) {
+            const decoded = decodeCursor(filters.cursor)
+            if (decoded) {
+                const { clause, binds } = buildCursorWhere(decoded)
+                const cursorWhere = `${where} AND ${clause}`
+                const sql = `SELECT * FROM commission_settlements ${cursorWhere} ORDER BY created_at DESC, id DESC LIMIT ?`
+                const { results } = await this.db.prepare(sql).bind(...baseParams, ...binds, limit + 1).all<CommissionSettlement>()
 
-        return { settlements: results, total: countResult?.total || 0 }
+                const hasMore = results.length > limit
+                const page = hasMore ? results.slice(0, limit) : results
+                const nextCursor = hasMore && page.length > 0
+                    ? encodeCursor(page[page.length - 1].created_at, page[page.length - 1].id)
+                    : undefined
+
+                return { settlements: page, total, nextCursor, hasMore }
+            }
+        }
+
+        // Offset-based fallback
+        const sql = `SELECT * FROM commission_settlements ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+        const { results } = await this.db.prepare(sql).bind(...baseParams, limit, offset).all<CommissionSettlement>()
+
+        return { settlements: results, total }
     }
 }

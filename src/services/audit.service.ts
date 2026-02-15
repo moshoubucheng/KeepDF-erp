@@ -1,4 +1,5 @@
 import { toCSV, csvResponse } from '../utils/csv'
+import { decodeCursor, buildCursorWhere, encodeCursor } from '../utils/cursor'
 
 export type AuditAction =
     | 'LOGIN'
@@ -91,6 +92,7 @@ export interface AuditQueryFilters {
     endDate?: string
     limit?: number
     offset?: number
+    cursor?: string
 }
 
 export class AuditService {
@@ -115,7 +117,7 @@ export class AuditService {
     }
 
     /** Query audit logs with filters and pagination */
-    async query(filters: AuditQueryFilters): Promise<{ logs: any[]; total: number }> {
+    async query(filters: AuditQueryFilters): Promise<{ logs: any[]; total: number; nextCursor?: string; hasMore?: boolean }> {
         const limit = Math.min(filters.limit || 50, 200)
         const offset = filters.offset || 0
 
@@ -144,18 +146,37 @@ export class AuditService {
         }
 
         const countParams = [...params]
+        const countSql = `SELECT COUNT(*) as total FROM audit_logs ${where}`
+        const countResult = await this.db.prepare(countSql).bind(...countParams).first<{ total: number }>()
+        const total = countResult?.total || 0
 
+        // Cursor-based pagination
+        if (filters.cursor) {
+            const decoded = decodeCursor(filters.cursor)
+            if (decoded) {
+                const { clause, binds } = buildCursorWhere(decoded, 'a.created_at')
+                const cursorWhere = `${where} AND ${clause}`
+                const cursorParams = [...params, ...binds, limit + 1]
+
+                const sql = `SELECT a.*, d.name as distributor_name FROM audit_logs a LEFT JOIN distributors d ON d.id = a.distributor_id ${cursorWhere} ORDER BY a.created_at DESC, a.id DESC LIMIT ?`
+                const { results } = await this.db.prepare(sql).bind(...cursorParams).all()
+
+                const hasMore = results.length > limit
+                const page = hasMore ? results.slice(0, limit) : results
+                const nextCursor = hasMore && page.length > 0
+                    ? encodeCursor((page[page.length - 1] as any).created_at, (page[page.length - 1] as any).id)
+                    : undefined
+
+                return { logs: page, total, nextCursor, hasMore }
+            }
+        }
+
+        // Offset-based fallback
         const sql = `SELECT a.*, d.name as distributor_name FROM audit_logs a LEFT JOIN distributors d ON d.id = a.distributor_id ${where} ORDER BY a.created_at DESC LIMIT ? OFFSET ?`
         params.push(limit, offset)
 
-        const countSql = `SELECT COUNT(*) as total FROM audit_logs ${where}`
-
-        const [{ results }, countResult] = await Promise.all([
-            this.db.prepare(sql).bind(...params).all(),
-            this.db.prepare(countSql).bind(...countParams).first<{ total: number }>(),
-        ])
-
-        return { logs: results, total: countResult?.total || 0 }
+        const { results } = await this.db.prepare(sql).bind(...params).all()
+        return { logs: results, total }
     }
 
     /** Export audit logs as CSV */

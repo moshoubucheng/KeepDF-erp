@@ -1,4 +1,5 @@
 import type { MessageTemplate, CustomerMessage, MessageTrigger } from '../db/types'
+import { decodeCursor, buildCursorWhere, encodeCursor } from '../utils/cursor'
 
 const VALID_TYPES = ['ORDER_CONFIRMATION', 'SHIPPING_NOTIFICATION', 'DELIVERY_CONFIRMATION', 'RETURN_APPROVED', 'RETURN_REJECTED', 'CUSTOM'] as const
 const VALID_CHANNELS = ['EMAIL', 'SMS', 'IN_APP'] as const
@@ -134,39 +135,55 @@ export class CommunicationService {
         type?: string
         limit?: number
         offset?: number
-    }): Promise<{ messages: CustomerMessage[]; total: number }> {
+        cursor?: string
+    }): Promise<{ messages: CustomerMessage[]; total: number; nextCursor?: string; hasMore?: boolean }> {
         const limit = Math.min(filters?.limit || 50, 200)
         const offset = filters?.offset || 0
 
         let where = 'WHERE 1=1'
-        const params: (string | number)[] = []
+        const baseParams: (string | number)[] = []
 
         if (role !== 'admin') {
             where += ' AND distributor_id = ?'
-            params.push(distributorId)
+            baseParams.push(distributorId)
         }
         if (filters?.customerId) {
             where += ' AND customer_id = ?'
-            params.push(filters.customerId)
+            baseParams.push(filters.customerId)
         }
         if (filters?.type) {
             where += ' AND type = ?'
-            params.push(filters.type)
+            baseParams.push(filters.type)
         }
 
-        const countParams = [...params]
-
-        const sql = `SELECT * FROM customer_messages ${where} ORDER BY sent_at DESC LIMIT ? OFFSET ?`
-        params.push(limit, offset)
-
         const countSql = `SELECT COUNT(*) as total FROM customer_messages ${where}`
+        const countResult = await this.db.prepare(countSql).bind(...baseParams).first<{ total: number }>()
+        const total = countResult?.total || 0
 
-        const [{ results }, countResult] = await Promise.all([
-            this.db.prepare(sql).bind(...params).all<CustomerMessage>(),
-            this.db.prepare(countSql).bind(...countParams).first<{ total: number }>(),
-        ])
+        // Cursor-based pagination
+        if (filters?.cursor) {
+            const decoded = decodeCursor(filters.cursor)
+            if (decoded) {
+                const { clause, binds } = buildCursorWhere(decoded, 'sent_at')
+                const cursorWhere = `${where} AND ${clause}`
+                const sql = `SELECT * FROM customer_messages ${cursorWhere} ORDER BY sent_at DESC, id DESC LIMIT ?`
+                const { results } = await this.db.prepare(sql).bind(...baseParams, ...binds, limit + 1).all<CustomerMessage>()
 
-        return { messages: results, total: countResult?.total || 0 }
+                const hasMore = results.length > limit
+                const page = hasMore ? results.slice(0, limit) : results
+                const nextCursor = hasMore && page.length > 0
+                    ? encodeCursor(page[page.length - 1].sent_at, page[page.length - 1].id)
+                    : undefined
+
+                return { messages: page, total, nextCursor, hasMore }
+            }
+        }
+
+        // Offset-based fallback
+        const sql = `SELECT * FROM customer_messages ${where} ORDER BY sent_at DESC LIMIT ? OFFSET ?`
+        const { results } = await this.db.prepare(sql).bind(...baseParams, limit, offset).all<CustomerMessage>()
+
+        return { messages: results, total }
     }
 
     async getCustomerMessages(customerId: number, distributorId: number, role: string): Promise<CustomerMessage[]> {

@@ -192,6 +192,14 @@ export class PurchaseOrderService {
             'SELECT * FROM purchase_order_items WHERE po_id = ?'
         ).bind(id).all<PurchaseOrderItem>()
 
+        // Batch pre-fetch: which SKUs already have warehouse locations
+        const skuList = poItems.map(i => i.sku)
+        const skuPlaceholders = skuList.map(() => '?').join(',')
+        const { results: whRows } = await this.db.prepare(
+            `SELECT sku FROM warehouse_locations WHERE sku IN (${skuPlaceholders})`
+        ).bind(...skuList).all<{ sku: string }>()
+        const existingSkuSet = new Set(whRows.map(r => r.sku))
+
         const stmts: D1PreparedStatement[] = []
 
         for (const item of poItems) {
@@ -206,11 +214,7 @@ export class PurchaseOrderService {
             )
 
             // Update warehouse stock
-            const wh = await this.db.prepare(
-                'SELECT id FROM warehouse_locations WHERE sku = ?'
-            ).bind(item.sku).first()
-
-            if (wh) {
+            if (existingSkuSet.has(item.sku)) {
                 stmts.push(
                     this.db.prepare(
                         'UPDATE warehouse_locations SET qty = qty + ? WHERE sku = ?'
@@ -222,6 +226,7 @@ export class PurchaseOrderService {
                         "INSERT INTO warehouse_locations (code, sku, qty) VALUES (?, ?, ?)"
                     ).bind(`AUTO-${item.sku}`, item.sku, receivedQty)
                 )
+                existingSkuSet.add(item.sku) // mark as existing for subsequent items with same SKU
             }
 
             // Insert inbound record

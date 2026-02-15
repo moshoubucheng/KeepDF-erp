@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import type { Bindings, Variables } from '../db/types'
+import { CacheService } from '../services/cache.service'
 
 interface OrderStats {
     total_orders: number
@@ -34,43 +35,48 @@ const dashboard = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 /** GET /dashboard/stats - 总览统计 */
 dashboard.get('/stats', async (c) => {
     const distributorId = c.get('distributorId')
+    const cache = new CacheService(c.env.KV)
 
-    const orderStats = await c.env.DB.prepare(`
-        SELECT
-            COUNT(*) as total_orders,
-            COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_orders,
-            COUNT(CASE WHEN status = 'PROCESSING' THEN 1 END) as processing_orders,
-            COALESCE(SUM(CASE WHEN status = 'DELIVERED' THEN total_amount ELSE 0 END), 0) as total_revenue
-        FROM orders
-        WHERE distributor_id = ?
-    `).bind(distributorId).first<OrderStats>()
+    const stats = await cache.getOrFetch(`dashboard:stats:${distributorId}`, async () => {
+        // Parallel queries instead of sequential
+        const [orderStats, productStats, lowStockStats, wallet] = await Promise.all([
+            c.env.DB.prepare(`
+                SELECT
+                    COUNT(*) as total_orders,
+                    COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_orders,
+                    COUNT(CASE WHEN status = 'PROCESSING' THEN 1 END) as processing_orders,
+                    COALESCE(SUM(CASE WHEN status = 'DELIVERED' THEN total_amount ELSE 0 END), 0) as total_revenue
+                FROM orders
+                WHERE distributor_id = ?
+            `).bind(distributorId).first<OrderStats>(),
+            c.env.DB.prepare(
+                'SELECT COUNT(*) as total FROM products'
+            ).first<{ total: number }>(),
+            c.env.DB.prepare(
+                'SELECT COUNT(*) as count FROM warehouse_locations WHERE qty <= 50'
+            ).first<{ count: number }>(),
+            c.env.DB.prepare(
+                'SELECT balance, frozen_balance FROM distributors WHERE id = ?'
+            ).bind(distributorId).first<{ balance: number; frozen_balance: number }>(),
+        ])
 
-    const productStats = await c.env.DB.prepare(
-        'SELECT COUNT(*) as total FROM products'
-    ).first<{ total: number }>()
+        return {
+            overview: {
+                totalOrders: orderStats?.total_orders || 0,
+                pendingOrders: orderStats?.pending_orders || 0,
+                processingOrders: orderStats?.processing_orders || 0,
+                totalRevenue: orderStats?.total_revenue || 0,
+                totalProducts: productStats?.total || 0,
+                lowStockCount: lowStockStats?.count || 0,
+            },
+            wallet: {
+                balance: wallet?.balance || 0,
+                frozen_balance: wallet?.frozen_balance || 0,
+            },
+        }
+    }, 300) // 5 minute TTL
 
-    const lowStockStats = await c.env.DB.prepare(
-        'SELECT COUNT(*) as count FROM warehouse_locations WHERE qty <= 50'
-    ).first<{ count: number }>()
-
-    const wallet = await c.env.DB.prepare(
-        'SELECT balance, frozen_balance FROM distributors WHERE id = ?'
-    ).bind(distributorId).first<{ balance: number; frozen_balance: number }>()
-
-    return c.json({
-        overview: {
-            totalOrders: orderStats?.total_orders || 0,
-            pendingOrders: orderStats?.pending_orders || 0,
-            processingOrders: orderStats?.processing_orders || 0,
-            totalRevenue: orderStats?.total_revenue || 0,
-            totalProducts: productStats?.total || 0,
-            lowStockCount: lowStockStats?.count || 0,
-        },
-        wallet: {
-            balance: wallet?.balance || 0,
-            frozen_balance: wallet?.frozen_balance || 0,
-        },
-    })
+    return c.json(stats)
 })
 
 /** GET /dashboard/orders-by-platform - 按平台统计 */

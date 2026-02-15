@@ -7,6 +7,8 @@ import { CommissionService } from '../services/commission.service'
 import { getAuthorizedOrder } from '../utils/auth-helpers'
 import { NotificationCenterService } from '../services/notification-center.service'
 import { CommunicationService } from '../services/communication.service'
+import { CacheService } from '../services/cache.service'
+import { decodeCursor, buildCursorWhere, encodeCursor } from '../utils/cursor'
 import { toCSV, csvResponse } from '../utils/csv'
 
 const orders = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -54,6 +56,7 @@ orders.get('/', async (c) => {
     const distributorId = c.get('distributorId')
     const platform = c.req.query('platform')
     const status = c.req.query('status')
+    const cursor = c.req.query('cursor')
     const rawLimit = Number(c.req.query('limit') || 50)
     const limit = Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 200))
 
@@ -64,23 +67,40 @@ orders.get('/', async (c) => {
         return c.json({ error: 'Invalid status. Must be one of: PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED' }, 400)
     }
 
-    let sql = 'SELECT * FROM orders WHERE distributor_id = ?'
-    const params: (string | number)[] = [distributorId]
+    let where = 'WHERE distributor_id = ?'
+    const baseParams: (string | number)[] = [distributorId]
 
     if (platform) {
-        sql += ' AND platform = ?'
-        params.push(platform.toUpperCase())
+        where += ' AND platform = ?'
+        baseParams.push(platform.toUpperCase())
     }
     if (status) {
-        sql += ' AND status = ?'
-        params.push(status.toUpperCase())
+        where += ' AND status = ?'
+        baseParams.push(status.toUpperCase())
     }
 
-    sql += ' ORDER BY created_at DESC LIMIT ?'
-    params.push(limit)
+    // Cursor-based pagination
+    if (cursor) {
+        const decoded = decodeCursor(cursor)
+        if (decoded) {
+            const { clause, binds } = buildCursorWhere(decoded)
+            const cursorWhere = `${where} AND ${clause}`
+            const sql = `SELECT * FROM orders ${cursorWhere} ORDER BY created_at DESC, id DESC LIMIT ?`
+            const { results } = await c.env.DB.prepare(sql).bind(...baseParams, ...binds, limit + 1).all<Order>()
 
-    const stmt = c.env.DB.prepare(sql)
-    const { results } = await stmt.bind(...params).all<Order>()
+            const hasMore = results.length > limit
+            const page = hasMore ? results.slice(0, limit) : results
+            const nextCursor = hasMore && page.length > 0
+                ? encodeCursor(page[page.length - 1].created_at, page[page.length - 1].id)
+                : undefined
+
+            return c.json({ orders: page, count: page.length, hasMore, ...(nextCursor ? { nextCursor } : {}) })
+        }
+    }
+
+    // Offset-based fallback
+    const sql = `SELECT * FROM orders ${where} ORDER BY created_at DESC LIMIT ?`
+    const { results } = await c.env.DB.prepare(sql).bind(...baseParams, limit).all<Order>()
 
     return c.json({ orders: results, count: results.length })
 })
@@ -163,6 +183,10 @@ orders.patch('/:id/ship', async (c) => {
         ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
     })
 
+    // Invalidate dashboard cache
+    const cache = new CacheService(c.env.KV)
+    cache.invalidate(`dashboard:stats:${c.get('distributorId')}`)
+
     return c.json({ status: 'shipped', orderId: id, tracking: body.tracking_number })
 })
 
@@ -234,6 +258,10 @@ orders.patch('/:id/deliver', async (c) => {
         ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
     })
 
+    // Invalidate dashboard cache
+    const cache = new CacheService(c.env.KV)
+    cache.invalidate(`dashboard:stats:${c.get('distributorId')}`)
+
     const updated = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
         .bind(id).first<Order>()
 
@@ -304,6 +332,10 @@ orders.patch('/:id/cancel', async (c) => {
         details: `order cancelled from ${order.status}`,
         ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
     })
+
+    // Invalidate dashboard cache
+    const cache = new CacheService(c.env.KV)
+    cache.invalidate(`dashboard:stats:${c.get('distributorId')}`)
 
     const updated = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
         .bind(id).first<Order>()

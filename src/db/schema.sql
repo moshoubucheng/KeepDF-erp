@@ -460,3 +460,9 @@ CREATE TABLE IF NOT EXISTS inventory_forecasts (
   calculated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_forecast_sku ON inventory_forecasts(sku);
+
+-- ===== V10: Performance Indexes =====
+CREATE INDEX IF NOT EXISTS idx_warehouse_sku ON warehouse_locations(sku);
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_sku_only ON order_items(sku);
+CREATE INDEX IF NOT EXISTS idx_po_items_sku ON purchase_order_items(sku);

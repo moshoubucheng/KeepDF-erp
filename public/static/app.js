@@ -708,9 +708,32 @@ async function loadAuditLogs(offset = 0) {
 }
 
 // ===== Pagination =====
-function renderPagination(containerId, offset, limit, total, onNavigate) {
+function renderPagination(containerId, offset, limit, total, onNavigate, cursorInfo) {
     const container = document.getElementById(containerId);
     if (!container) return;
+
+    // Cursor-based pagination mode
+    if (cursorInfo) {
+        if (!cursorInfo.hasMore && !cursorInfo.hasPrev) { container.innerHTML = ''; return; }
+
+        const prevDisabled = !cursorInfo.hasPrev ? 'disabled' : '';
+        const nextDisabled = !cursorInfo.hasMore ? 'disabled' : '';
+
+        container.innerHTML = `
+          <button class="btn-ghost ${prevDisabled}" id="${containerId}-prev">${t('common.prev')}</button>
+          <span style="color:var(--text-secondary);font-size:0.85rem">${cursorInfo.pageLabel || ''}</span>
+          <button class="btn-ghost ${nextDisabled}" id="${containerId}-next">${t('common.next')}</button>`;
+
+        if (!prevDisabled && cursorInfo.onPrev) {
+            container.querySelector(`#${containerId}-prev`).addEventListener('click', cursorInfo.onPrev);
+        }
+        if (!nextDisabled && cursorInfo.onNext) {
+            container.querySelector(`#${containerId}-next`).addEventListener('click', cursorInfo.onNext);
+        }
+        return;
+    }
+
+    // Offset-based pagination mode (backward compatible)
     if (total <= limit) { container.innerHTML = ''; return; }
 
     const currentPage = Math.floor(offset / limit) + 1;

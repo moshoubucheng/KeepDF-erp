@@ -91,6 +91,7 @@ const VALID_COMMISSION_STATUSES = ['PENDING', 'SETTLED', 'FAILED'] as const
 commissions.get('/history', async (c) => {
     const distributorId = c.get('distributorId')
     const status = c.req.query('status')
+    const cursor = c.req.query('cursor')
     const rawLimit = Number(c.req.query('limit') || 50)
     const rawOffset = Number(c.req.query('offset') || 0)
 
@@ -102,17 +103,19 @@ commissions.get('/history', async (c) => {
     }
 
     const service = new CommissionService(c.env.DB)
-    const { settlements, total } = await service.getHistory(distributorId, {
+    const result = await service.getHistory(distributorId, {
         status: status ? status.toUpperCase() : undefined,
         limit,
         offset,
+        cursor: cursor || undefined,
     })
 
     return c.json({
-        settlements,
-        total,
-        count: settlements.length,
-        hasMore: offset + settlements.length < total,
+        settlements: result.settlements,
+        total: result.total,
+        count: result.settlements.length,
+        hasMore: result.hasMore ?? (offset + result.settlements.length < result.total),
+        ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
     })
 })
 
