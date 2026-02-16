@@ -316,7 +316,7 @@ export default function PurchaseOrdersPage() {
             </div>
           </div>
 
-          <DataTable columns={columns} data={orders} loading={loading} />
+          <DataTable columns={columns} data={orders} loading={loading} emptyMessage={t('po.empty', 'No purchase orders found')} />
 
           <div className="mt-4">
             <Pagination page={page} pages={totalPages} onPageChange={setPage} />

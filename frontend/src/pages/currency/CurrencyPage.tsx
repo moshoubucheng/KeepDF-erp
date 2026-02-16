@@ -255,7 +255,7 @@ export default function CurrencyPage() {
             <h2 className="text-lg font-semibold text-text-primary">{t('currency.rates_title')}</h2>
           </div>
 
-          <DataTable columns={columns} data={rates} loading={loading} />
+          <DataTable columns={columns} data={rates} loading={loading} emptyMessage={t('currency.empty', 'No exchange rates')} />
 
           <div className="mt-4">
             <Pagination page={page} pages={totalPages} onPageChange={setPage} />

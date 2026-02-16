@@ -366,7 +366,7 @@ export default function CustomerSegmentsPage() {
               </Button>
             </div>
 
-            <DataTable columns={segmentColumns} data={segments} loading={segmentsLoading} />
+            <DataTable columns={segmentColumns} data={segments} loading={segmentsLoading} emptyMessage={t('segments.empty', 'No segments found')} />
           </CardContent>
         </Card>
       )}
@@ -377,7 +377,7 @@ export default function CustomerSegmentsPage() {
           <CardContent>
             <h2 className="text-lg font-semibold text-text-primary mb-4">{t('segments.rfm_title')}</h2>
 
-            <DataTable columns={rfmColumns} data={rfmPageData} loading={rfmLoading} />
+            <DataTable columns={rfmColumns} data={rfmPageData} loading={rfmLoading} emptyMessage={t('segments.empty_rfm', 'No RFM data available')} />
 
             {rfmTotalPages > 1 && (
               <div className="mt-4">
@@ -443,7 +443,7 @@ export default function CustomerSegmentsPage() {
         title={viewingSegment ? `${viewingSegment.name} - ${t('segments.customer_list')}` : t('segments.customer_list')}
       >
         <div className="space-y-4">
-          <DataTable columns={customerColumns} data={segmentCustomers} loading={segmentCustomersLoading} />
+          <DataTable columns={customerColumns} data={segmentCustomers} loading={segmentCustomersLoading} emptyMessage={t('segments.empty_customers', 'No customers in this segment')} />
 
           {customersTotalPages > 1 && (
             <Pagination page={customersPage} pages={customersTotalPages} onPageChange={handleCustomersPageChange} />

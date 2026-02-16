@@ -223,7 +223,7 @@ export default function SuppliersPage() {
             )}
           </div>
 
-          <DataTable columns={columns} data={suppliers} loading={loading} />
+          <DataTable columns={columns} data={suppliers} loading={loading} emptyMessage={t('supplier.empty', 'No suppliers found')} />
 
           <div className="mt-4">
             <Pagination page={page} pages={totalPages} onPageChange={setPage} />

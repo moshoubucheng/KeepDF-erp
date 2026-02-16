@@ -375,7 +375,7 @@ export default function StocktakesPage() {
             </Button>
           </div>
 
-          <DataTable columns={stocktakeColumns} data={stocktakes} loading={loading} />
+          <DataTable columns={stocktakeColumns} data={stocktakes} loading={loading} emptyMessage={t('stocktakes.empty', 'No stocktakes found')} />
 
           <div className="mt-4">
             <Pagination page={page} pages={totalPages} onPageChange={setPage} />
@@ -439,7 +439,7 @@ export default function StocktakesPage() {
             </div>
           )}
 
-          <DataTable columns={itemColumns} data={detailItems} loading={detailLoading} />
+          <DataTable columns={itemColumns} data={detailItems} loading={detailLoading} emptyMessage={t('stocktakes.emptyItems', 'No items counted yet')} />
         </div>
       </Modal>
 

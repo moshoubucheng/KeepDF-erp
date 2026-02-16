@@ -364,7 +364,7 @@ export default function SkuMappingsPage() {
             </div>
           </div>
 
-          <DataTable columns={columns} data={mappings} loading={loading} />
+          <DataTable columns={columns} data={mappings} loading={loading} emptyMessage={t('skuMappings.empty', 'No SKU mappings found')} />
 
           <div className="mt-4">
             <Pagination page={page} pages={totalPages} onPageChange={setPage} />

@@ -354,9 +354,9 @@ export default function PricingPage() {
   ];
 
   const renderTable = () => {
-    if (activeTab === 'rules') return <DataTable columns={rulesColumns} data={rules} loading={loading} />;
-    if (activeTab === 'history') return <DataTable columns={historyColumns} data={history} loading={loading} />;
-    return <DataTable columns={marginsColumns} data={margins} loading={loading} />;
+    if (activeTab === 'rules') return <DataTable columns={rulesColumns} data={rules} loading={loading} emptyMessage={t('pricing.empty_rules', 'No pricing rules')} />;
+    if (activeTab === 'history') return <DataTable columns={historyColumns} data={history} loading={loading} emptyMessage={t('pricing.empty_history', 'No price history')} />;
+    return <DataTable columns={marginsColumns} data={margins} loading={loading} emptyMessage={t('pricing.empty_margins', 'No margin data')} />;
   };
 
   return (

@@ -452,7 +452,7 @@ export default function CommunicationsPage() {
               </Button>
             </div>
 
-            <DataTable columns={messageColumns} data={messages} loading={messagesLoading} />
+            <DataTable columns={messageColumns} data={messages} loading={messagesLoading} emptyMessage={t('communications.empty_messages', 'No messages found')} />
 
             <div className="mt-4">
               <Pagination page={page} pages={messagesTotalPages} onPageChange={setPage} />
@@ -479,7 +479,7 @@ export default function CommunicationsPage() {
               </Button>
             </div>
 
-            <DataTable columns={templateColumns} data={templates} loading={templatesLoading} />
+            <DataTable columns={templateColumns} data={templates} loading={templatesLoading} emptyMessage={t('communications.empty_templates', 'No templates found')} />
 
             <div className="mt-4">
               <Pagination page={page} pages={templatesTotalPages} onPageChange={setPage} />
@@ -507,7 +507,7 @@ export default function CommunicationsPage() {
               </Button>
             </div>
 
-            <DataTable columns={triggerColumns} data={triggers} loading={triggersLoading} />
+            <DataTable columns={triggerColumns} data={triggers} loading={triggersLoading} emptyMessage={t('communications.empty_triggers', 'No triggers configured')} />
           </CardContent>
         </Card>
       )}
