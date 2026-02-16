@@ -874,5 +874,13 @@
   "common.off": "OFF",
   "segments.recency": "Recency",
   "segments.frequency": "Frequency",
-  "segments.monetary": "Monetary"
+  "segments.monetary": "Monetary",
+  "nav.purchaseOrders": "Purchase Orders",
+  "nav.suppliers": "Suppliers",
+  "nav.skuMappings": "SKU Mappings",
+  "nav.shippingFees": "Shipping Fees",
+  "nav.financialReports": "Financial Reports",
+  "nav.customerSegments": "Customer Segments",
+  "nav.group.analytics": "Analytics",
+  "nav.notifications": "Notifications"
 }

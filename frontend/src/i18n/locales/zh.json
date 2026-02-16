@@ -874,5 +874,13 @@
   "common.off": "关闭",
   "segments.recency": "最近购买",
   "segments.frequency": "购买频率",
-  "segments.monetary": "消费金额"
+  "segments.monetary": "消费金额",
+  "nav.purchaseOrders": "采购单",
+  "nav.suppliers": "供应商",
+  "nav.skuMappings": "SKU映射",
+  "nav.shippingFees": "物流费用",
+  "nav.financialReports": "财务报表",
+  "nav.customerSegments": "客户分群",
+  "nav.group.analytics": "分析报表",
+  "nav.notifications": "通知"
 }

@@ -874,5 +874,13 @@
   "common.off": "OFF",
   "segments.recency": "最終購入日",
   "segments.frequency": "購入頻度",
-  "segments.monetary": "購入金額"
+  "segments.monetary": "購入金額",
+  "nav.purchaseOrders": "発注管理",
+  "nav.suppliers": "仕入先管理",
+  "nav.skuMappings": "SKUマッピング",
+  "nav.shippingFees": "送料管理",
+  "nav.financialReports": "財務レポート",
+  "nav.customerSegments": "顧客セグメント",
+  "nav.group.analytics": "分析",
+  "nav.notifications": "通知"
 }
