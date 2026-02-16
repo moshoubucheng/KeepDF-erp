@@ -10,10 +10,12 @@ interface ToastItem {
 
 interface UIState {
   sidebarOpen: boolean
+  sidebarHidden: boolean
   theme: Theme
   toasts: ToastItem[]
   toggleSidebar: () => void
   closeSidebar: () => void
+  setSidebarHidden: (hidden: boolean) => void
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
   addToast: (type: ToastItem['type'], message: string) => void
@@ -40,11 +42,13 @@ applyTheme(getInitialTheme())
 
 export const useUIStore = create<UIState>((set, get) => ({
   sidebarOpen: false,
+  sidebarHidden: false,
   theme: getInitialTheme(),
   toasts: [],
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   closeSidebar: () => set({ sidebarOpen: false }),
+  setSidebarHidden: (hidden: boolean) => set({ sidebarHidden: hidden }),
 
   setTheme: (theme: Theme) => {
     applyTheme(theme)

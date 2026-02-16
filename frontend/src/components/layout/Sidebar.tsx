@@ -157,7 +157,7 @@ function saveCollapsedGroups(collapsed: Set<string>) {
 export function Sidebar() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { sidebarOpen, closeSidebar } = useUIStore()
+  const { sidebarOpen, sidebarHidden, closeSidebar } = useUIStore()
   const { logout } = useAuthStore()
   const [collapsed, setCollapsed] = useState<Set<string>>(loadCollapsedGroups)
 
@@ -205,8 +205,8 @@ export function Sidebar() {
       <aside
         className={cn(
           'fixed top-0 left-0 z-50 flex h-full w-[250px] flex-col border-r border-border bg-bg-sidebar transition-transform duration-200 ease-in-out',
-          // Desktop: always visible
-          'md:translate-x-0',
+          // Desktop: always visible unless force-hidden
+          sidebarHidden ? '' : 'md:translate-x-0',
           // Mobile: slide in/out
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}

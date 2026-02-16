@@ -577,6 +577,8 @@
   "datascreen.today_shipped": "今日发货",
   "datascreen.today_returns": "今日退货",
   "datascreen.latest_orders": "最新订单",
+  "datascreen.show_sidebar": "显示侧边栏",
+  "datascreen.hide_sidebar": "隐藏侧边栏",
   "onboarding.welcome_title": "欢迎使用 KeepDF",
   "onboarding.welcome_desc": "跨境电商智能中台，让我们开始初始设置。",
   "onboarding.select_language": "选择语言",

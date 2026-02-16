@@ -577,6 +577,8 @@
   "datascreen.today_shipped": "今日の出荷",
   "datascreen.today_returns": "今日の返品",
   "datascreen.latest_orders": "最新注文",
+  "datascreen.show_sidebar": "サイドバーを表示",
+  "datascreen.hide_sidebar": "サイドバーを非表示",
   "onboarding.welcome_title": "KeepDF へようこそ",
   "onboarding.welcome_desc": "クロスボーダーEC智能プラットフォーム。初期設定を始めましょう。",
   "onboarding.select_language": "言語を選択",

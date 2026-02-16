@@ -577,6 +577,8 @@
   "datascreen.today_shipped": "Today's Shipments",
   "datascreen.today_returns": "Today's Returns",
   "datascreen.latest_orders": "Latest Orders",
+  "datascreen.show_sidebar": "Show sidebar",
+  "datascreen.hide_sidebar": "Hide sidebar",
   "onboarding.welcome_title": "Welcome to KeepDF",
   "onboarding.welcome_desc": "Cross-border E-commerce Smart Platform. Let's get you started.",
   "onboarding.select_language": "Select Language",
