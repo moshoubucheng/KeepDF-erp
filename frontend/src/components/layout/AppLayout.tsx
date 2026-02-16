@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { CommandPalette } from '@/components/ui/CommandPalette'
+import { InlineErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { OfflineBanner } from '@/components/onboarding/OfflineBanner'
 import { useUIStore } from '@/stores/ui.store'
 import { cn } from '@/utils/cn'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -53,6 +55,8 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg-primary">
+      <OfflineBanner />
+
       {/* Sidebar -- fixed 250px on desktop, overlay on mobile */}
       <Sidebar />
 
@@ -89,7 +93,9 @@ export function AppLayout() {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <Outlet />
+          <InlineErrorBoundary>
+            <Outlet />
+          </InlineErrorBoundary>
         </main>
       </div>
 

@@ -7,5 +7,6 @@ export default defineWorkersConfig({
         wrangler: { configPath: './wrangler.toml' },
       },
     },
+    exclude: ['frontend/**', 'node_modules/**'],
   },
 })

@@ -25,6 +25,10 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${token}`
   }
 
+  if (!navigator.onLine) {
+    throw new ApiError(0, { error: 'offline' })
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,

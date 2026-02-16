@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import NotFoundPage from './pages/NotFoundPage'
 import { Toaster } from './components/ui/Toast'
 import { Spinner } from './components/ui/Spinner'
+import { ErrorBoundary, InlineErrorBoundary } from './components/ui/ErrorBoundary'
 
 // Sprint 15 core pages (eager)
 import OrdersPage from './pages/orders/OrdersPage'
@@ -53,7 +54,7 @@ function LazyFallback() {
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
@@ -67,41 +68,41 @@ export default function App() {
             <Route path="returns" element={<ReturnsPage />} />
             {/* Inventory */}
             <Route path="inventory" element={<InventoryPage />} />
-            <Route path="purchase-orders" element={<Suspense fallback={<LazyFallback />}><PurchaseOrdersPage /></Suspense>} />
-            <Route path="suppliers" element={<Suspense fallback={<LazyFallback />}><SuppliersPage /></Suspense>} />
-            <Route path="stocktakes" element={<Suspense fallback={<LazyFallback />}><StocktakesPage /></Suspense>} />
-            <Route path="sku-mappings" element={<Suspense fallback={<LazyFallback />}><SkuMappingsPage /></Suspense>} />
-            <Route path="forecasting" element={<Suspense fallback={<LazyFallback />}><ForecastingPage /></Suspense>} />
+            <Route path="purchase-orders" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><PurchaseOrdersPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="suppliers" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><SuppliersPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="stocktakes" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><StocktakesPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="sku-mappings" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><SkuMappingsPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="forecasting" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ForecastingPage /></InlineErrorBoundary></Suspense>} />
             {/* Finance */}
             <Route path="wallet" element={<WalletPage />} />
             <Route path="commissions" element={<CommissionsPage />} />
-            <Route path="pricing" element={<Suspense fallback={<LazyFallback />}><PricingPage /></Suspense>} />
-            <Route path="currency" element={<Suspense fallback={<LazyFallback />}><CurrencyPage /></Suspense>} />
-            <Route path="coupons" element={<Suspense fallback={<LazyFallback />}><CouponsPage /></Suspense>} />
-            <Route path="promotions" element={<Suspense fallback={<LazyFallback />}><PromotionsPage /></Suspense>} />
-            <Route path="shipping-fees" element={<Suspense fallback={<LazyFallback />}><ShippingFeesPage /></Suspense>} />
-            <Route path="financial-reports" element={<Suspense fallback={<LazyFallback />}><FinancialReportsPage /></Suspense>} />
-            <Route path="invoices" element={<Suspense fallback={<LazyFallback />}><InvoicesPage /></Suspense>} />
+            <Route path="pricing" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><PricingPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="currency" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CurrencyPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="coupons" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CouponsPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="promotions" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><PromotionsPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="shipping-fees" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ShippingFeesPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="financial-reports" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><FinancialReportsPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="invoices" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><InvoicesPage /></InlineErrorBoundary></Suspense>} />
             {/* CRM */}
             <Route path="customers" element={<CustomersPage />} />
-            <Route path="customer-segments" element={<Suspense fallback={<LazyFallback />}><CustomerSegmentsPage /></Suspense>} />
-            <Route path="communications" element={<Suspense fallback={<LazyFallback />}><CommunicationsPage /></Suspense>} />
+            <Route path="customer-segments" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CustomerSegmentsPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="communications" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CommunicationsPage /></InlineErrorBoundary></Suspense>} />
             {/* Analytics */}
-            <Route path="reports" element={<Suspense fallback={<LazyFallback />}><ReportsPage /></Suspense>} />
-            <Route path="data-screen" element={<Suspense fallback={<LazyFallback />}><DataScreenPage /></Suspense>} />
+            <Route path="reports" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ReportsPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="data-screen" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><DataScreenPage /></InlineErrorBoundary></Suspense>} />
             {/* System */}
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="distributors" element={<Suspense fallback={<LazyFallback />}><DistributorsPage /></Suspense>} />
-            <Route path="audit" element={<Suspense fallback={<LazyFallback />}><AuditPage /></Suspense>} />
-            <Route path="notifications" element={<Suspense fallback={<LazyFallback />}><NotificationsPage /></Suspense>} />
-            <Route path="automation" element={<Suspense fallback={<LazyFallback />}><AutomationPage /></Suspense>} />
-            <Route path="approvals" element={<Suspense fallback={<LazyFallback />}><ApprovalsPage /></Suspense>} />
-            <Route path="webhooks" element={<Suspense fallback={<LazyFallback />}><WebhooksPage /></Suspense>} />
+            <Route path="distributors" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><DistributorsPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="audit" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><AuditPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="notifications" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><NotificationsPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="automation" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><AutomationPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="approvals" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ApprovalsPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="webhooks" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><WebhooksPage /></InlineErrorBoundary></Suspense>} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>
       </Routes>
       <Toaster />
-    </>
+    </ErrorBoundary>
   )
 }
