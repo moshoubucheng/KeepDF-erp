@@ -114,6 +114,8 @@
   "invoices.detail": "詳細",
   "invoices.empty": "請求書がありません",
   "invoices.detail_title": "請求書詳細",
+  "invoices.pdf_generated": "PDFを生成しました",
+  "invoices.pdf_exists": "PDFは既に生成済みです",
   "invoices.loading": "読み込み中...",
   "distributors.title": "販売者管理",
   "distributors.subtitle": "販売者管理",

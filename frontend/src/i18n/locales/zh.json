@@ -114,6 +114,8 @@
   "invoices.detail": "详情",
   "invoices.empty": "暂无发票",
   "invoices.detail_title": "发票详情",
+  "invoices.pdf_generated": "PDF生成成功",
+  "invoices.pdf_exists": "PDF已存在",
   "invoices.loading": "加载中...",
   "distributors.title": "分销商管理",
   "distributors.subtitle": "分销商管理",

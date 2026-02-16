@@ -114,6 +114,8 @@
   "invoices.detail": "Detail",
   "invoices.empty": "No invoices found",
   "invoices.detail_title": "Invoice Detail",
+  "invoices.pdf_generated": "PDF generated successfully",
+  "invoices.pdf_exists": "PDF already exists",
   "invoices.loading": "Loading...",
   "distributors.title": "Distributors",
   "distributors.subtitle": "Distributor Management",

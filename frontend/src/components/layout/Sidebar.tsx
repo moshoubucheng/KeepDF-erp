@@ -32,6 +32,8 @@ import {
   Webhook,
   Link2,
   Boxes,
+  Receipt,
+  Monitor,
 } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -93,6 +95,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { key: 'promotions', labelKey: 'nav.promotions', path: '/promotions', icon: <Gift className="h-4 w-4" /> },
       { key: 'shipping-fees', labelKey: 'nav.shippingFees', path: '/shipping-fees', icon: <Calculator className="h-4 w-4" /> },
       { key: 'financial-reports', labelKey: 'nav.financialReports', path: '/financial-reports', icon: <FileText className="h-4 w-4" /> },
+      { key: 'invoices', labelKey: 'nav.invoices', path: '/invoices', icon: <Receipt className="h-4 w-4" /> },
     ],
   },
   {
@@ -109,6 +112,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     labelKey: 'nav.group.analytics',
     items: [
       { key: 'reports', labelKey: 'nav.reports', path: '/reports', icon: <BarChart3 className="h-4 w-4" /> },
+      { key: 'data-screen', labelKey: 'nav.datascreen', path: '/data-screen', icon: <Monitor className="h-4 w-4" /> },
     ],
   },
   {

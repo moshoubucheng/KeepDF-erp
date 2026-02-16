@@ -40,6 +40,8 @@ const CommunicationsPage = lazy(() => import('./pages/communications/Communicati
 const CustomerSegmentsPage = lazy(() => import('./pages/customer-segments/CustomerSegmentsPage'))
 const StocktakesPage = lazy(() => import('./pages/stocktakes/StocktakesPage'))
 const SkuMappingsPage = lazy(() => import('./pages/sku-mappings/SkuMappingsPage'))
+const InvoicesPage = lazy(() => import('./pages/invoices/InvoicesPage'))
+const DataScreenPage = lazy(() => import('./pages/data-screen/DataScreenPage'))
 
 function LazyFallback() {
   return (
@@ -79,12 +81,14 @@ export default function App() {
             <Route path="promotions" element={<Suspense fallback={<LazyFallback />}><PromotionsPage /></Suspense>} />
             <Route path="shipping-fees" element={<Suspense fallback={<LazyFallback />}><ShippingFeesPage /></Suspense>} />
             <Route path="financial-reports" element={<Suspense fallback={<LazyFallback />}><FinancialReportsPage /></Suspense>} />
+            <Route path="invoices" element={<Suspense fallback={<LazyFallback />}><InvoicesPage /></Suspense>} />
             {/* CRM */}
             <Route path="customers" element={<CustomersPage />} />
             <Route path="customer-segments" element={<Suspense fallback={<LazyFallback />}><CustomerSegmentsPage /></Suspense>} />
             <Route path="communications" element={<Suspense fallback={<LazyFallback />}><CommunicationsPage /></Suspense>} />
             {/* Analytics */}
             <Route path="reports" element={<Suspense fallback={<LazyFallback />}><ReportsPage /></Suspense>} />
+            <Route path="data-screen" element={<Suspense fallback={<LazyFallback />}><DataScreenPage /></Suspense>} />
             {/* System */}
             <Route path="settings" element={<SettingsPage />} />
             <Route path="distributors" element={<Suspense fallback={<LazyFallback />}><DistributorsPage /></Suspense>} />
