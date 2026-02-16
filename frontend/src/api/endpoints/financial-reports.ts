@@ -23,11 +23,14 @@ function fetchRaw(path: string) {
 export const financialReportsApi = {
   pnl: (params: DateRange = {}) =>
     api.get<{
-      revenue: { total: number; byPlatform: Array<{ platform: string; amount: number }> }
+      period: { start: string; end: string }
+      revenue: { total: number; tax: number; orders: number }
       cogs: number
       gross_profit: number
+      gross_margin: number
       expenses: { commission: number; refunds: number }
       net_profit: number
+      net_margin: number
     }>(`/financial-reports/pnl${dateQuery(params)}`),
 
   pnlExport: (params: DateRange = {}) =>
@@ -35,8 +38,10 @@ export const financialReportsApi = {
 
   taxSummary: (params: DateRange = {}) =>
     api.get<{
+      period: { start: string; end: string }
       total_tax: number
-      breakdown: Array<{ rate_label: string; order_count: number; taxable_amount: number; tax_amount: number }>
+      total_taxable: number
+      breakdown: Array<{ tax_rate: number; rate_label: string; order_count: number; taxable_amount: number; tax_amount: number }>
     }>(`/financial-reports/tax-summary${dateQuery(params)}`),
 
   taxSummaryExport: (params: DateRange = {}) =>
@@ -44,11 +49,10 @@ export const financialReportsApi = {
 
   reconciliation: (params: DateRange = {}) =>
     api.get<{
-      opening_balance: number
-      closing_balance: number
-      expected_balance: number
-      discrepancy: number
+      period: { start: string; end: string }
       transactions: Array<{ type: string; count: number; total: number }>
+      current_balance: number
+      current_frozen: number
     }>(`/financial-reports/reconciliation${dateQuery(params)}`),
 
   reconciliationExport: (params: DateRange = {}) =>
@@ -56,10 +60,10 @@ export const financialReportsApi = {
 
   balanceSheet: () =>
     api.get<{
-      asOf: string
-      assets: { cash: number; inventory: number; total: number }
-      liabilities: { payables: number; total: number }
-      equity: { retained_earnings: number; total: number }
+      as_of: string
+      assets: { cash: number; frozen: number; inventory: number; inventory_units: number; total: number }
+      liabilities: { pending_refunds: number; pending_commissions: number; total: number }
+      equity: number
     }>('/financial-reports/balance-sheet'),
 
   pnlPdf: (params: DateRange = {}) =>

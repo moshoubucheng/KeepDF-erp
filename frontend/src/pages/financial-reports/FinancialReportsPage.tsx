@@ -14,11 +14,11 @@ import { cn } from '@/utils/cn'
 
 type Tab = 'pnl' | 'balance' | 'cashflow' | 'tax'
 
-const TABS: { value: Tab; icon: React.ReactNode; labelKey: string; fallback: string }[] = [
-  { value: 'pnl', icon: <FileText size={16} />, labelKey: 'financial.pnl', fallback: 'P&L' },
-  { value: 'balance', icon: <Scale size={16} />, labelKey: 'financial.balanceSheet', fallback: 'Balance Sheet' },
-  { value: 'cashflow', icon: <DollarSign size={16} />, labelKey: 'financial.cashFlow', fallback: 'Cash Flow' },
-  { value: 'tax', icon: <Receipt size={16} />, labelKey: 'financial.taxSummary', fallback: 'Tax Summary' },
+const TABS: { value: Tab; icon: React.ReactNode; labelKey: string }[] = [
+  { value: 'pnl', icon: <FileText size={16} />, labelKey: 'financial.pnl' },
+  { value: 'balance', icon: <Scale size={16} />, labelKey: 'financial.balance_sheet' },
+  { value: 'cashflow', icon: <DollarSign size={16} />, labelKey: 'financial.cash_flow' },
+  { value: 'tax', icon: <Receipt size={16} />, labelKey: 'financial.tax_summary' },
 ]
 
 export default function FinancialReportsPage() {
@@ -86,50 +86,31 @@ export default function FinancialReportsPage() {
       }
 
       if (csv) {
-        addToast('success', t('financial.exportSuccess', 'CSV exported'))
+        addToast('success', t('financial.export_success'))
       }
     } catch (err) {
-      addToast('error', (err as Error).message || t('financial.exportError', 'Export failed'))
+      addToast('error', (err as Error).message || t('financial.export_error'))
     } finally {
       setCsvExporting(false)
     }
   }
-
-  // P&L revenue breakdown columns
-  const pnlPlatformColumns = useMemo<Column<{ platform: string; amount: number }>[]>(
-    () => [
-      {
-        key: 'platform',
-        header: t('financial.platform', 'Platform'),
-        render: (row) => <span className="font-medium text-text-primary">{row.platform}</span>,
-      },
-      {
-        key: 'amount',
-        header: t('financial.amount', 'Amount'),
-        render: (row) => (
-          <span className="tabular-nums font-medium text-accent-emerald">{formatCurrency(row.amount)}</span>
-        ),
-      },
-    ],
-    [t],
-  )
 
   // Cash flow transactions columns
   const transactionColumns = useMemo<Column<{ type: string; count: number; total: number }>[]>(
     () => [
       {
         key: 'type',
-        header: t('financial.transactionType', 'Type'),
+        header: t('financial.tx_type'),
         render: (row) => <span className="font-medium text-text-primary">{row.type}</span>,
       },
       {
         key: 'count',
-        header: t('financial.count', 'Count'),
+        header: t('financial.count'),
         render: (row) => <span className="tabular-nums">{row.count}</span>,
       },
       {
         key: 'total',
-        header: t('financial.total', 'Total'),
+        header: t('financial.total'),
         render: (row) => (
           <span className={cn('tabular-nums font-medium', row.total >= 0 ? 'text-accent-emerald' : 'text-accent-red')}>
             {formatCurrency(row.total)}
@@ -145,23 +126,23 @@ export default function FinancialReportsPage() {
     () => [
       {
         key: 'rate_label',
-        header: t('financial.taxRate', 'Tax Rate'),
+        header: t('financial.tax_rate'),
         render: (row) => <span className="font-medium text-text-primary">{row.rate_label}</span>,
       },
       {
         key: 'order_count',
-        header: t('financial.orderCount', 'Orders'),
+        header: t('financial.orders'),
         render: (row) => <span className="tabular-nums">{row.order_count}</span>,
       },
       {
         key: 'taxable_amount',
-        header: t('financial.taxableAmount', 'Taxable Amount'),
+        header: t('financial.total_taxable'),
         render: (row) => <span className="tabular-nums">{formatCurrency(row.taxable_amount)}</span>,
         hideOnMobile: true,
       },
       {
         key: 'tax_amount',
-        header: t('financial.taxAmount', 'Tax Amount'),
+        header: t('financial.tax'),
         render: (row) => (
           <span className="tabular-nums font-medium text-accent-purple">{formatCurrency(row.tax_amount)}</span>
         ),
@@ -180,10 +161,10 @@ export default function FinancialReportsPage() {
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-text-primary">
-          {t('financial.title', 'Financial Reports')}
+          {t('financial.title')}
         </h1>
         <p className="text-sm text-text-muted mt-1">
-          {t('financial.subtitle', 'P&L, balance sheet, cash flow, and tax reports')}
+          {t('financial.subtitle')}
         </p>
       </div>
 
@@ -193,7 +174,7 @@ export default function FinancialReportsPage() {
           <div className="flex flex-wrap items-end gap-3">
             {/* Tab buttons */}
             <div className="flex items-center rounded-lg border border-border bg-bg-input p-0.5">
-              {TABS.map(({ value, icon, labelKey, fallback }) => (
+              {TABS.map(({ value, icon, labelKey }) => (
                 <button
                   key={value}
                   onClick={() => setTab(value)}
@@ -205,7 +186,7 @@ export default function FinancialReportsPage() {
                   )}
                 >
                   {icon}
-                  <span className="hidden sm:inline">{t(labelKey, fallback)}</span>
+                  <span className="hidden sm:inline">{t(labelKey)}</span>
                 </button>
               ))}
             </div>
@@ -216,7 +197,7 @@ export default function FinancialReportsPage() {
                 <div className="w-40">
                   <Input
                     type="date"
-                    label={t('financial.startDate', 'Start Date')}
+                    label={t('financial.start_date')}
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                   />
@@ -224,7 +205,7 @@ export default function FinancialReportsPage() {
                 <div className="w-40">
                   <Input
                     type="date"
-                    label={t('financial.endDate', 'End Date')}
+                    label={t('financial.end_date')}
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                   />
@@ -242,7 +223,7 @@ export default function FinancialReportsPage() {
                 disabled={tab === 'balance'}
               >
                 <Download size={14} />
-                {t('financial.exportCsv', 'CSV')}
+                {t('financial.export_csv')}
               </Button>
             </div>
           </div>
@@ -251,82 +232,67 @@ export default function FinancialReportsPage() {
 
       {/* P&L Tab */}
       {tab === 'pnl' && (
-        <>
-          {/* P&L Summary */}
-          <Card>
-            <CardContent>
-              <h3 className="text-text-primary font-semibold text-base mb-4">
-                {t('financial.pnlSummary', 'Profit & Loss Summary')}
-              </h3>
-              {pnlQuery.isLoading ? (
-                <div className="animate-pulse space-y-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-5 w-full rounded bg-bg-input" />
-                  ))}
+        <Card>
+          <CardContent>
+            <h3 className="text-text-primary font-semibold text-base mb-4">
+              {t('financial.pnl_summary')}
+            </h3>
+            {pnlQuery.isLoading ? (
+              <div className="animate-pulse space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-5 w-full rounded bg-bg-input" />
+                ))}
+              </div>
+            ) : pnl ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-sm text-text-secondary">{t('financial.revenue')}</span>
+                  <span className="text-sm font-semibold text-accent-emerald tabular-nums">
+                    {formatCurrency(pnl.revenue.total)}
+                  </span>
                 </div>
-              ) : pnl ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-text-secondary">{t('financial.totalRevenue', 'Total Revenue')}</span>
-                    <span className="text-sm font-semibold text-accent-emerald tabular-nums">
-                      {formatCurrency(pnl.revenue.total)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-text-secondary">{t('financial.cogs', 'Cost of Goods Sold')}</span>
-                    <span className="text-sm font-medium text-text-primary tabular-nums">
-                      {formatCurrency(pnl.cogs)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm font-semibold text-text-primary">{t('financial.grossProfit', 'Gross Profit')}</span>
-                    <span className={cn('text-sm font-semibold tabular-nums', pnl.gross_profit >= 0 ? 'text-accent-emerald' : 'text-accent-red')}>
-                      {formatCurrency(pnl.gross_profit)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-text-secondary">{t('financial.commissions', 'Commissions')}</span>
-                    <span className="text-sm text-text-muted tabular-nums">
-                      {formatCurrency(pnl.expenses.commission)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-text-secondary">{t('financial.refunds', 'Refunds')}</span>
-                    <span className="text-sm text-text-muted tabular-nums">
-                      {formatCurrency(pnl.expenses.refunds)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between py-3">
-                    <span className="text-base font-bold text-text-primary">{t('financial.netProfit', 'Net Profit')}</span>
-                    <span className={cn('text-base font-bold tabular-nums', pnl.net_profit >= 0 ? 'text-accent-emerald' : 'text-accent-red')}>
-                      {formatCurrency(pnl.net_profit)}
-                    </span>
-                  </div>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-sm text-text-secondary">{t('financial.orders')}</span>
+                  <span className="text-sm text-text-primary tabular-nums">
+                    {pnl.revenue.orders}
+                  </span>
                 </div>
-              ) : (
-                <p className="text-sm text-text-muted">{t('financial.noData', 'No data available')}</p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Revenue by Platform */}
-          {pnl && pnl.revenue.byPlatform.length > 0 && (
-            <Card>
-              <CardContent>
-                <h3 className="text-text-primary font-semibold text-base mb-2">
-                  {t('financial.revenueByPlatform', 'Revenue by Platform')}
-                </h3>
-              </CardContent>
-              <CardContent className="p-0">
-                <DataTable
-                  columns={pnlPlatformColumns}
-                  data={pnl.revenue.byPlatform}
-                  keyField="platform"
-                />
-              </CardContent>
-            </Card>
-          )}
-        </>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-sm text-text-secondary">{t('financial.cogs')}</span>
+                  <span className="text-sm font-medium text-text-primary tabular-nums">
+                    {formatCurrency(pnl.cogs)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-sm font-semibold text-text-primary">{t('financial.gross_profit')}</span>
+                  <span className={cn('text-sm font-semibold tabular-nums', pnl.gross_profit >= 0 ? 'text-accent-emerald' : 'text-accent-red')}>
+                    {formatCurrency(pnl.gross_profit)} ({pnl.gross_margin}%)
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-sm text-text-secondary">{t('financial.commission')}</span>
+                  <span className="text-sm text-text-muted tabular-nums">
+                    {formatCurrency(pnl.expenses.commission)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-2 border-b border-border">
+                  <span className="text-sm text-text-secondary">{t('financial.refunds')}</span>
+                  <span className="text-sm text-text-muted tabular-nums">
+                    {formatCurrency(pnl.expenses.refunds)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-base font-bold text-text-primary">{t('financial.net_profit')}</span>
+                  <span className={cn('text-base font-bold tabular-nums', pnl.net_profit >= 0 ? 'text-accent-emerald' : 'text-accent-red')}>
+                    {formatCurrency(pnl.net_profit)} ({pnl.net_margin}%)
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-text-muted">{t('financial.no_data')}</p>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Balance Sheet Tab */}
@@ -334,10 +300,10 @@ export default function FinancialReportsPage() {
         <Card>
           <CardContent>
             <h3 className="text-text-primary font-semibold text-base mb-4">
-              {t('financial.balanceSheetTitle', 'Balance Sheet')}
-              {balance?.asOf && (
+              {t('financial.balance_sheet')}
+              {balance?.as_of && (
                 <span className="ml-2 text-xs text-text-muted font-normal">
-                  {t('financial.asOf', 'As of')} {balance.asOf}
+                  {t('financial.as_of')} {balance.as_of}
                 </span>
               )}
             </h3>
@@ -352,19 +318,23 @@ export default function FinancialReportsPage() {
                 {/* Assets */}
                 <div>
                   <h4 className="text-sm font-semibold text-accent-emerald mb-2">
-                    {t('financial.assets', 'Assets')}
+                    {t('financial.assets')}
                   </h4>
                   <div className="space-y-2 pl-4">
                     <div className="flex items-center justify-between py-1">
-                      <span className="text-sm text-text-secondary">{t('financial.cash', 'Cash')}</span>
+                      <span className="text-sm text-text-secondary">{t('financial.cash')}</span>
                       <span className="text-sm tabular-nums">{formatCurrency(balance.assets.cash)}</span>
                     </div>
                     <div className="flex items-center justify-between py-1">
-                      <span className="text-sm text-text-secondary">{t('financial.inventory', 'Inventory')}</span>
+                      <span className="text-sm text-text-secondary">{t('financial.frozen')}</span>
+                      <span className="text-sm tabular-nums">{formatCurrency(balance.assets.frozen)}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-sm text-text-secondary">{t('financial.inventory')}</span>
                       <span className="text-sm tabular-nums">{formatCurrency(balance.assets.inventory)}</span>
                     </div>
                     <div className="flex items-center justify-between py-1 border-t border-border">
-                      <span className="text-sm font-semibold text-text-primary">{t('financial.totalAssets', 'Total Assets')}</span>
+                      <span className="text-sm font-semibold text-text-primary">{t('financial.total_assets')}</span>
                       <span className="text-sm font-semibold tabular-nums">{formatCurrency(balance.assets.total)}</span>
                     </div>
                   </div>
@@ -373,15 +343,19 @@ export default function FinancialReportsPage() {
                 {/* Liabilities */}
                 <div>
                   <h4 className="text-sm font-semibold text-accent-red mb-2">
-                    {t('financial.liabilities', 'Liabilities')}
+                    {t('financial.liabilities')}
                   </h4>
                   <div className="space-y-2 pl-4">
                     <div className="flex items-center justify-between py-1">
-                      <span className="text-sm text-text-secondary">{t('financial.payables', 'Payables')}</span>
-                      <span className="text-sm tabular-nums">{formatCurrency(balance.liabilities.payables)}</span>
+                      <span className="text-sm text-text-secondary">{t('financial.pending_refunds')}</span>
+                      <span className="text-sm tabular-nums">{formatCurrency(balance.liabilities.pending_refunds)}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-sm text-text-secondary">{t('financial.pending_commissions')}</span>
+                      <span className="text-sm tabular-nums">{formatCurrency(balance.liabilities.pending_commissions)}</span>
                     </div>
                     <div className="flex items-center justify-between py-1 border-t border-border">
-                      <span className="text-sm font-semibold text-text-primary">{t('financial.totalLiabilities', 'Total Liabilities')}</span>
+                      <span className="text-sm font-semibold text-text-primary">{t('financial.total_liabilities')}</span>
                       <span className="text-sm font-semibold tabular-nums">{formatCurrency(balance.liabilities.total)}</span>
                     </div>
                   </div>
@@ -390,22 +364,18 @@ export default function FinancialReportsPage() {
                 {/* Equity */}
                 <div>
                   <h4 className="text-sm font-semibold text-accent-purple mb-2">
-                    {t('financial.equity', 'Equity')}
+                    {t('financial.equity')}
                   </h4>
                   <div className="space-y-2 pl-4">
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-sm text-text-secondary">{t('financial.retainedEarnings', 'Retained Earnings')}</span>
-                      <span className="text-sm tabular-nums">{formatCurrency(balance.equity.retained_earnings)}</span>
-                    </div>
                     <div className="flex items-center justify-between py-1 border-t border-border">
-                      <span className="text-sm font-semibold text-text-primary">{t('financial.totalEquity', 'Total Equity')}</span>
-                      <span className="text-sm font-semibold tabular-nums">{formatCurrency(balance.equity.total)}</span>
+                      <span className="text-sm font-semibold text-text-primary">{t('financial.total_equity')}</span>
+                      <span className="text-sm font-semibold tabular-nums">{formatCurrency(balance.equity)}</span>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-text-muted">{t('financial.noData', 'No data available')}</p>
+              <p className="text-sm text-text-muted">{t('financial.no_data')}</p>
             )}
           </CardContent>
         </Card>
@@ -418,40 +388,33 @@ export default function FinancialReportsPage() {
           <Card>
             <CardContent>
               <h3 className="text-text-primary font-semibold text-base mb-4">
-                {t('financial.cashFlowSummary', 'Cash Flow Summary')}
+                {t('financial.reconciliation')}
               </h3>
               {reconciliationQuery.isLoading ? (
                 <div className="animate-pulse space-y-3">
-                  {Array.from({ length: 4 }).map((_, i) => (
+                  {Array.from({ length: 3 }).map((_, i) => (
                     <div key={i} className="h-5 w-full rounded bg-bg-input" />
                   ))}
                 </div>
               ) : reconciliation ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-text-secondary">{t('financial.openingBalance', 'Opening Balance')}</span>
-                    <span className="text-sm tabular-nums">{formatCurrency(reconciliation.opening_balance)}</span>
+                    <span className="text-sm text-text-secondary">{t('financial.current_balance')}</span>
+                    <span className="text-sm font-semibold text-accent-emerald tabular-nums">{formatCurrency(reconciliation.current_balance)}</span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-text-secondary">{t('financial.closingBalance', 'Closing Balance')}</span>
-                    <span className="text-sm font-semibold tabular-nums">{formatCurrency(reconciliation.closing_balance)}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-border">
-                    <span className="text-sm text-text-secondary">{t('financial.expectedBalance', 'Expected Balance')}</span>
-                    <span className="text-sm tabular-nums">{formatCurrency(reconciliation.expected_balance)}</span>
+                    <span className="text-sm text-text-secondary">{t('financial.frozen')}</span>
+                    <span className="text-sm tabular-nums text-text-muted">{formatCurrency(reconciliation.current_frozen)}</span>
                   </div>
                   <div className="flex items-center justify-between py-2">
-                    <span className="text-sm font-semibold text-text-primary">{t('financial.discrepancy', 'Discrepancy')}</span>
-                    <span className={cn(
-                      'text-sm font-semibold tabular-nums',
-                      reconciliation.discrepancy === 0 ? 'text-accent-emerald' : 'text-accent-red',
-                    )}>
-                      {formatCurrency(reconciliation.discrepancy)}
+                    <span className="text-sm font-semibold text-text-primary">{t('financial.available_balance')}</span>
+                    <span className="text-sm font-semibold tabular-nums">
+                      {formatCurrency(reconciliation.current_balance - reconciliation.current_frozen)}
                     </span>
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-text-muted">{t('financial.noData', 'No data available')}</p>
+                <p className="text-sm text-text-muted">{t('financial.no_data')}</p>
               )}
             </CardContent>
           </Card>
@@ -461,7 +424,7 @@ export default function FinancialReportsPage() {
             <Card>
               <CardContent>
                 <h3 className="text-text-primary font-semibold text-base mb-2">
-                  {t('financial.transactions', 'Transactions')}
+                  {t('financial.transactions')}
                 </h3>
               </CardContent>
               <CardContent className="p-0">
@@ -485,7 +448,7 @@ export default function FinancialReportsPage() {
               <CardContent>
                 <div className="flex items-center justify-between">
                   <h3 className="text-text-primary font-semibold text-base">
-                    {t('financial.totalTax', 'Total Tax')}
+                    {t('financial.total_tax')}
                   </h3>
                   <span className="text-2xl font-bold text-accent-purple tabular-nums">
                     {formatCurrency(tax.total_tax)}
@@ -499,7 +462,7 @@ export default function FinancialReportsPage() {
           <Card>
             <CardContent>
               <h3 className="text-text-primary font-semibold text-base mb-2">
-                {t('financial.taxBreakdown', 'Tax Breakdown')}
+                {t('financial.tax_breakdown')}
               </h3>
             </CardContent>
             <CardContent className="p-0">
@@ -507,7 +470,7 @@ export default function FinancialReportsPage() {
                 columns={taxColumns}
                 data={tax?.breakdown ?? []}
                 loading={taxQuery.isLoading}
-                emptyMessage={t('financial.noTaxData', 'No tax data available')}
+                emptyMessage={t('financial.no_tax_data')}
                 keyField="rate_label"
               />
             </CardContent>
