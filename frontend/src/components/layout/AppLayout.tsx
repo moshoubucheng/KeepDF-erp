@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Sidebar } from './Sidebar'
@@ -12,6 +12,20 @@ export function AppLayout() {
   const { sidebarHidden, setSidebarHidden } = useUIStore()
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showToggle, setShowToggle] = useState(false)
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
+
+  const clearHideTimer = useCallback(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = null
+    }
+  }, [])
+
+  const showWithTimer = useCallback(() => {
+    clearHideTimer()
+    setShowToggle(true)
+    hideTimerRef.current = setTimeout(() => setShowToggle(false), 3000)
+  }, [clearHideTimer])
 
   useEffect(() => {
     const handler = () => {
@@ -20,16 +34,21 @@ export function AppLayout() {
       if (!fs) {
         setSidebarHidden(false)
         setShowToggle(false)
+        clearHideTimer()
       }
     }
     document.addEventListener('fullscreenchange', handler)
-    return () => document.removeEventListener('fullscreenchange', handler)
-  }, [setSidebarHidden])
+    return () => {
+      document.removeEventListener('fullscreenchange', handler)
+      clearHideTimer()
+    }
+  }, [setSidebarHidden, clearHideTimer])
 
   const handleToggleClick = useCallback(() => {
+    clearHideTimer()
     setSidebarHidden(!sidebarHidden)
     setShowToggle(false)
-  }, [sidebarHidden, setSidebarHidden])
+  }, [sidebarHidden, setSidebarHidden, clearHideTimer])
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg-primary">
@@ -42,12 +61,13 @@ export function AppLayout() {
           {/* Hover zone on left edge — always present, triggers button reveal */}
           <div
             className="fixed left-0 top-0 z-[60] h-full w-2 hidden md:block"
-            onMouseEnter={() => setShowToggle(true)}
+            onMouseEnter={showWithTimer}
           />
-          {/* Toggle button — appears on hover, hides after click or mouse leave */}
+          {/* Toggle button — appears on hover, auto-hides after 3s or on click */}
           <button
             onClick={handleToggleClick}
-            onMouseLeave={() => setShowToggle(false)}
+            onMouseEnter={clearHideTimer}
+            onMouseLeave={showWithTimer}
             className={cn(
               'fixed left-0 top-1/2 z-[61] -translate-y-1/2 rounded-r-lg border border-l-0 border-border bg-bg-card/90 p-1.5 text-text-muted backdrop-blur-sm transition-all hover:bg-bg-card hover:text-text-primary hidden md:block',
               showToggle ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full pointer-events-none',
