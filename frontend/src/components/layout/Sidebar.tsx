@@ -34,6 +34,9 @@ import {
   Boxes,
   Receipt,
   Monitor,
+  Upload,
+  Layers,
+  RefreshCw,
 } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -126,6 +129,9 @@ const NAV_GROUPS: NavGroupDef[] = [
       { key: 'automation', labelKey: 'nav.automation', path: '/automation', icon: <Zap className="h-4 w-4" /> },
       { key: 'approvals', labelKey: 'nav.approvals', path: '/approvals', icon: <CheckCircle className="h-4 w-4" /> },
       { key: 'webhooks', labelKey: 'nav.webhooks', path: '/webhooks', icon: <Webhook className="h-4 w-4" /> },
+      { key: 'import', labelKey: 'nav.import', path: '/import', icon: <Upload className="h-4 w-4" /> },
+      { key: 'batch', labelKey: 'nav.batch', path: '/batch', icon: <Layers className="h-4 w-4" /> },
+      { key: 'platform-sync', labelKey: 'nav.platformSync', path: '/platform-sync', icon: <RefreshCw className="h-4 w-4" /> },
     ],
   },
 ]

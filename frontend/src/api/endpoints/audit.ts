@@ -11,6 +11,20 @@ export interface AuditLog {
   created_at: string
 }
 
+export interface RestorableLog extends AuditLog {
+  snapshot_id: number
+  before_data: string
+  after_data: string
+  distributor_name: string
+}
+
+export interface Snapshot {
+  id: number
+  audit_log_id: number
+  before_data: string
+  after_data: string
+}
+
 interface AuditLogsParams {
   offset?: number
   limit?: number
@@ -39,4 +53,22 @@ export const auditApi = {
       hasMore: boolean
     }>(`/audit-logs${qs ? `?${qs}` : ''}`)
   },
+
+  listRestorable: (params: { offset?: number; limit?: number } = {}) => {
+    const query = new URLSearchParams()
+    if (params.offset !== undefined) query.set('offset', String(params.offset))
+    if (params.limit !== undefined) query.set('limit', String(params.limit))
+    const qs = query.toString()
+    return api.get<{ logs: RestorableLog[]; total: number }>(
+      `/audit-logs/restorable${qs ? `?${qs}` : ''}`,
+    )
+  },
+
+  getSnapshot: (logId: number) =>
+    api.get<{ snapshot: Snapshot }>(`/audit-logs/snapshots/${logId}`),
+
+  restore: (logId: number) =>
+    api.post<{ success: boolean; restored: { table: string; id: number } }>(
+      `/audit-logs/restore/${logId}`,
+    ),
 }

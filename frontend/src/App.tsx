@@ -43,6 +43,9 @@ const StocktakesPage = lazy(() => import('./pages/stocktakes/StocktakesPage'))
 const SkuMappingsPage = lazy(() => import('./pages/sku-mappings/SkuMappingsPage'))
 const InvoicesPage = lazy(() => import('./pages/invoices/InvoicesPage'))
 const DataScreenPage = lazy(() => import('./pages/data-screen/DataScreenPage'))
+const ImportPage = lazy(() => import('./pages/import/ImportPage'))
+const BatchPage = lazy(() => import('./pages/batch/BatchPage'))
+const PlatformSyncPage = lazy(() => import('./pages/platform-sync/PlatformSyncPage'))
 
 function LazyFallback() {
   return (
@@ -98,6 +101,9 @@ export default function App() {
             <Route path="automation" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><AutomationPage /></InlineErrorBoundary></Suspense>} />
             <Route path="approvals" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ApprovalsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="webhooks" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><WebhooksPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="import" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ImportPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="batch" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><BatchPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="platform-sync" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><PlatformSyncPage /></InlineErrorBoundary></Suspense>} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>
