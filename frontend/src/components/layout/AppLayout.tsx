@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { CommandPalette } from '@/components/ui/CommandPalette'
 import { useUIStore } from '@/stores/ui.store'
 import { cn } from '@/utils/cn'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -91,6 +92,9 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Command palette (global keyboard shortcuts + modal) */}
+      <CommandPalette />
     </div>
   )
 }
