@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   communicationsApi,
   type CustomerMessage,
@@ -24,6 +25,7 @@ const CHANNEL_OPTIONS = ['email', 'sms', 'line'] as const;
 const TRIGGER_EVENTS = ['order_created', 'order_shipped', 'order_delivered', 'return_requested', 'return_approved', 'return_refunded'] as const;
 
 export default function CommunicationsPage() {
+  const { t } = useTranslation();
   const { addToast } = useUIStore();
   const { page, limit, setPage, resetPage } = usePagination();
 
@@ -72,11 +74,11 @@ export default function CommunicationsPage() {
       setMessages(res.messages || []);
       setMessagesTotal(res.total || 0);
     } catch {
-      addToast('error', 'メッセージ一覧の取得に失敗しました');
+      addToast('error', t('communications.error_fetch_messages'));
     } finally {
       setMessagesLoading(false);
     }
-  }, [page, limit, addToast]);
+  }, [page, limit, addToast, t]);
 
   // Fetch templates
   const fetchTemplates = useCallback(async () => {
@@ -86,11 +88,11 @@ export default function CommunicationsPage() {
       setTemplates(res.templates || []);
       setTemplatesTotal(res.total || 0);
     } catch {
-      addToast('error', 'テンプレート一覧の取得に失敗しました');
+      addToast('error', t('communications.error_fetch_templates'));
     } finally {
       setTemplatesLoading(false);
     }
-  }, [page, limit, addToast]);
+  }, [page, limit, addToast, t]);
 
   // Fetch triggers
   const fetchTriggers = useCallback(async () => {
@@ -99,11 +101,11 @@ export default function CommunicationsPage() {
       const res = await communicationsApi.listTriggers();
       setTriggers(res.triggers || []);
     } catch {
-      addToast('error', 'トリガー一覧の取得に失敗しました');
+      addToast('error', t('communications.error_fetch_triggers'));
     } finally {
       setTriggersLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, t]);
 
   // Fetch all templates for select dropdowns (send modal, trigger modal)
   const [allTemplates, setAllTemplates] = useState<MessageTemplate[]>([]);
@@ -134,7 +136,7 @@ export default function CommunicationsPage() {
   // Send message
   const handleSendMessage = async () => {
     if (!sendCustomerId || !sendContent) {
-      addToast('error', '顧客IDとメッセージ内容は必須です');
+      addToast('error', t('communications.error_required_send'));
       return;
     }
     setSending(true);
@@ -147,12 +149,12 @@ export default function CommunicationsPage() {
         template_id: sendTemplateId ? Number(sendTemplateId) : undefined,
         channel: sendChannel || undefined,
       });
-      addToast('success', 'メッセージを送信しました');
+      addToast('success', t('communications.success_send'));
       setShowSendModal(false);
       resetSendForm();
       if (activeTab === 'messages') fetchMessages();
     } catch {
-      addToast('error', 'メッセージの送信に失敗しました');
+      addToast('error', t('communications.error_send'));
     } finally {
       setSending(false);
     }
@@ -170,7 +172,7 @@ export default function CommunicationsPage() {
   // Create/Edit template
   const handleSaveTemplate = async () => {
     if (!templateName || !templateContent) {
-      addToast('error', 'テンプレート名と内容は必須です');
+      addToast('error', t('communications.error_required_template'));
       return;
     }
     setSavingTemplate(true);
@@ -183,17 +185,17 @@ export default function CommunicationsPage() {
       };
       if (editingTemplate) {
         await communicationsApi.updateTemplate(editingTemplate.id, data);
-        addToast('success', 'テンプレートを更新しました');
+        addToast('success', t('communications.success_update_template'));
       } else {
         await communicationsApi.createTemplate(data);
-        addToast('success', 'テンプレートを作成しました');
+        addToast('success', t('communications.success_create_template'));
       }
       setShowTemplateModal(false);
       resetTemplateForm();
       fetchTemplates();
       fetchAllTemplates();
     } catch {
-      addToast('error', 'テンプレートの保存に失敗しました');
+      addToast('error', t('communications.error_save_template'));
     } finally {
       setSavingTemplate(false);
     }
@@ -217,15 +219,15 @@ export default function CommunicationsPage() {
   };
 
   const handleDeleteTemplate = async (id: number) => {
-    if (!window.confirm('このテンプレートを削除しますか？')) return;
+    if (!window.confirm(t('communications.confirm_delete_template'))) return;
     setDeletingTemplateId(id);
     try {
       await communicationsApi.deleteTemplate(id);
-      addToast('success', 'テンプレートを削除しました');
+      addToast('success', t('communications.success_delete_template'));
       fetchTemplates();
       fetchAllTemplates();
     } catch {
-      addToast('error', 'テンプレートの削除に失敗しました');
+      addToast('error', t('communications.error_delete_template'));
     } finally {
       setDeletingTemplateId(null);
     }
@@ -234,7 +236,7 @@ export default function CommunicationsPage() {
   // Create/Delete trigger
   const handleCreateTrigger = async () => {
     if (!triggerEventType || !triggerTemplateId) {
-      addToast('error', 'イベントタイプとテンプレートは必須です');
+      addToast('error', t('communications.error_required_trigger'));
       return;
     }
     setSavingTrigger(true);
@@ -243,27 +245,27 @@ export default function CommunicationsPage() {
         event_type: triggerEventType,
         template_id: Number(triggerTemplateId),
       });
-      addToast('success', 'トリガーを作成しました');
+      addToast('success', t('communications.success_create_trigger'));
       setShowTriggerModal(false);
       setTriggerEventType('');
       setTriggerTemplateId('');
       fetchTriggers();
     } catch {
-      addToast('error', 'トリガーの作成に失敗しました');
+      addToast('error', t('communications.error_create_trigger'));
     } finally {
       setSavingTrigger(false);
     }
   };
 
   const handleDeleteTrigger = async (id: number) => {
-    if (!window.confirm('このトリガーを削除しますか？')) return;
+    if (!window.confirm(t('communications.confirm_delete_trigger'))) return;
     setDeletingTriggerId(id);
     try {
       await communicationsApi.deleteTrigger(id);
-      addToast('success', 'トリガーを削除しました');
+      addToast('success', t('communications.success_delete_trigger'));
       fetchTriggers();
     } catch {
-      addToast('error', 'トリガーの削除に失敗しました');
+      addToast('error', t('communications.error_delete_trigger'));
     } finally {
       setDeletingTriggerId(null);
     }
@@ -273,23 +275,23 @@ export default function CommunicationsPage() {
   const messageColumns: Column<CustomerMessage>[] = [
     {
       key: 'type',
-      header: 'タイプ',
+      header: t('communications.type'),
       render: (row) => <span className="text-xs font-medium text-accent-purple">{row.type}</span>,
     },
     {
       key: 'customer_id',
-      header: '顧客ID',
+      header: t('communications.customer_id'),
       render: (row) => <span className="font-mono text-xs">#{row.customer_id}</span>,
     },
     {
       key: 'subject',
-      header: '件名',
+      header: t('communications.subject'),
       hideOnMobile: true,
       render: (row) => <span className="text-sm text-text-secondary">{row.subject || '-'}</span>,
     },
     {
       key: 'content',
-      header: '内容',
+      header: t('communications.content'),
       hideOnMobile: true,
       render: (row) => (
         <span className="text-sm text-text-secondary truncate max-w-[200px] block">
@@ -299,13 +301,13 @@ export default function CommunicationsPage() {
     },
     {
       key: 'channel',
-      header: 'チャネル',
+      header: t('communications.channel'),
       hideOnMobile: true,
       render: (row) => <span className="text-sm text-text-muted">{row.channel || '-'}</span>,
     },
     {
       key: 'created_at',
-      header: '送信日',
+      header: t('communications.sent_at'),
       hideOnMobile: true,
       render: (row) => <span className="text-xs text-text-muted">{formatDate(row.created_at)}</span>,
     },
@@ -313,27 +315,27 @@ export default function CommunicationsPage() {
 
   // Columns: Templates
   const templateColumns: Column<MessageTemplate>[] = [
-    { key: 'name', header: 'テンプレート名' },
+    { key: 'name', header: t('communications.template_name') },
     {
       key: 'type',
-      header: 'タイプ',
+      header: t('communications.type'),
       render: (row) => <span className="text-xs font-medium text-accent-purple">{row.type}</span>,
     },
     {
       key: 'subject',
-      header: '件名',
+      header: t('communications.subject'),
       hideOnMobile: true,
       render: (row) => <span className="text-sm text-text-secondary">{row.subject || '-'}</span>,
     },
     {
       key: 'channel',
-      header: 'チャネル',
+      header: t('communications.channel'),
       hideOnMobile: true,
       render: (row) => <span className="text-sm text-text-muted">{row.channel || '-'}</span>,
     },
     {
       key: 'created_at',
-      header: '作成日',
+      header: t('communications.created_at'),
       hideOnMobile: true,
       render: (row) => <span className="text-xs text-text-muted">{formatDate(row.created_at)}</span>,
     },
@@ -343,7 +345,7 @@ export default function CommunicationsPage() {
       render: (row) => (
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => openEditTemplate(row)}>
-            編集
+            {t('common.edit')}
           </Button>
           <Button
             size="sm"
@@ -352,7 +354,7 @@ export default function CommunicationsPage() {
             loading={deletingTemplateId === row.id}
             disabled={deletingTemplateId !== null}
           >
-            削除
+            {t('common.delete')}
           </Button>
         </div>
       ),
@@ -363,12 +365,12 @@ export default function CommunicationsPage() {
   const triggerColumns: Column<CommTrigger>[] = [
     {
       key: 'event_type',
-      header: 'イベントタイプ',
+      header: t('communications.event_type'),
       render: (row) => <span className="text-xs font-medium text-accent-purple">{row.event_type}</span>,
     },
     {
       key: 'template_id',
-      header: 'テンプレート',
+      header: t('communications.template'),
       render: (row) => {
         const tpl = allTemplates.find((t) => t.id === row.template_id);
         return <span className="text-sm text-text-secondary">{tpl ? tpl.name : `#${row.template_id}`}</span>;
@@ -376,7 +378,7 @@ export default function CommunicationsPage() {
     },
     {
       key: 'created_at',
-      header: '作成日',
+      header: t('communications.created_at'),
       hideOnMobile: true,
       render: (row) => <span className="text-xs text-text-muted">{formatDate(row.created_at)}</span>,
     },
@@ -391,7 +393,7 @@ export default function CommunicationsPage() {
           loading={deletingTriggerId === row.id}
           disabled={deletingTriggerId !== null}
         >
-          削除
+          {t('common.delete')}
         </Button>
       ),
     },
@@ -401,16 +403,16 @@ export default function CommunicationsPage() {
   const templatesTotalPages = Math.ceil(templatesTotal / limit);
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: 'messages', label: 'メッセージ' },
-    { id: 'templates', label: 'テンプレート' },
-    { id: 'triggers', label: 'トリガー' },
+    { id: 'messages', label: t('communications.messages') },
+    { id: 'templates', label: t('communications.templates') },
+    { id: 'triggers', label: t('communications.triggers') },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">コミュニケーション</h1>
-        <p className="text-sm text-text-muted mt-1">顧客へのメッセージ、テンプレート、自動トリガーを管理します</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t('communications.title')}</h1>
+        <p className="text-sm text-text-muted mt-1">{t('communications.subtitle')}</p>
       </div>
 
       {/* Tab navigation */}
@@ -437,7 +439,7 @@ export default function CommunicationsPage() {
         <Card>
           <CardContent>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-              <h2 className="text-lg font-semibold text-text-primary">メッセージ一覧</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('communications.messages_list')}</h2>
               <Button
                 size="sm"
                 variant="primary"
@@ -446,7 +448,7 @@ export default function CommunicationsPage() {
                   setShowSendModal(true);
                 }}
               >
-                メッセージ送信
+                {t('communications.send_message')}
               </Button>
             </div>
 
@@ -464,7 +466,7 @@ export default function CommunicationsPage() {
         <Card>
           <CardContent>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-              <h2 className="text-lg font-semibold text-text-primary">テンプレート一覧</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('communications.templates_list')}</h2>
               <Button
                 size="sm"
                 variant="primary"
@@ -473,7 +475,7 @@ export default function CommunicationsPage() {
                   setShowTemplateModal(true);
                 }}
               >
-                新規テンプレート
+                {t('communications.new_template')}
               </Button>
             </div>
 
@@ -491,7 +493,7 @@ export default function CommunicationsPage() {
         <Card>
           <CardContent>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-              <h2 className="text-lg font-semibold text-text-primary">トリガー一覧</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('communications.triggers_list')}</h2>
               <Button
                 size="sm"
                 variant="primary"
@@ -501,7 +503,7 @@ export default function CommunicationsPage() {
                   setShowTriggerModal(true);
                 }}
               >
-                新規トリガー
+                {t('communications.new_trigger')}
               </Button>
             </div>
 
@@ -511,54 +513,54 @@ export default function CommunicationsPage() {
       )}
 
       {/* Send Message Modal */}
-      <Modal open={showSendModal} onClose={() => setShowSendModal(false)} title="メッセージ送信">
+      <Modal open={showSendModal} onClose={() => setShowSendModal(false)} title={t('communications.send_message')}>
         <div className="space-y-4">
           <Input
-            label="顧客ID"
+            label={t('communications.customer_id')}
             type="number"
             value={sendCustomerId}
             onChange={(e) => setSendCustomerId(e.target.value)}
-            placeholder="顧客IDを入力"
+            placeholder={t('communications.placeholder_customer_id')}
           />
 
-          <Select label="タイプ" value={sendType} onChange={(e) => setSendType(e.target.value)}>
+          <Select label={t('communications.type')} value={sendType} onChange={(e) => setSendType(e.target.value)}>
             {MESSAGE_TYPES.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </Select>
 
           <Input
-            label="件名"
+            label={t('communications.subject')}
             type="text"
             value={sendSubject}
             onChange={(e) => setSendSubject(e.target.value)}
-            placeholder="件名を入力（任意）"
+            placeholder={t('communications.placeholder_subject')}
           />
 
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-1">内容</label>
+            <label className="block text-sm font-medium text-text-primary mb-1">{t('communications.content')}</label>
             <textarea
               className="w-full rounded-lg border border-border bg-bg-card px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-purple"
               rows={4}
               value={sendContent}
               onChange={(e) => setSendContent(e.target.value)}
-              placeholder="メッセージ内容を入力"
+              placeholder={t('communications.placeholder_content')}
             />
           </div>
 
           <Select
-            label="テンプレート（任意）"
+            label={t('communications.template_optional')}
             value={sendTemplateId}
             onChange={(e) => setSendTemplateId(e.target.value)}
           >
-            <option value="">テンプレートなし</option>
+            <option value="">{t('communications.no_template')}</option>
             {allTemplates.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </Select>
 
-          <Select label="チャネル（任意）" value={sendChannel} onChange={(e) => setSendChannel(e.target.value)}>
-            <option value="">未指定</option>
+          <Select label={t('communications.channel_optional')} value={sendChannel} onChange={(e) => setSendChannel(e.target.value)}>
+            <option value="">{t('communications.unspecified')}</option>
             {CHANNEL_OPTIONS.map((ch) => (
               <option key={ch} value={ch}>{ch}</option>
             ))}
@@ -566,10 +568,10 @@ export default function CommunicationsPage() {
 
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowSendModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleSendMessage} loading={sending}>
-              送信
+              {t('communications.send')}
             </Button>
           </div>
         </div>
@@ -579,67 +581,67 @@ export default function CommunicationsPage() {
       <Modal
         open={showTemplateModal}
         onClose={() => setShowTemplateModal(false)}
-        title={editingTemplate ? 'テンプレート編集' : '新規テンプレート'}
+        title={editingTemplate ? t('communications.edit_template') : t('communications.new_template')}
       >
         <div className="space-y-4">
           <Input
-            label="テンプレート名"
+            label={t('communications.template_name')}
             type="text"
             value={templateName}
             onChange={(e) => setTemplateName(e.target.value)}
-            placeholder="テンプレート名を入力"
+            placeholder={t('communications.placeholder_template_name')}
           />
 
-          <Select label="タイプ" value={templateType} onChange={(e) => setTemplateType(e.target.value)}>
+          <Select label={t('communications.type')} value={templateType} onChange={(e) => setTemplateType(e.target.value)}>
             {MESSAGE_TYPES.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </Select>
 
           <Input
-            label="件名"
+            label={t('communications.subject')}
             type="text"
             value={templateSubject}
             onChange={(e) => setTemplateSubject(e.target.value)}
-            placeholder="件名を入力（任意）"
+            placeholder={t('communications.placeholder_subject')}
           />
 
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1">
-              内容 <span className="text-text-muted text-xs">{'({{variable}} 形式で変数を使用可能)'}</span>
+              {t('communications.content')} <span className="text-text-muted text-xs">{t('communications.variable_hint')}</span>
             </label>
             <textarea
               className="w-full rounded-lg border border-border bg-bg-card px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-purple"
               rows={6}
               value={templateContent}
               onChange={(e) => setTemplateContent(e.target.value)}
-              placeholder="例: {{customer_name}} 様、ご注文 {{order_id}} をお送りしました。"
+              placeholder={t('communications.placeholder_template_content')}
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowTemplateModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleSaveTemplate} loading={savingTemplate}>
-              {editingTemplate ? '更新' : '作成'}
+              {editingTemplate ? t('common.update') : t('common.create')}
             </Button>
           </div>
         </div>
       </Modal>
 
       {/* Trigger Create Modal */}
-      <Modal open={showTriggerModal} onClose={() => setShowTriggerModal(false)} title="新規トリガー">
+      <Modal open={showTriggerModal} onClose={() => setShowTriggerModal(false)} title={t('communications.new_trigger')}>
         <div className="space-y-4">
-          <Select label="イベントタイプ" value={triggerEventType} onChange={(e) => setTriggerEventType(e.target.value)}>
-            <option value="">選択してください</option>
+          <Select label={t('communications.event_type')} value={triggerEventType} onChange={(e) => setTriggerEventType(e.target.value)}>
+            <option value="">{t('communications.please_select')}</option>
             {TRIGGER_EVENTS.map((ev) => (
               <option key={ev} value={ev}>{ev}</option>
             ))}
           </Select>
 
-          <Select label="テンプレート" value={triggerTemplateId} onChange={(e) => setTriggerTemplateId(e.target.value)}>
-            <option value="">選択してください</option>
+          <Select label={t('communications.template')} value={triggerTemplateId} onChange={(e) => setTriggerTemplateId(e.target.value)}>
+            <option value="">{t('communications.please_select')}</option>
             {allTemplates.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -647,10 +649,10 @@ export default function CommunicationsPage() {
 
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowTriggerModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleCreateTrigger} loading={savingTrigger}>
-              作成
+              {t('common.create')}
             </Button>
           </div>
         </div>

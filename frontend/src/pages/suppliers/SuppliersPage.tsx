@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { suppliersApi, type Supplier } from '@/api/endpoints/suppliers';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -22,6 +23,7 @@ const EMPTY_FORM = {
 };
 
 export default function SuppliersPage() {
+  const { t } = useTranslation();
   const { addToast } = useUIStore();
   const { isAdmin } = useAuthStore();
   const { page, limit, setPage } = usePagination();
@@ -52,11 +54,11 @@ export default function SuppliersPage() {
       setActiveCount(data.filter((s) => s.is_active).length);
       setInactiveCount(data.filter((s) => !s.is_active).length);
     } catch {
-      addToast('error', '仕入先一覧の取得に失敗しました');
+      addToast('error', t('supplier.error_fetch'));
     } finally {
       setLoading(false);
     }
-  }, [page, limit, addToast]);
+  }, [page, limit, addToast, t]);
 
   useEffect(() => {
     fetchSuppliers();
@@ -83,7 +85,7 @@ export default function SuppliersPage() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      addToast('error', '仕入先名を入力してください');
+      addToast('error', t('supplier.error_name_required'));
       return;
     }
     setSaving(true);
@@ -98,15 +100,15 @@ export default function SuppliersPage() {
       };
       if (editingId) {
         await suppliersApi.update(editingId, payload);
-        addToast('success', '仕入先を更新しました');
+        addToast('success', t('supplier.success_updated'));
       } else {
         await suppliersApi.create(payload);
-        addToast('success', '仕入先を追加しました');
+        addToast('success', t('supplier.success_created'));
       }
       setShowModal(false);
       fetchSuppliers();
     } catch {
-      addToast('error', editingId ? '仕入先の更新に失敗しました' : '仕入先の追加に失敗しました');
+      addToast('error', editingId ? t('supplier.error_update') : t('supplier.error_create'));
     } finally {
       setSaving(false);
     }
@@ -122,12 +124,12 @@ export default function SuppliersPage() {
     setDeleting(true);
     try {
       await suppliersApi.delete(deletingId);
-      addToast('success', '仕入先を無効化しました');
+      addToast('success', t('supplier.success_deactivated'));
       setShowDeleteConfirm(false);
       setDeletingId(null);
       fetchSuppliers();
     } catch {
-      addToast('error', '仕入先の無効化に失敗しました');
+      addToast('error', t('supplier.error_deactivate'));
     } finally {
       setDeleting(false);
     }
@@ -138,34 +140,34 @@ export default function SuppliersPage() {
   };
 
   const columns: Column<Supplier>[] = [
-    { key: 'name', header: '仕入先名' },
+    { key: 'name', header: t('procurement.supplier_name') },
     {
       key: 'contact_person',
-      header: '担当者',
+      header: t('supplier.contact_person'),
       hideOnMobile: true,
       render: (row) => <span>{row.contact_person || '-'}</span>,
     },
     {
       key: 'email',
-      header: 'メール',
+      header: t('supplier.email'),
       hideOnMobile: true,
       render: (row) => <span className="text-text-secondary">{row.email || '-'}</span>,
     },
     {
       key: 'phone',
-      header: '電話',
+      header: t('supplier.phone'),
       hideOnMobile: true,
       render: (row) => <span>{row.phone || '-'}</span>,
     },
     {
       key: 'lead_time_days',
-      header: 'リードタイム',
+      header: t('procurement.lead_time'),
       hideOnMobile: true,
-      render: (row) => <span>{row.lead_time_days != null ? `${row.lead_time_days}日` : '-'}</span>,
+      render: (row) => <span>{row.lead_time_days != null ? `${row.lead_time_days}${t('procurement.days')}` : '-'}</span>,
     },
     {
       key: 'is_active',
-      header: 'ステータス',
+      header: t('procurement.status'),
       render: (row) => <StatusBadge status={row.is_active ? 'ACTIVE' : 'INACTIVE'} />,
     },
     {
@@ -176,11 +178,11 @@ export default function SuppliersPage() {
         return (
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => openEditModal(row)}>
-              編集
+              {t('common.edit')}
             </Button>
             {row.is_active ? (
               <Button size="sm" variant="secondary" onClick={() => confirmDelete(row.id)}>
-                無効化
+                {t('supplier.deactivate')}
               </Button>
             ) : null}
           </div>
@@ -192,20 +194,20 @@ export default function SuppliersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">仕入先管理</h1>
-        <p className="text-sm text-text-muted mt-1">仕入先の登録・管理を行います</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t('supplier.page_title')}</h1>
+        <p className="text-sm text-text-muted mt-1">{t('supplier.page_subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <StatCard
           icon={<span className="text-lg">✅</span>}
-          title="有効"
+          title={t('common.active')}
           value={activeCount}
           accent="purple"
         />
         <StatCard
           icon={<span className="text-lg">⛔</span>}
-          title="無効"
+          title={t('common.inactive')}
           value={inactiveCount}
         />
       </div>
@@ -213,10 +215,10 @@ export default function SuppliersPage() {
       <Card>
         <CardContent>
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm text-text-secondary">仕入先一覧</span>
+            <span className="text-sm text-text-secondary">{t('supplier.list_title')}</span>
             {isAdmin && (
               <Button size="sm" variant="primary" onClick={openCreateModal}>
-                新規追加
+                {t('supplier.add_new')}
               </Button>
             )}
           </div>
@@ -232,47 +234,47 @@ export default function SuppliersPage() {
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
-        title={editingId ? '仕入先を編集' : '新規仕入先'}
+        title={editingId ? t('supplier.modal_edit') : t('supplier.modal_create')}
       >
         <div className="space-y-4">
           <Input
-            label="仕入先名"
+            label={t('procurement.supplier_name')}
             type="text"
             value={form.name}
             onChange={(e) => updateField('name', e.target.value)}
-            placeholder="仕入先名を入力"
+            placeholder={t('supplier.placeholder_name')}
             autoFocus
           />
           <Input
-            label="担当者"
+            label={t('supplier.contact_person')}
             type="text"
             value={form.contact_person}
             onChange={(e) => updateField('contact_person', e.target.value)}
-            placeholder="担当者名を入力"
+            placeholder={t('supplier.placeholder_contact')}
           />
           <Input
-            label="メールアドレス"
+            label={t('supplier.email_address')}
             type="email"
             value={form.email}
             onChange={(e) => updateField('email', e.target.value)}
             placeholder="email@example.com"
           />
           <Input
-            label="電話番号"
+            label={t('supplier.phone_number')}
             type="tel"
             value={form.phone}
             onChange={(e) => updateField('phone', e.target.value)}
             placeholder="090-0000-0000"
           />
           <Input
-            label="住所"
+            label={t('supplier.address')}
             type="text"
             value={form.address}
             onChange={(e) => updateField('address', e.target.value)}
-            placeholder="住所を入力"
+            placeholder={t('supplier.placeholder_address')}
           />
           <Input
-            label="リードタイム（日）"
+            label={t('supplier.lead_time_days')}
             type="number"
             value={form.lead_time_days}
             onChange={(e) => updateField('lead_time_days', e.target.value)}
@@ -280,24 +282,24 @@ export default function SuppliersPage() {
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleSave} loading={saving}>
-              {editingId ? '更新' : '追加'}
+              {editingId ? t('common.update') : t('supplier.add')}
             </Button>
           </div>
         </div>
       </Modal>
 
-      <Modal open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="仕入先の無効化">
+      <Modal open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title={t('supplier.modal_deactivate')}>
         <div className="space-y-4">
-          <p className="text-text-secondary">この仕入先を無効化しますか？無効化後も履歴は保持されます。</p>
+          <p className="text-text-secondary">{t('supplier.confirm_deactivate')}</p>
           <div className="flex justify-end gap-2">
             <Button size="sm" variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleDelete} loading={deleting}>
-              無効化する
+              {t('supplier.deactivate_confirm')}
             </Button>
           </div>
         </div>

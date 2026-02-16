@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { purchaseOrdersApi, type PurchaseOrder } from '@/api/endpoints/purchase-orders';
 import { suppliersApi } from '@/api/endpoints/suppliers';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -36,6 +37,7 @@ const NEXT_STATUS: Record<string, string> = {
 };
 
 export default function PurchaseOrdersPage() {
+  const { t } = useTranslation();
   const { addToast } = useUIStore();
   const { isAdmin } = useAuthStore();
   const { page, limit, setPage, resetPage } = usePagination();
@@ -68,11 +70,11 @@ export default function PurchaseOrdersPage() {
       setOrders(res.orders || []);
       setTotalPages(Math.ceil(res.total / limit) || 1);
     } catch {
-      addToast('error', '発注一覧の取得に失敗しました');
+      addToast('error', t('po.error_fetch'));
     } finally {
       setLoading(false);
     }
-  }, [page, limit, statusFilter, addToast]);
+  }, [page, limit, statusFilter, addToast, t]);
 
   const fetchSuppliers = useCallback(async () => {
     try {
@@ -98,12 +100,12 @@ export default function PurchaseOrdersPage() {
 
   const handleCreatePO = async () => {
     if (!formSupplierId) {
-      addToast('error', '仕入先を選択してください');
+      addToast('error', t('po.error_select_supplier'));
       return;
     }
     const validItems = formItems.filter((item) => item.sku && item.qty > 0 && item.unit_cost > 0);
     if (validItems.length === 0) {
-      addToast('error', '有効な明細を1つ以上追加してください');
+      addToast('error', t('po.error_add_items'));
       return;
     }
     setCreating(true);
@@ -114,12 +116,12 @@ export default function PurchaseOrdersPage() {
         expected_delivery: formExpectedDelivery || undefined,
         items: validItems,
       });
-      addToast('success', '発注書を作成しました');
+      addToast('success', t('po.success_created'));
       setShowCreateModal(false);
       resetForm();
       fetchOrders();
     } catch {
-      addToast('error', '発注書の作成に失敗しました');
+      addToast('error', t('po.error_create'));
     } finally {
       setCreating(false);
     }
@@ -133,10 +135,10 @@ export default function PurchaseOrdersPage() {
       } else {
         await purchaseOrdersApi.updateStatus(id, newStatus);
       }
-      addToast('success', `ステータスを${newStatus}に更新しました`);
+      addToast('success', t('po.success_status_updated', { status: newStatus }));
       fetchOrders();
     } catch {
-      addToast('error', 'ステータスの更新に失敗しました');
+      addToast('error', t('po.error_status_update'));
     } finally {
       setUpdatingId(null);
     }
@@ -157,9 +159,9 @@ export default function PurchaseOrdersPage() {
         作成日: po.created_at,
       }));
       downloadObjectsCsv(rows, 'purchase-orders.csv');
-      addToast('success', 'CSVをエクスポートしました');
+      addToast('success', t('po.success_csv_export'));
     } catch {
-      addToast('error', 'CSVエクスポートに失敗しました');
+      addToast('error', t('po.error_csv_export'));
     } finally {
       setExporting(false);
     }
@@ -185,32 +187,32 @@ export default function PurchaseOrdersPage() {
   };
 
   const columns: Column<PurchaseOrder>[] = [
-    { key: 'po_number', header: 'PO番号' },
+    { key: 'po_number', header: t('procurement.po_number') },
     {
       key: 'supplier_name',
-      header: '仕入先',
+      header: t('procurement.supplier_name'),
       hideOnMobile: true,
       render: (row) => <span>{row.supplier_name || '-'}</span>,
     },
     {
       key: 'status',
-      header: 'ステータス',
+      header: t('procurement.status'),
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: 'total_amount',
-      header: '合計金額',
+      header: t('po.total_amount'),
       render: (row) => <span>{formatCurrency(row.total_amount)}</span>,
     },
     {
       key: 'expected_delivery',
-      header: '納品予定日',
+      header: t('procurement.expected_delivery'),
       hideOnMobile: true,
       render: (row) => <span>{row.expected_delivery ? formatDate(row.expected_delivery) : '-'}</span>,
     },
     {
       key: 'created_at',
-      header: '作成日',
+      header: t('po.created_date'),
       hideOnMobile: true,
       render: (row) => <span>{formatDate(row.created_at)}</span>,
     },
@@ -241,7 +243,7 @@ export default function PurchaseOrdersPage() {
                 loading={updatingId === row.id}
                 disabled={updatingId !== null}
               >
-                受領
+                {t('po.receive')}
               </Button>
             )}
           </div>
@@ -253,32 +255,32 @@ export default function PurchaseOrdersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">発注管理</h1>
-        <p className="text-sm text-text-muted mt-1">仕入先への発注書を管理します</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t('po.page_title')}</h1>
+        <p className="text-sm text-text-muted mt-1">{t('po.page_subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           icon={<span className="text-lg">📋</span>}
-          title="下書き"
+          title={t('po.status_draft')}
           value={orders.filter((o) => o.status === 'DRAFT').length}
           accent="purple"
         />
         <StatCard
           icon={<span className="text-lg">📤</span>}
-          title="提出済"
+          title={t('po.status_submitted')}
           value={orders.filter((o) => o.status === 'SUBMITTED').length}
           accent="purple"
         />
         <StatCard
           icon={<span className="text-lg">✅</span>}
-          title="確認済"
+          title={t('po.status_confirmed')}
           value={orders.filter((o) => o.status === 'CONFIRMED').length}
           accent="purple"
         />
         <StatCard
           icon={<span className="text-lg">🚚</span>}
-          title="発送済"
+          title={t('po.status_shipped')}
           value={orders.filter((o) => o.status === 'SHIPPED').length}
           accent="purple"
         />
@@ -289,7 +291,7 @@ export default function PurchaseOrdersPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
               <Select label="" value={statusFilter} onChange={(e) => handleStatusFilterChange(e.target.value)}>
-                <option value="">全ステータス</option>
+                <option value="">{t('po.all_statuses')}</option>
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -297,7 +299,7 @@ export default function PurchaseOrdersPage() {
             </div>
             <div className="flex gap-2">
               <Button size="sm" variant="secondary" onClick={handleExportCsv} loading={exporting}>
-                CSVエクスポート
+                {t('po.csv_export')}
               </Button>
               {isAdmin && (
                 <Button
@@ -308,7 +310,7 @@ export default function PurchaseOrdersPage() {
                     setShowCreateModal(true);
                   }}
                 >
-                  新規発注
+                  {t('po.new_order')}
                 </Button>
               )}
             </div>
@@ -322,39 +324,39 @@ export default function PurchaseOrdersPage() {
         </CardContent>
       </Card>
 
-      <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title="新規発注書">
+      <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title={t('po.modal_create')}>
         <div className="space-y-4">
           <Select
-            label="仕入先"
+            label={t('procurement.supplier_name')}
             value={formSupplierId}
             onChange={(e) => setFormSupplierId(e.target.value)}
           >
-            <option value="">選択してください</option>
+            <option value="">{t('po.select_placeholder')}</option>
             {suppliers.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </Select>
 
           <Input
-            label="納品予定日"
+            label={t('procurement.expected_delivery')}
             type="date"
             value={formExpectedDelivery}
             onChange={(e) => setFormExpectedDelivery(e.target.value)}
           />
 
           <Input
-            label="備考"
+            label={t('po.notes')}
             type="text"
             value={formNotes}
             onChange={(e) => setFormNotes(e.target.value)}
-            placeholder="備考を入力"
+            placeholder={t('po.placeholder_notes')}
           />
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-text-primary">明細</span>
+              <span className="text-sm font-medium text-text-primary">{t('po.line_items')}</span>
               <Button size="sm" variant="secondary" onClick={addItem}>
-                + 行追加
+                {t('po.add_row')}
               </Button>
             </div>
             <div className="space-y-3">
@@ -371,7 +373,7 @@ export default function PurchaseOrdersPage() {
                   </div>
                   <div className="w-24">
                     <Input
-                      label="数量"
+                      label={t('po.quantity')}
                       type="number"
                       value={String(item.qty)}
                       onChange={(e) => updateItem(index, 'qty', Number(e.target.value))}
@@ -379,7 +381,7 @@ export default function PurchaseOrdersPage() {
                   </div>
                   <div className="w-28">
                     <Input
-                      label="単価"
+                      label={t('po.unit_cost')}
                       type="number"
                       value={String(item.unit_cost)}
                       onChange={(e) => updateItem(index, 'unit_cost', Number(e.target.value))}
@@ -387,7 +389,7 @@ export default function PurchaseOrdersPage() {
                   </div>
                   {formItems.length > 1 && (
                     <Button size="sm" variant="secondary" onClick={() => removeItem(index)}>
-                      削除
+                      {t('common.delete')}
                     </Button>
                   )}
                 </div>
@@ -397,10 +399,10 @@ export default function PurchaseOrdersPage() {
 
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowCreateModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleCreatePO} loading={creating}>
-              作成
+              {t('common.create')}
             </Button>
           </div>
         </div>

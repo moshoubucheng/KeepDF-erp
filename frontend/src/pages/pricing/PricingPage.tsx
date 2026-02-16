@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { pricingApi, type PriceRule, type PriceHistory, type MarginAnalysis } from '@/api/endpoints/pricing';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,12 +17,6 @@ import { downloadObjectsCsv } from '@/utils/download';
 
 type TabType = 'rules' | 'history' | 'margins';
 
-const TABS: { key: TabType; label: string }[] = [
-  { key: 'rules', label: '価格ルール' },
-  { key: 'history', label: '変更履歴' },
-  { key: 'margins', label: '利益率' },
-];
-
 const EMPTY_RULE_FORM = {
   sku: '',
   platform: '',
@@ -32,9 +27,16 @@ const EMPTY_RULE_FORM = {
 };
 
 export default function PricingPage() {
+  const { t } = useTranslation();
   const { addToast } = useUIStore();
   const { isAdmin } = useAuthStore();
   const { page, limit, setPage, resetPage } = usePagination();
+
+  const TABS: { key: TabType; label: string }[] = [
+    { key: 'rules', label: t('pricing.tab_rules') },
+    { key: 'history', label: t('pricing.tab_history') },
+    { key: 'margins', label: t('pricing.margin') },
+  ];
 
   const [activeTab, setActiveTab] = useState<TabType>('rules');
   const [platformFilter, setPlatformFilter] = useState('');
@@ -71,11 +73,11 @@ export default function PricingPage() {
       setRules(res.rules || []);
       setTotalPages(Math.ceil(res.total / limit) || 1);
     } catch {
-      addToast('error', '価格ルールの取得に失敗しました');
+      addToast('error', t('pricing.error_fetch_rules'));
     } finally {
       setLoading(false);
     }
-  }, [buildParams, limit, addToast]);
+  }, [buildParams, limit, addToast, t]);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
@@ -84,11 +86,11 @@ export default function PricingPage() {
       setHistory(res.history || []);
       setTotalPages(Math.ceil(res.total / limit) || 1);
     } catch {
-      addToast('error', '変更履歴の取得に失敗しました');
+      addToast('error', t('pricing.error_fetch_history'));
     } finally {
       setLoading(false);
     }
-  }, [buildParams, limit, addToast]);
+  }, [buildParams, limit, addToast, t]);
 
   const fetchMargins = useCallback(async () => {
     setLoading(true);
@@ -98,11 +100,11 @@ export default function PricingPage() {
       setMargins(res.margins || []);
       setTotalPages(1);
     } catch {
-      addToast('error', '利益率の取得に失敗しました');
+      addToast('error', t('pricing.error_fetch_margins'));
     } finally {
       setLoading(false);
     }
-  }, [buildParams, addToast]);
+  }, [buildParams, addToast, t]);
 
   useEffect(() => {
     if (activeTab === 'rules') fetchRules();
@@ -142,7 +144,7 @@ export default function PricingPage() {
 
   const handleSaveRule = async () => {
     if (!ruleForm.sku.trim() || !ruleForm.base_price) {
-      addToast('error', 'SKUと基本価格は必須です');
+      addToast('error', t('pricing.error_required_fields'));
       return;
     }
     setSaving(true);
@@ -157,15 +159,15 @@ export default function PricingPage() {
       };
       if (editingRuleId) {
         await pricingApi.update(editingRuleId, payload);
-        addToast('success', '価格ルールを更新しました');
+        addToast('success', t('pricing.success_updated'));
       } else {
         await pricingApi.create(payload);
-        addToast('success', '価格ルールを作成しました');
+        addToast('success', t('pricing.success_created'));
       }
       setShowRuleModal(false);
       fetchRules();
     } catch {
-      addToast('error', editingRuleId ? '更新に失敗しました' : '作成に失敗しました');
+      addToast('error', editingRuleId ? t('pricing.error_update') : t('pricing.error_create'));
     } finally {
       setSaving(false);
     }
@@ -175,10 +177,10 @@ export default function PricingPage() {
     setDeletingId(id);
     try {
       await pricingApi.delete(id);
-      addToast('success', '価格ルールを削除しました');
+      addToast('success', t('pricing.success_deleted'));
       fetchRules();
     } catch {
-      addToast('error', '削除に失敗しました');
+      addToast('error', t('pricing.error_delete'));
     } finally {
       setDeletingId(null);
     }
@@ -221,9 +223,9 @@ export default function PricingPage() {
         }));
         downloadObjectsCsv(rows, 'pricing-margins.csv');
       }
-      addToast('success', 'CSVをエクスポートしました');
+      addToast('success', t('pricing.success_csv_export'));
     } catch {
-      addToast('error', 'CSVエクスポートに失敗しました');
+      addToast('error', t('pricing.error_csv_export'));
     } finally {
       setExporting(false);
     }
@@ -237,30 +239,30 @@ export default function PricingPage() {
     { key: 'sku', header: 'SKU' },
     {
       key: 'platform',
-      header: 'プラットフォーム',
+      header: t('pricing.platform'),
       hideOnMobile: true,
-      render: (row) => <span>{row.platform || '全共通'}</span>,
+      render: (row) => <span>{row.platform || t('pricing.all_platforms')}</span>,
     },
     {
       key: 'base_price',
-      header: '基本価格',
+      header: t('pricing.base_price'),
       render: (row) => <span>{formatCurrency(row.base_price)}</span>,
     },
     {
       key: 'sale_price',
-      header: 'セール価格',
+      header: t('pricing.sale_price'),
       hideOnMobile: true,
       render: (row) => <span>{row.sale_price != null ? formatCurrency(row.sale_price) : '-'}</span>,
     },
     {
       key: 'valid_from',
-      header: '有効開始',
+      header: t('pricing.valid_from'),
       hideOnMobile: true,
       render: (row) => <span>{row.valid_from ? formatDate(row.valid_from) : '-'}</span>,
     },
     {
       key: 'is_active',
-      header: 'ステータス',
+      header: t('pricing.status'),
       render: (row) => <StatusBadge status={row.is_active ? 'ACTIVE' : 'INACTIVE'} />,
     },
     {
@@ -271,7 +273,7 @@ export default function PricingPage() {
         return (
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => openEditRuleModal(row)}>
-              編集
+              {t('common.edit')}
             </Button>
             <Button
               size="sm"
@@ -280,7 +282,7 @@ export default function PricingPage() {
               loading={deletingId === row.id}
               disabled={deletingId !== null}
             >
-              削除
+              {t('common.delete')}
             </Button>
           </div>
         );
@@ -292,23 +294,23 @@ export default function PricingPage() {
     { key: 'sku', header: 'SKU' },
     {
       key: 'platform',
-      header: 'プラットフォーム',
+      header: t('pricing.platform'),
       hideOnMobile: true,
       render: (row) => <span>{row.platform || '-'}</span>,
     },
     {
       key: 'old_price',
-      header: '旧価格',
+      header: t('pricing.old_price'),
       render: (row) => <span>{formatCurrency(row.old_price)}</span>,
     },
     {
       key: 'new_price',
-      header: '新価格',
+      header: t('pricing.new_price'),
       render: (row) => <span>{formatCurrency(row.new_price)}</span>,
     },
     {
       key: 'created_at',
-      header: '変更日',
+      header: t('pricing.change_date'),
       render: (row) => <span>{formatDate(row.created_at)}</span>,
     },
   ];
@@ -317,23 +319,23 @@ export default function PricingPage() {
     { key: 'sku', header: 'SKU' },
     {
       key: 'platform',
-      header: 'プラットフォーム',
+      header: t('pricing.platform'),
       hideOnMobile: true,
       render: (row) => <span>{row.platform || '-'}</span>,
     },
     {
       key: 'cost_price',
-      header: '原価',
+      header: t('pricing.cost_price'),
       render: (row) => <span>{formatCurrency(row.cost_price)}</span>,
     },
     {
       key: 'base_price',
-      header: '基本価格',
+      header: t('pricing.base_price'),
       render: (row) => <span>{formatCurrency(row.base_price)}</span>,
     },
     {
       key: 'margin',
-      header: '利益',
+      header: t('pricing.profit'),
       render: (row) => (
         <span className={row.margin >= 0 ? 'text-green-500' : 'text-red-500'}>
           {formatCurrency(row.margin)}
@@ -342,7 +344,7 @@ export default function PricingPage() {
     },
     {
       key: 'margin_percent',
-      header: '利益率',
+      header: t('pricing.margin'),
       render: (row) => (
         <span className={row.margin_percent >= 0 ? 'text-green-500' : 'text-red-500'}>
           {row.margin_percent.toFixed(1)}%
@@ -360,8 +362,8 @@ export default function PricingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">価格管理</h1>
-        <p className="text-sm text-text-muted mt-1">価格ルール・変更履歴・利益率を管理します</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t('pricing.page_title')}</h1>
+        <p className="text-sm text-text-muted mt-1">{t('pricing.page_subtitle')}</p>
       </div>
 
       <Card>
@@ -385,11 +387,11 @@ export default function PricingPage() {
 
             <div className="flex gap-2">
               <Button size="sm" variant="secondary" onClick={handleExportCsv} loading={exporting}>
-                CSVエクスポート
+                {t('pricing.csv_export')}
               </Button>
               {isAdmin && activeTab === 'rules' && (
                 <Button size="sm" variant="primary" onClick={openCreateRuleModal}>
-                  新規ルール
+                  {t('pricing.new_rule')}
                 </Button>
               )}
             </div>
@@ -401,7 +403,7 @@ export default function PricingPage() {
               value={platformFilter}
               onChange={(e) => handleFilterChange('platform', e.target.value)}
             >
-              <option value="">全プラットフォーム</option>
+              <option value="">{t('pricing.all_platforms')}</option>
               <option value="tiktok">TikTok</option>
               <option value="temu">Temu</option>
               <option value="rakuten">Rakuten</option>
@@ -411,7 +413,7 @@ export default function PricingPage() {
               type="text"
               value={skuFilter}
               onChange={(e) => handleFilterChange('sku', e.target.value)}
-              placeholder="SKUで検索"
+              placeholder={t('pricing.search_sku')}
             />
           </div>
 
@@ -426,7 +428,7 @@ export default function PricingPage() {
       <Modal
         open={showRuleModal}
         onClose={() => setShowRuleModal(false)}
-        title={editingRuleId ? '価格ルールを編集' : '新規価格ルール'}
+        title={editingRuleId ? t('pricing.modal_edit') : t('pricing.modal_create')}
       >
         <div className="space-y-4">
           <Input
@@ -434,51 +436,51 @@ export default function PricingPage() {
             type="text"
             value={ruleForm.sku}
             onChange={(e) => updateRuleField('sku', e.target.value)}
-            placeholder="SKUを入力"
+            placeholder={t('pricing.placeholder_sku')}
             autoFocus
           />
           <Select
-            label="プラットフォーム"
+            label={t('pricing.platform')}
             value={ruleForm.platform}
             onChange={(e) => updateRuleField('platform', e.target.value)}
           >
-            <option value="">全共通</option>
+            <option value="">{t('pricing.all_platforms')}</option>
             <option value="tiktok">TikTok</option>
             <option value="temu">Temu</option>
             <option value="rakuten">Rakuten</option>
           </Select>
           <Input
-            label="基本価格"
+            label={t('pricing.base_price')}
             type="number"
             value={ruleForm.base_price}
             onChange={(e) => updateRuleField('base_price', e.target.value)}
             placeholder="0"
           />
           <Input
-            label="セール価格"
+            label={t('pricing.sale_price')}
             type="number"
             value={ruleForm.sale_price}
             onChange={(e) => updateRuleField('sale_price', e.target.value)}
-            placeholder="任意"
+            placeholder={t('pricing.placeholder_optional')}
           />
           <Input
-            label="有効開始日"
+            label={t('pricing.valid_from')}
             type="date"
             value={ruleForm.valid_from}
             onChange={(e) => updateRuleField('valid_from', e.target.value)}
           />
           <Input
-            label="有効終了日"
+            label={t('pricing.valid_to')}
             type="date"
             value={ruleForm.valid_to}
             onChange={(e) => updateRuleField('valid_to', e.target.value)}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowRuleModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleSaveRule} loading={saving}>
-              {editingRuleId ? '更新' : '作成'}
+              {editingRuleId ? t('common.update') : t('common.create')}
             </Button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { skuMappingsApi, type SkuMapping } from '@/api/endpoints/sku-mappings';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -31,6 +32,7 @@ interface ValidationResult {
 }
 
 export default function SkuMappingsPage() {
+  const { t } = useTranslation();
   const { addToast } = useUIStore();
   const { isAdmin } = useAuthStore();
   const { page, limit, setPage, resetPage } = usePagination();
@@ -76,11 +78,11 @@ export default function SkuMappingsPage() {
       setMappings(res.mappings || []);
       setTotalCount(res.total || 0);
     } catch {
-      addToast('error', 'SKUマッピング一覧の取得に失敗しました');
+      addToast('error', t('skuMappings.fetchError'));
     } finally {
       setLoading(false);
     }
-  }, [page, limit, platformFilter, skuSearch, addToast]);
+  }, [page, limit, platformFilter, skuSearch, addToast, t]);
 
   useEffect(() => {
     fetchMappings();
@@ -120,7 +122,7 @@ export default function SkuMappingsPage() {
 
   const handleSave = async () => {
     if (!formLocalSku || !formPlatform || !formPlatformSku) {
-      addToast('error', 'ローカルSKU、プラットフォーム、プラットフォームSKUは必須です');
+      addToast('error', t('skuMappings.requiredFieldsError'));
       return;
     }
     setSaving(true);
@@ -134,7 +136,7 @@ export default function SkuMappingsPage() {
           price_sync: formPriceSync ? 1 : 0,
           stock_sync: formStockSync ? 1 : 0,
         });
-        addToast('success', 'マッピングを更新しました');
+        addToast('success', t('skuMappings.updateSuccess'));
       } else {
         await skuMappingsApi.create({
           local_sku: formLocalSku,
@@ -144,13 +146,13 @@ export default function SkuMappingsPage() {
           price_sync: formPriceSync ? 1 : 0,
           stock_sync: formStockSync ? 1 : 0,
         });
-        addToast('success', 'マッピングを作成しました');
+        addToast('success', t('skuMappings.createSuccess'));
       }
       setShowFormModal(false);
       resetForm();
       fetchMappings();
     } catch {
-      addToast('error', 'マッピングの保存に失敗しました');
+      addToast('error', t('skuMappings.saveError'));
     } finally {
       setSaving(false);
     }
@@ -158,14 +160,14 @@ export default function SkuMappingsPage() {
 
   // Delete
   const handleDelete = async (id: number) => {
-    if (!window.confirm('このマッピングを削除しますか？')) return;
+    if (!window.confirm(t('skuMappings.deleteConfirm'))) return;
     setDeletingId(id);
     try {
       await skuMappingsApi.delete(id);
-      addToast('success', 'マッピングを削除しました');
+      addToast('success', t('skuMappings.deleteSuccess'));
       fetchMappings();
     } catch {
-      addToast('error', 'マッピングの削除に失敗しました');
+      addToast('error', t('skuMappings.deleteError'));
     } finally {
       setDeletingId(null);
     }
@@ -180,7 +182,7 @@ export default function SkuMappingsPage() {
       const res = await skuMappingsApi.validate();
       setValidationResult(res);
     } catch {
-      addToast('error', 'バリデーションに失敗しました');
+      addToast('error', t('skuMappings.validateError'));
       setShowValidateModal(false);
     } finally {
       setValidating(false);
@@ -193,9 +195,9 @@ export default function SkuMappingsPage() {
     try {
       const csvContent = await skuMappingsApi.export();
       downloadCsv('sku-mappings.csv', csvContent);
-      addToast('success', 'CSVをエクスポートしました');
+      addToast('success', t('skuMappings.exportSuccess'));
     } catch {
-      addToast('error', 'CSVエクスポートに失敗しました');
+      addToast('error', t('skuMappings.exportError'));
     } finally {
       setExporting(false);
     }
@@ -205,12 +207,12 @@ export default function SkuMappingsPage() {
   const columns: Column<SkuMapping>[] = [
     {
       key: 'local_sku',
-      header: 'ローカルSKU',
+      header: t('skuMappings.local_sku'),
       render: (row) => <span className="font-mono text-xs font-medium text-accent-purple">{row.local_sku}</span>,
     },
     {
       key: 'platform',
-      header: 'プラットフォーム',
+      header: t('skuMappings.platform'),
       render: (row) => (
         <span className="inline-flex items-center rounded-full bg-blue-500/15 px-2 py-0.5 text-xs font-medium text-blue-400">
           {row.platform}
@@ -219,12 +221,12 @@ export default function SkuMappingsPage() {
     },
     {
       key: 'platform_sku',
-      header: 'プラットフォームSKU',
+      header: t('skuMappings.platform_sku'),
       render: (row) => <span className="font-mono text-xs text-text-secondary">{row.platform_sku}</span>,
     },
     {
       key: 'platform_title',
-      header: 'タイトル',
+      header: t('skuMappings.platformTitle'),
       hideOnMobile: true,
       render: (row) => (
         <span className="text-sm text-text-secondary truncate max-w-[150px] block">
@@ -234,32 +236,32 @@ export default function SkuMappingsPage() {
     },
     {
       key: 'price_sync',
-      header: '価格同期',
+      header: t('skuMappings.price_sync'),
       hideOnMobile: true,
       render: (row) => (
         <span className={row.price_sync ? 'text-emerald-400 text-xs font-medium' : 'text-text-muted text-xs'}>
-          {row.price_sync ? 'ON' : 'OFF'}
+          {row.price_sync ? t('common.on') : t('common.off')}
         </span>
       ),
     },
     {
       key: 'stock_sync',
-      header: '在庫同期',
+      header: t('skuMappings.stock_sync'),
       hideOnMobile: true,
       render: (row) => (
         <span className={row.stock_sync ? 'text-emerald-400 text-xs font-medium' : 'text-text-muted text-xs'}>
-          {row.stock_sync ? 'ON' : 'OFF'}
+          {row.stock_sync ? t('common.on') : t('common.off')}
         </span>
       ),
     },
     {
       key: 'is_active',
-      header: '状態',
+      header: t('skuMappings.status'),
       render: (row) => <StatusBadge status={row.is_active ? 'ACTIVE' : 'INACTIVE'} />,
     },
     {
       key: 'last_synced_at',
-      header: '最終同期',
+      header: t('skuMappings.lastSynced'),
       hideOnMobile: true,
       render: (row) => (
         <span className="text-xs text-text-muted">
@@ -275,7 +277,7 @@ export default function SkuMappingsPage() {
         return (
           <div className="flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => openEditModal(row)}>
-              編集
+              {t('common.edit')}
             </Button>
             <Button
               size="sm"
@@ -284,7 +286,7 @@ export default function SkuMappingsPage() {
               loading={deletingId === row.id}
               disabled={deletingId !== null}
             >
-              削除
+              {t('common.delete')}
             </Button>
           </div>
         );
@@ -296,17 +298,17 @@ export default function SkuMappingsPage() {
   const validationErrorColumns: Column<ValidationError>[] = [
     {
       key: 'local_sku',
-      header: 'ローカルSKU',
+      header: t('skuMappings.local_sku'),
       render: (row) => <span className="font-mono text-xs text-accent-purple">{row.local_sku}</span>,
     },
     {
       key: 'platform',
-      header: 'プラットフォーム',
+      header: t('skuMappings.platform'),
       render: (row) => <span className="text-sm text-text-secondary">{row.platform}</span>,
     },
     {
       key: 'error',
-      header: 'エラー',
+      header: t('skuMappings.error'),
       render: (row) => <span className="text-sm text-red-400">{row.error}</span>,
     },
   ];
@@ -316,8 +318,8 @@ export default function SkuMappingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">SKUマッピング</h1>
-        <p className="text-sm text-text-muted mt-1">ローカルSKUとプラットフォームSKUのマッピングを管理します</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t('skuMappings.title')}</h1>
+        <p className="text-sm text-text-muted mt-1">{t('skuMappings.subtitle')}</p>
       </div>
 
       <Card>
@@ -325,7 +327,7 @@ export default function SkuMappingsPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <Select label="" value={platformFilter} onChange={(e) => handlePlatformFilterChange(e.target.value)}>
-                <option value="">全プラットフォーム</option>
+                <option value="">{t('skuMappings.allPlatforms')}</option>
                 {PLATFORM_OPTIONS.map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
@@ -335,17 +337,17 @@ export default function SkuMappingsPage() {
                 type="text"
                 value={skuSearch}
                 onChange={(e) => handleSkuSearchChange(e.target.value)}
-                placeholder="ローカルSKUで検索"
+                placeholder={t('skuMappings.searchPlaceholder')}
               />
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button size="sm" variant="secondary" onClick={handleExportCsv} loading={exporting}>
-                CSVエクスポート
+                {t('skuMappings.csvExport')}
               </Button>
               {isAdmin && (
                 <>
                   <Button size="sm" variant="secondary" onClick={handleValidate} loading={validating}>
-                    バリデーション
+                    {t('skuMappings.validate')}
                   </Button>
                   <Button
                     size="sm"
@@ -355,7 +357,7 @@ export default function SkuMappingsPage() {
                       setShowFormModal(true);
                     }}
                   >
-                    新規マッピング
+                    {t('skuMappings.add')}
                   </Button>
                 </>
               )}
@@ -374,38 +376,38 @@ export default function SkuMappingsPage() {
       <Modal
         open={showFormModal}
         onClose={() => setShowFormModal(false)}
-        title={editingMapping ? 'マッピング編集' : '新規マッピング'}
+        title={editingMapping ? t('skuMappings.edit') : t('skuMappings.add')}
       >
         <div className="space-y-4">
           <Input
-            label="ローカルSKU"
+            label={t('skuMappings.local_sku')}
             type="text"
             value={formLocalSku}
             onChange={(e) => setFormLocalSku(e.target.value)}
-            placeholder="ローカルSKUを入力"
+            placeholder={t('skuMappings.localSkuPlaceholder')}
           />
 
-          <Select label="プラットフォーム" value={formPlatform} onChange={(e) => setFormPlatform(e.target.value)}>
-            <option value="">選択してください</option>
+          <Select label={t('skuMappings.platform')} value={formPlatform} onChange={(e) => setFormPlatform(e.target.value)}>
+            <option value="">{t('skuMappings.selectPlatform')}</option>
             {PLATFORM_OPTIONS.map((p) => (
               <option key={p} value={p}>{p}</option>
             ))}
           </Select>
 
           <Input
-            label="プラットフォームSKU"
+            label={t('skuMappings.platform_sku')}
             type="text"
             value={formPlatformSku}
             onChange={(e) => setFormPlatformSku(e.target.value)}
-            placeholder="プラットフォームSKUを入力"
+            placeholder={t('skuMappings.platformSkuPlaceholder')}
           />
 
           <Input
-            label="プラットフォームタイトル（任意）"
+            label={t('skuMappings.platformTitleLabel')}
             type="text"
             value={formPlatformTitle}
             onChange={(e) => setFormPlatformTitle(e.target.value)}
-            placeholder="商品タイトルを入力"
+            placeholder={t('skuMappings.platformTitlePlaceholder')}
           />
 
           <div className="flex items-center gap-6">
@@ -416,7 +418,7 @@ export default function SkuMappingsPage() {
                 onChange={(e) => setFormPriceSync(e.target.checked)}
                 className="rounded border-border bg-bg-card text-accent-purple focus:ring-accent-purple"
               />
-              価格同期
+              {t('skuMappings.price_sync')}
             </label>
             <label className="flex items-center gap-2 text-sm text-text-primary cursor-pointer">
               <input
@@ -425,16 +427,16 @@ export default function SkuMappingsPage() {
                 onChange={(e) => setFormStockSync(e.target.checked)}
                 className="rounded border-border bg-bg-card text-accent-purple focus:ring-accent-purple"
               />
-              在庫同期
+              {t('skuMappings.stock_sync')}
             </label>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowFormModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleSave} loading={saving}>
-              {editingMapping ? '更新' : '作成'}
+              {editingMapping ? t('skuMappings.update') : t('skuMappings.create')}
             </Button>
           </div>
         </div>
@@ -444,25 +446,25 @@ export default function SkuMappingsPage() {
       <Modal
         open={showValidateModal}
         onClose={() => setShowValidateModal(false)}
-        title="バリデーション結果"
+        title={t('skuMappings.validationResult')}
       >
         <div className="space-y-4">
           {validating && (
-            <p className="text-sm text-text-muted">検証中...</p>
+            <p className="text-sm text-text-muted">{t('skuMappings.validating')}</p>
           )}
           {validationResult && (
             <>
               <div className="grid grid-cols-3 gap-4">
                 <div className="rounded-lg border border-border bg-bg-card p-3 text-center">
-                  <p className="text-xs text-text-muted">合計</p>
+                  <p className="text-xs text-text-muted">{t('skuMappings.total')}</p>
                   <p className="text-lg font-bold text-text-primary">{validationResult.total}</p>
                 </div>
                 <div className="rounded-lg border border-border bg-bg-card p-3 text-center">
-                  <p className="text-xs text-text-muted">有効</p>
+                  <p className="text-xs text-text-muted">{t('skuMappings.valid')}</p>
                   <p className="text-lg font-bold text-emerald-400">{validationResult.valid}</p>
                 </div>
                 <div className="rounded-lg border border-border bg-bg-card p-3 text-center">
-                  <p className="text-xs text-text-muted">無効</p>
+                  <p className="text-xs text-text-muted">{t('skuMappings.invalid')}</p>
                   <p className="text-lg font-bold text-red-400">{validationResult.invalid}</p>
                 </div>
               </div>
@@ -472,7 +474,7 @@ export default function SkuMappingsPage() {
               )}
 
               {validationResult.errors.length === 0 && validationResult.invalid === 0 && (
-                <p className="text-sm text-emerald-400">全てのマッピングが有効です。</p>
+                <p className="text-sm text-emerald-400">{t('skuMappings.allValid')}</p>
               )}
             </>
           )}

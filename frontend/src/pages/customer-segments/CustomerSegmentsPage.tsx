@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   customerSegmentsApi,
   type Segment,
@@ -27,6 +28,7 @@ interface SegmentCustomer {
 }
 
 export default function CustomerSegmentsPage() {
+  const { t } = useTranslation();
   const { addToast } = useUIStore();
   const { page, limit, setPage, resetPage } = usePagination();
 
@@ -63,11 +65,11 @@ export default function CustomerSegmentsPage() {
       const res = await customerSegmentsApi.listSegments();
       setSegments(res.segments || []);
     } catch {
-      addToast('error', 'セグメント一覧の取得に失敗しました');
+      addToast('error', t('segments.error_fetch'));
     } finally {
       setSegmentsLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, t]);
 
   // Fetch RFM
   const fetchRfm = useCallback(async () => {
@@ -76,11 +78,11 @@ export default function CustomerSegmentsPage() {
       const res = await customerSegmentsApi.rfm();
       setRfmCustomers(res.customers || []);
     } catch {
-      addToast('error', 'RFM分析データの取得に失敗しました');
+      addToast('error', t('segments.error_fetch_rfm'));
     } finally {
       setRfmLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, t]);
 
   useEffect(() => {
     if (activeTab === 'segments') fetchSegments();
@@ -95,7 +97,7 @@ export default function CustomerSegmentsPage() {
   // Create/Edit segment
   const handleSaveSegment = async () => {
     if (!segmentName) {
-      addToast('error', 'セグメント名は必須です');
+      addToast('error', t('segments.error_required_name'));
       return;
     }
     let parsedCriteria: Record<string, unknown>;
@@ -103,7 +105,7 @@ export default function CustomerSegmentsPage() {
       parsedCriteria = JSON.parse(segmentCriteria);
       setCriteriaError('');
     } catch {
-      setCriteriaError('有効なJSONを入力してください');
+      setCriteriaError(t('segments.error_invalid_json'));
       return;
     }
     setSavingSegment(true);
@@ -113,19 +115,19 @@ export default function CustomerSegmentsPage() {
           name: segmentName,
           criteria: parsedCriteria,
         });
-        addToast('success', 'セグメントを更新しました');
+        addToast('success', t('segments.success_update'));
       } else {
         await customerSegmentsApi.createSegment({
           name: segmentName,
           criteria: parsedCriteria,
         });
-        addToast('success', 'セグメントを作成しました');
+        addToast('success', t('segments.success_create'));
       }
       setShowSegmentModal(false);
       resetSegmentForm();
       fetchSegments();
     } catch {
-      addToast('error', 'セグメントの保存に失敗しました');
+      addToast('error', t('segments.error_save'));
     } finally {
       setSavingSegment(false);
     }
@@ -147,14 +149,14 @@ export default function CustomerSegmentsPage() {
   };
 
   const handleDeleteSegment = async (id: number) => {
-    if (!window.confirm('このセグメントを削除しますか？')) return;
+    if (!window.confirm(t('segments.confirm_delete'))) return;
     setDeletingSegmentId(id);
     try {
       await customerSegmentsApi.deleteSegment(id);
-      addToast('success', 'セグメントを削除しました');
+      addToast('success', t('segments.success_delete'));
       fetchSegments();
     } catch {
-      addToast('error', 'セグメントの削除に失敗しました');
+      addToast('error', t('segments.error_delete'));
     } finally {
       setDeletingSegmentId(null);
     }
@@ -168,11 +170,11 @@ export default function CustomerSegmentsPage() {
       setSegmentCustomers((res.customers || []) as SegmentCustomer[]);
       setSegmentCustomersTotal(res.total || 0);
     } catch {
-      addToast('error', 'セグメント顧客の取得に失敗しました');
+      addToast('error', t('segments.error_fetch_customers'));
     } finally {
       setSegmentCustomersLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, t]);
 
   const openCustomersModal = (seg: Segment) => {
     setViewingSegment(seg);
@@ -194,15 +196,15 @@ export default function CustomerSegmentsPage() {
 
   // Columns: Segments
   const segmentColumns: Column<Segment>[] = [
-    { key: 'name', header: 'セグメント名' },
+    { key: 'name', header: t('segments.segment_name') },
     {
       key: 'customer_count',
-      header: '顧客数',
+      header: t('segments.count'),
       render: (row) => <span className="font-medium text-text-primary">{row.customer_count}</span>,
     },
     {
       key: 'criteria',
-      header: '条件',
+      header: t('segments.criteria'),
       hideOnMobile: true,
       render: (row) => {
         const text = JSON.stringify(row.criteria);
@@ -215,7 +217,7 @@ export default function CustomerSegmentsPage() {
     },
     {
       key: 'created_at',
-      header: '作成日',
+      header: t('segments.created_at'),
       hideOnMobile: true,
       render: (row) => <span className="text-xs text-text-muted">{formatDate(row.created_at)}</span>,
     },
@@ -225,10 +227,10 @@ export default function CustomerSegmentsPage() {
       render: (row) => (
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => openCustomersModal(row)}>
-            顧客表示
+            {t('segments.view_customers')}
           </Button>
           <Button size="sm" variant="secondary" onClick={() => openEditSegment(row)}>
-            編集
+            {t('common.edit')}
           </Button>
           <Button
             size="sm"
@@ -237,7 +239,7 @@ export default function CustomerSegmentsPage() {
             loading={deletingSegmentId === row.id}
             disabled={deletingSegmentId !== null}
           >
-            削除
+            {t('common.delete')}
           </Button>
         </div>
       ),
@@ -248,27 +250,27 @@ export default function CustomerSegmentsPage() {
   const rfmColumns: Column<RfmCustomer>[] = [
     {
       key: 'name',
-      header: '顧客名',
+      header: t('segments.customer_name'),
       render: (row) => <span className="font-medium text-text-primary">{row.name}</span>,
     },
     {
       key: 'recency',
-      header: 'Recency',
+      header: t('segments.recency'),
       render: (row) => <span className="text-sm text-text-secondary">{row.recency}</span>,
     },
     {
       key: 'frequency',
-      header: 'Frequency',
+      header: t('segments.frequency'),
       render: (row) => <span className="text-sm text-text-secondary">{row.frequency}</span>,
     },
     {
       key: 'monetary',
-      header: 'Monetary',
+      header: t('segments.monetary'),
       render: (row) => <span className="text-sm text-text-secondary">{formatCurrency(row.monetary)}</span>,
     },
     {
       key: 'rfm_score',
-      header: 'RFMスコア',
+      header: t('segments.rfm_score'),
       render: (row) => (
         <span className="inline-flex items-center rounded-full bg-purple-500/15 px-2 py-0.5 text-xs font-medium text-accent-purple">
           {row.rfm_score}
@@ -286,24 +288,24 @@ export default function CustomerSegmentsPage() {
     },
     {
       key: 'name',
-      header: '顧客名',
+      header: t('segments.customer_name'),
       render: (row) => <span className="font-medium text-text-primary">{row.name}</span>,
     },
     {
       key: 'email',
-      header: 'メール',
+      header: t('segments.email'),
       hideOnMobile: true,
       render: (row) => <span className="text-sm text-text-secondary">{row.email || '-'}</span>,
     },
     {
       key: 'total_orders',
-      header: '注文数',
+      header: t('segments.order_count'),
       hideOnMobile: true,
       render: (row) => <span className="text-sm text-text-secondary">{row.total_orders ?? '-'}</span>,
     },
     {
       key: 'total_spent',
-      header: '合計金額',
+      header: t('segments.total_spent'),
       hideOnMobile: true,
       render: (row) => (
         <span className="text-sm text-text-secondary">
@@ -316,15 +318,15 @@ export default function CustomerSegmentsPage() {
   const customersTotalPages = Math.ceil(segmentCustomersTotal / customersLimit);
 
   const tabs: { id: TabId; label: string }[] = [
-    { id: 'segments', label: 'セグメント' },
-    { id: 'rfm', label: 'RFM分析' },
+    { id: 'segments', label: t('segments.tab_segments') },
+    { id: 'rfm', label: t('segments.rfm_title') },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">顧客セグメント</h1>
-        <p className="text-sm text-text-muted mt-1">顧客セグメントとRFM分析を管理します</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t('segments.title')}</h1>
+        <p className="text-sm text-text-muted mt-1">{t('segments.page_subtitle')}</p>
       </div>
 
       {/* Tab navigation */}
@@ -351,7 +353,7 @@ export default function CustomerSegmentsPage() {
         <Card>
           <CardContent>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-              <h2 className="text-lg font-semibold text-text-primary">セグメント一覧</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('segments.list')}</h2>
               <Button
                 size="sm"
                 variant="primary"
@@ -360,7 +362,7 @@ export default function CustomerSegmentsPage() {
                   setShowSegmentModal(true);
                 }}
               >
-                新規セグメント
+                {t('segments.new_segment')}
               </Button>
             </div>
 
@@ -373,7 +375,7 @@ export default function CustomerSegmentsPage() {
       {activeTab === 'rfm' && (
         <Card>
           <CardContent>
-            <h2 className="text-lg font-semibold text-text-primary mb-4">RFM分析</h2>
+            <h2 className="text-lg font-semibold text-text-primary mb-4">{t('segments.rfm_title')}</h2>
 
             <DataTable columns={rfmColumns} data={rfmPageData} loading={rfmLoading} />
 
@@ -390,20 +392,20 @@ export default function CustomerSegmentsPage() {
       <Modal
         open={showSegmentModal}
         onClose={() => setShowSegmentModal(false)}
-        title={editingSegment ? 'セグメント編集' : '新規セグメント'}
+        title={editingSegment ? t('segments.edit_segment') : t('segments.new_segment')}
       >
         <div className="space-y-4">
           <Input
-            label="セグメント名"
+            label={t('segments.segment_name')}
             type="text"
             value={segmentName}
             onChange={(e) => setSegmentName(e.target.value)}
-            placeholder="セグメント名を入力"
+            placeholder={t('segments.placeholder_segment_name')}
           />
 
           <div>
             <label className="block text-sm font-medium text-text-primary mb-1">
-              条件 (JSON)
+              {t('segments.criteria_json')}
             </label>
             <textarea
               className={cn(
@@ -425,10 +427,10 @@ export default function CustomerSegmentsPage() {
 
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowSegmentModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleSaveSegment} loading={savingSegment}>
-              {editingSegment ? '更新' : '作成'}
+              {editingSegment ? t('common.update') : t('common.create')}
             </Button>
           </div>
         </div>
@@ -438,7 +440,7 @@ export default function CustomerSegmentsPage() {
       <Modal
         open={showCustomersModal}
         onClose={() => setShowCustomersModal(false)}
-        title={viewingSegment ? `${viewingSegment.name} - 顧客一覧` : '顧客一覧'}
+        title={viewingSegment ? `${viewingSegment.name} - ${t('segments.customer_list')}` : t('segments.customer_list')}
       >
         <div className="space-y-4">
           <DataTable columns={customerColumns} data={segmentCustomers} loading={segmentCustomersLoading} />

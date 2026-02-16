@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { stocktakesApi, type Stocktake, type StocktakeItem } from '@/api/endpoints/stocktakes';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +17,7 @@ import { formatDate } from '@/utils/format';
 const STATUS_OPTIONS = ['DRAFT', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
 
 export default function StocktakesPage() {
+  const { t } = useTranslation();
   const { addToast } = useUIStore();
   const { isAdmin } = useAuthStore();
   const { page, limit, setPage, resetPage } = usePagination();
@@ -60,11 +62,11 @@ export default function StocktakesPage() {
       setStocktakes(res.stocktakes || []);
       setTotalCount(res.total || 0);
     } catch {
-      addToast('error', '棚卸一覧の取得に失敗しました');
+      addToast('error', t('stocktakes.fetchError'));
     } finally {
       setLoading(false);
     }
-  }, [page, limit, statusFilter, addToast]);
+  }, [page, limit, statusFilter, addToast, t]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -81,12 +83,12 @@ export default function StocktakesPage() {
     setCreating(true);
     try {
       await stocktakesApi.create(createNotes || undefined);
-      addToast('success', '棚卸を作成しました');
+      addToast('success', t('stocktakes.createSuccess'));
       setShowCreateModal(false);
       setCreateNotes('');
       fetchStocktakes();
     } catch {
-      addToast('error', '棚卸の作成に失敗しました');
+      addToast('error', t('stocktakes.createError'));
     } finally {
       setCreating(false);
     }
@@ -97,10 +99,10 @@ export default function StocktakesPage() {
     setActionLoadingId(id);
     try {
       await stocktakesApi.start(id);
-      addToast('success', '棚卸を開始しました');
+      addToast('success', t('stocktakes.startSuccess'));
       fetchStocktakes();
     } catch {
-      addToast('error', '棚卸の開始に失敗しました');
+      addToast('error', t('stocktakes.startError'));
     } finally {
       setActionLoadingId(null);
     }
@@ -108,14 +110,14 @@ export default function StocktakesPage() {
 
   // Complete stocktake
   const handleComplete = async (id: number) => {
-    if (!window.confirm('この棚卸を完了しますか？')) return;
+    if (!window.confirm(t('stocktakes.completeConfirm'))) return;
     setActionLoadingId(id);
     try {
       await stocktakesApi.complete(id);
-      addToast('success', '棚卸を完了しました');
+      addToast('success', t('stocktakes.completeSuccess'));
       fetchStocktakes();
     } catch {
-      addToast('error', '棚卸の完了に失敗しました');
+      addToast('error', t('stocktakes.completeError'));
     } finally {
       setActionLoadingId(null);
     }
@@ -123,14 +125,14 @@ export default function StocktakesPage() {
 
   // Cancel stocktake
   const handleCancel = async (id: number) => {
-    if (!window.confirm('この棚卸をキャンセルしますか？')) return;
+    if (!window.confirm(t('stocktakes.cancelConfirm'))) return;
     setActionLoadingId(id);
     try {
       await stocktakesApi.cancel(id);
-      addToast('success', '棚卸をキャンセルしました');
+      addToast('success', t('stocktakes.cancelSuccess'));
       fetchStocktakes();
     } catch {
-      addToast('error', '棚卸のキャンセルに失敗しました');
+      addToast('error', t('stocktakes.cancelError'));
     } finally {
       setActionLoadingId(null);
     }
@@ -146,7 +148,7 @@ export default function StocktakesPage() {
       setDetailStocktake(res);
       setDetailItems(res.items || []);
     } catch {
-      addToast('error', '棚卸詳細の取得に失敗しました');
+      addToast('error', t('stocktakes.detailFetchError'));
     } finally {
       setDetailLoading(false);
     }
@@ -164,7 +166,7 @@ export default function StocktakesPage() {
 
   const handleCountItem = async () => {
     if (!countStocktakeId || !countSku || !countLocationCode || countActualQty === '') {
-      addToast('error', 'SKU、ロケーション、実数量は必須です');
+      addToast('error', t('stocktakes.countRequiredError'));
       return;
     }
     setCounting(true);
@@ -175,7 +177,7 @@ export default function StocktakesPage() {
         actual_qty: Number(countActualQty),
         notes: countNotes || undefined,
       });
-      addToast('success', 'カウントを記録しました');
+      addToast('success', t('stocktakes.countSuccess'));
       setShowCountModal(false);
       // Refresh detail if viewing
       if (detailStocktake && detailStocktake.id === countStocktakeId) {
@@ -183,7 +185,7 @@ export default function StocktakesPage() {
       }
       fetchStocktakes();
     } catch {
-      addToast('error', 'カウントの記録に失敗しました');
+      addToast('error', t('stocktakes.countError'));
     } finally {
       setCounting(false);
     }
@@ -198,17 +200,17 @@ export default function StocktakesPage() {
     },
     {
       key: 'status',
-      header: 'ステータス',
+      header: t('stocktakes.status'),
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: 'total_items',
-      header: 'アイテム数',
+      header: t('stocktakes.itemCount'),
       render: (row) => <span className="text-sm text-text-primary">{row.total_items}</span>,
     },
     {
       key: 'discrepancy_count',
-      header: '差異数',
+      header: t('stocktakes.discrepancyCount'),
       render: (row) => (
         <span className={row.discrepancy_count > 0 ? 'text-sm font-semibold text-amber-400' : 'text-sm text-text-primary'}>
           {row.discrepancy_count}
@@ -217,7 +219,7 @@ export default function StocktakesPage() {
     },
     {
       key: 'notes',
-      header: '備考',
+      header: t('stocktakes.notes'),
       hideOnMobile: true,
       render: (row) => (
         <span className="text-sm text-text-muted truncate max-w-[150px] block">
@@ -227,7 +229,7 @@ export default function StocktakesPage() {
     },
     {
       key: 'created_at',
-      header: '作成日',
+      header: t('stocktakes.createdAt'),
       hideOnMobile: true,
       render: (row) => <span className="text-xs text-text-muted">{formatDate(row.created_at)}</span>,
     },
@@ -237,7 +239,7 @@ export default function StocktakesPage() {
       render: (row) => (
         <div className="flex gap-1 flex-wrap">
           <Button size="sm" variant="secondary" onClick={() => handleViewDetail(row)}>
-            詳細
+            {t('stocktakes.detail')}
           </Button>
           {row.status === 'DRAFT' && (
             <Button
@@ -247,7 +249,7 @@ export default function StocktakesPage() {
               loading={actionLoadingId === row.id}
               disabled={actionLoadingId !== null}
             >
-              開始
+              {t('stocktakes.start')}
             </Button>
           )}
           {row.status === 'IN_PROGRESS' && (
@@ -258,7 +260,7 @@ export default function StocktakesPage() {
                 onClick={() => openCountModal(row.id)}
                 disabled={actionLoadingId !== null}
               >
-                カウント
+                {t('stocktakes.count')}
               </Button>
               <Button
                 size="sm"
@@ -267,7 +269,7 @@ export default function StocktakesPage() {
                 loading={actionLoadingId === row.id}
                 disabled={actionLoadingId !== null}
               >
-                完了
+                {t('stocktakes.complete')}
               </Button>
             </>
           )}
@@ -279,7 +281,7 @@ export default function StocktakesPage() {
               loading={actionLoadingId === row.id}
               disabled={actionLoadingId !== null}
             >
-              中止
+              {t('stocktakes.abort')}
             </Button>
           )}
         </div>
@@ -296,24 +298,24 @@ export default function StocktakesPage() {
     },
     {
       key: 'location_code',
-      header: 'ロケーション',
+      header: t('stocktakes.location'),
       render: (row) => <span className="text-sm text-text-secondary">{row.location_code}</span>,
     },
     {
       key: 'expected_qty',
-      header: '期待数量',
+      header: t('stocktakes.expectedQty'),
       render: (row) => <span className="text-sm text-text-primary">{row.expected_qty}</span>,
     },
     {
       key: 'actual_qty',
-      header: '実数量',
+      header: t('stocktakes.actualQty'),
       render: (row) => (
         <span className="text-sm text-text-primary">{row.actual_qty != null ? row.actual_qty : '-'}</span>
       ),
     },
     {
       key: 'discrepancy',
-      header: '差異',
+      header: t('stocktakes.discrepancy'),
       render: (row) => (
         <span className={row.discrepancy && row.discrepancy !== 0 ? 'text-sm font-semibold text-amber-400' : 'text-sm text-text-primary'}>
           {row.discrepancy != null ? row.discrepancy : '-'}
@@ -322,7 +324,7 @@ export default function StocktakesPage() {
     },
     {
       key: 'notes',
-      header: '備考',
+      header: t('stocktakes.notes'),
       hideOnMobile: true,
       render: (row) => <span className="text-sm text-text-muted">{row.notes || '-'}</span>,
     },
@@ -333,10 +335,10 @@ export default function StocktakesPage() {
   if (!isAdmin) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-text-primary">棚卸管理</h1>
+        <h1 className="text-2xl font-bold text-text-primary">{t('stocktakes.title')}</h1>
         <Card>
           <CardContent>
-            <p className="text-sm text-text-muted">この機能は管理者のみ利用可能です。</p>
+            <p className="text-sm text-text-muted">{t('stocktakes.adminOnly')}</p>
           </CardContent>
         </Card>
       </div>
@@ -346,8 +348,8 @@ export default function StocktakesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary">棚卸管理</h1>
-        <p className="text-sm text-text-muted mt-1">在庫の棚卸を管理します</p>
+        <h1 className="text-2xl font-bold text-text-primary">{t('stocktakes.title')}</h1>
+        <p className="text-sm text-text-muted mt-1">{t('stocktakes.subtitle')}</p>
       </div>
 
       <Card>
@@ -355,7 +357,7 @@ export default function StocktakesPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
               <Select label="" value={statusFilter} onChange={(e) => handleStatusFilterChange(e.target.value)}>
-                <option value="">全ステータス</option>
+                <option value="">{t('stocktakes.allStatuses')}</option>
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -369,7 +371,7 @@ export default function StocktakesPage() {
                 setShowCreateModal(true);
               }}
             >
-              新規棚卸
+              {t('stocktakes.create')}
             </Button>
           </div>
 
@@ -382,22 +384,22 @@ export default function StocktakesPage() {
       </Card>
 
       {/* Create Stocktake Modal */}
-      <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title="新規棚卸">
+      <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)} title={t('stocktakes.create')}>
         <div className="space-y-4">
           <Input
-            label="備考（任意）"
+            label={t('stocktakes.notesOptional')}
             type="text"
             value={createNotes}
             onChange={(e) => setCreateNotes(e.target.value)}
-            placeholder="棚卸の備考を入力"
+            placeholder={t('stocktakes.notesPlaceholder')}
           />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowCreateModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleCreate} loading={creating}>
-              作成
+              {t('stocktakes.createBtn')}
             </Button>
           </div>
         </div>
@@ -407,30 +409,30 @@ export default function StocktakesPage() {
       <Modal
         open={showDetailModal}
         onClose={() => setShowDetailModal(false)}
-        title={detailStocktake ? `棚卸 #${detailStocktake.id} 詳細` : '棚卸詳細'}
+        title={detailStocktake ? t('stocktakes.detailTitle', { id: detailStocktake.id }) : t('stocktakes.detailTitleGeneric')}
       >
         <div className="space-y-4">
           {detailStocktake && (
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-text-muted">ステータス:</span>
+                <span className="text-text-muted">{t('stocktakes.statusLabel')}</span>
                 <span className="ml-2"><StatusBadge status={detailStocktake.status} /></span>
               </div>
               <div>
-                <span className="text-text-muted">アイテム数:</span>
+                <span className="text-text-muted">{t('stocktakes.itemCountLabel')}</span>
                 <span className="ml-2 text-text-primary">{detailStocktake.total_items}</span>
               </div>
               <div>
-                <span className="text-text-muted">差異数:</span>
+                <span className="text-text-muted">{t('stocktakes.discrepancyCountLabel')}</span>
                 <span className="ml-2 text-text-primary">{detailStocktake.discrepancy_count}</span>
               </div>
               <div>
-                <span className="text-text-muted">作成日:</span>
+                <span className="text-text-muted">{t('stocktakes.createdAtLabel')}</span>
                 <span className="ml-2 text-text-primary">{formatDate(detailStocktake.created_at)}</span>
               </div>
               {detailStocktake.notes && (
                 <div className="col-span-2">
-                  <span className="text-text-muted">備考:</span>
+                  <span className="text-text-muted">{t('stocktakes.notesLabel')}</span>
                   <span className="ml-2 text-text-primary">{detailStocktake.notes}</span>
                 </div>
               )}
@@ -442,46 +444,46 @@ export default function StocktakesPage() {
       </Modal>
 
       {/* Count Item Modal */}
-      <Modal open={showCountModal} onClose={() => setShowCountModal(false)} title="アイテムカウント">
+      <Modal open={showCountModal} onClose={() => setShowCountModal(false)} title={t('stocktakes.itemCountModal')}>
         <div className="space-y-4">
           <Input
             label="SKU"
             type="text"
             value={countSku}
             onChange={(e) => setCountSku(e.target.value)}
-            placeholder="SKUを入力"
+            placeholder={t('stocktakes.skuPlaceholder')}
           />
 
           <Input
-            label="ロケーションコード"
+            label={t('stocktakes.locationCode')}
             type="text"
             value={countLocationCode}
             onChange={(e) => setCountLocationCode(e.target.value)}
-            placeholder="例: A-01-01"
+            placeholder={t('stocktakes.locationPlaceholder')}
           />
 
           <Input
-            label="実数量"
+            label={t('stocktakes.actualQty')}
             type="number"
             value={countActualQty}
             onChange={(e) => setCountActualQty(e.target.value)}
-            placeholder="カウント数を入力"
+            placeholder={t('stocktakes.actualQtyPlaceholder')}
           />
 
           <Input
-            label="備考（任意）"
+            label={t('stocktakes.notesOptional')}
             type="text"
             value={countNotes}
             onChange={(e) => setCountNotes(e.target.value)}
-            placeholder="備考を入力"
+            placeholder={t('stocktakes.notesInputPlaceholder')}
           />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button size="sm" variant="secondary" onClick={() => setShowCountModal(false)}>
-              キャンセル
+              {t('common.cancel')}
             </Button>
             <Button size="sm" variant="primary" onClick={handleCountItem} loading={counting}>
-              記録
+              {t('stocktakes.record')}
             </Button>
           </div>
         </div>
