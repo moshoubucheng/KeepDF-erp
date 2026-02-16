@@ -12,8 +12,6 @@ import {
   Maximize,
   Minimize,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react'
 
 interface TodayStats {
@@ -34,7 +32,7 @@ interface RecentOrder {
 
 export default function DataScreenPage() {
   const { t } = useTranslation()
-  const { addToast, sidebarHidden, setSidebarHidden } = useUIStore()
+  const { addToast } = useUIStore()
 
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -87,15 +85,10 @@ export default function DataScreenPage() {
   }
 
   useEffect(() => {
-    const handler = () => {
-      const fs = !!document.fullscreenElement
-      setIsFullscreen(fs)
-      // Restore sidebar when exiting fullscreen
-      if (!fs) setSidebarHidden(false)
-    }
+    const handler = () => setIsFullscreen(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', handler)
     return () => document.removeEventListener('fullscreenchange', handler)
-  }, [setSidebarHidden])
+  }, [])
 
   const statCards = [
     {
@@ -142,17 +135,6 @@ export default function DataScreenPage() {
 
   return (
     <div className="space-y-6">
-      {/* Sidebar toggle -- only visible in fullscreen */}
-      {isFullscreen && (
-        <button
-          onClick={() => setSidebarHidden(!sidebarHidden)}
-          className="fixed left-0 top-1/2 z-[60] -translate-y-1/2 rounded-r-lg border border-l-0 border-border bg-bg-card/90 p-1.5 text-text-muted backdrop-blur-sm transition-colors hover:bg-bg-card hover:text-text-primary"
-          title={sidebarHidden ? t('datascreen.show_sidebar') : t('datascreen.hide_sidebar')}
-        >
-          {sidebarHidden ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
