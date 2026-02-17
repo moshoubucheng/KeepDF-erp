@@ -151,7 +151,7 @@ export class PushService {
     const privateKeyBytes = base64urlDecode(this.vapidPrivateKey)
     const key = await crypto.subtle.importKey(
       'pkcs8',
-      privateKeyBytes,
+      privateKeyBytes.buffer as ArrayBuffer,
       { name: 'ECDSA', namedCurve: 'P-256' },
       false,
       ['sign'],
@@ -188,7 +188,7 @@ export class PushService {
     // Import subscriber's public key
     const subscriberPubKey = await crypto.subtle.importKey(
       'raw',
-      subscriberPubKeyBytes,
+      subscriberPubKeyBytes.buffer as ArrayBuffer,
       { name: 'ECDH', namedCurve: 'P-256' },
       false,
       [],
@@ -216,7 +216,7 @@ export class PushService {
     )
 
     // HKDF: auth_secret + shared_secret → PRK
-    const prkKey = await crypto.subtle.importKey('raw', authSecret, { name: 'HKDF' }, false, ['deriveBits'])
+    const prkKey = await crypto.subtle.importKey('raw', authSecret.buffer as ArrayBuffer, { name: 'HKDF' }, false, ['deriveBits'])
     const ikm = concat(
       new TextEncoder().encode('WebPush: info\x00'),
       subscriberPubKeyBytes,
@@ -226,14 +226,14 @@ export class PushService {
     const authInfo = new TextEncoder().encode('Content-Encoding: auth\x00')
     const ikmBits = new Uint8Array(
       await crypto.subtle.deriveBits(
-        { name: 'HKDF', hash: 'SHA-256', salt: sharedSecret, info: authInfo },
+        { name: 'HKDF', hash: 'SHA-256', salt: sharedSecret.buffer as ArrayBuffer, info: authInfo.buffer as ArrayBuffer },
         prkKey,
         256,
       ),
     )
 
     // Import IKM for final HKDF
-    const ikmKey = await crypto.subtle.importKey('raw', ikmBits, { name: 'HKDF' }, false, ['deriveBits'])
+    const ikmKey = await crypto.subtle.importKey('raw', ikmBits.buffer as ArrayBuffer, { name: 'HKDF' }, false, ['deriveBits'])
 
     // Derive CEK (Content Encryption Key) — 16 bytes
     const cekInfo = concat(
@@ -241,7 +241,7 @@ export class PushService {
     )
     const cek = new Uint8Array(
       await crypto.subtle.deriveBits(
-        { name: 'HKDF', hash: 'SHA-256', salt: authSecret, info: cekInfo },
+        { name: 'HKDF', hash: 'SHA-256', salt: authSecret.buffer as ArrayBuffer, info: cekInfo.buffer as ArrayBuffer },
         ikmKey,
         128,
       ),
@@ -251,27 +251,27 @@ export class PushService {
     const nonceInfo = new TextEncoder().encode('Content-Encoding: nonce\x00')
     const nonce = new Uint8Array(
       await crypto.subtle.deriveBits(
-        { name: 'HKDF', hash: 'SHA-256', salt: authSecret, info: nonceInfo },
+        { name: 'HKDF', hash: 'SHA-256', salt: authSecret.buffer as ArrayBuffer, info: nonceInfo.buffer as ArrayBuffer },
         ikmKey,
         96,
       ),
     )
 
     // Import CEK as AES-GCM key
-    const aesKey = await crypto.subtle.importKey('raw', cek, { name: 'AES-GCM' }, false, ['encrypt'])
+    const aesKey = await crypto.subtle.importKey('raw', cek.buffer as ArrayBuffer, { name: 'AES-GCM' }, false, ['encrypt'])
 
     // Add padding delimiter (0x02) as per RFC 8291
     const padded = concat(plaintext, new Uint8Array([2]))
 
     // Encrypt
     const encrypted = new Uint8Array(
-      await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, aesKey, padded),
+      await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce.buffer as ArrayBuffer }, aesKey, padded.buffer as ArrayBuffer),
     )
 
     // Build aes128gcm header: salt(16) + rs(4) + idlen(1) + keyid(65) + encrypted
     const salt = crypto.getRandomValues(new Uint8Array(16))
     const rs = new Uint8Array(4)
-    new DataView(rs.buffer).setUint32(0, 4096)
+    new DataView(rs.buffer as ArrayBuffer).setUint32(0, 4096)
 
     const header = concat(
       salt,
@@ -280,7 +280,7 @@ export class PushService {
       ephemeralPubKeyRaw,
     )
 
-    return concat(header, encrypted).buffer
+    return concat(header, encrypted).buffer as ArrayBuffer
   }
 }
 
