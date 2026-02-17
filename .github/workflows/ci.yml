@@ -42,8 +42,8 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Run backend tests
-        run: npx vitest run --retry 2 --fileParallelism=false
+      - name: Run backend tests (with retry for flaky workerd isolated storage)
+        run: npx vitest run || npx vitest run || npx vitest run
 
   frontend-tests:
     name: Frontend Tests
