@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '../helpers/render'
-import DashboardPage from '@/pages/DashboardPage'
+import DashboardPage from '@/pages/dashboard'
 
 // Mock echarts-for-react/lib/core — jsdom has no canvas
 vi.mock('echarts-for-react/lib/core', () => ({

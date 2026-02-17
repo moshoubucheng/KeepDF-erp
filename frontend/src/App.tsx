@@ -10,7 +10,7 @@ import { Spinner } from './components/ui/Spinner'
 import { ErrorBoundary, InlineErrorBoundary } from './components/ui/ErrorBoundary'
 
 // All pages lazy-loaded for bundle splitting
-const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const DashboardPage = lazy(() => import('./pages/dashboard'))
 const OrdersPage = lazy(() => import('./pages/orders/OrdersPage'))
 const InventoryPage = lazy(() => import('./pages/inventory/InventoryPage'))
 const ShippingPage = lazy(() => import('./pages/shipping/ShippingPage'))
@@ -18,7 +18,7 @@ const ReturnsPage = lazy(() => import('./pages/returns/ReturnsPage'))
 const CustomersPage = lazy(() => import('./pages/customers/CustomersPage'))
 const CommissionsPage = lazy(() => import('./pages/commissions/CommissionsPage'))
 const WalletPage = lazy(() => import('./pages/wallet/WalletPage'))
-const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
+const SettingsPage = lazy(() => import('./pages/settings'))
 const OnboardingPage = lazy(() => import('./pages/onboarding/OnboardingPage'))
 
 // Sprint 16 pages (lazy loaded)
