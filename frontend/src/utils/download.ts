@@ -11,7 +11,7 @@ export function downloadCsv(filename: string, csvContent: string) {
   URL.revokeObjectURL(url)
 }
 
-export function arrayToCsv(headers: string[], rows: string[][]): string {
+function arrayToCsv(headers: string[], rows: string[][]): string {
   const escape = (val: string) => `"${String(val ?? '').replace(/"/g, '""')}"`
   const headerLine = headers.map(escape).join(',')
   const dataLines = rows.map(row => row.map(escape).join(','))

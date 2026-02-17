@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { purchaseOrdersApi, type PurchaseOrder } from '@/api/endpoints/purchase-orders';
-import { suppliersApi } from '@/api/endpoints/suppliers';
+import { suppliersApi, type Supplier } from '@/api/endpoints/suppliers';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -16,11 +16,6 @@ import { useAuthStore } from '@/stores/auth.store';
 import { usePagination } from '@/hooks/usePagination';
 import { formatDate, formatCurrency } from '@/utils/format';
 import { downloadObjectsCsv } from '@/utils/download';
-
-interface Supplier {
-  id: number;
-  name: string;
-}
 
 interface POItem {
   sku: string;
