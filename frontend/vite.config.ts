@@ -2,7 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { visualizer } from 'rollup-plugin-visualizer'
 import path from 'path'
+
+const isAnalyze = process.env.ANALYZE === 'true'
 
 export default defineConfig({
   plugins: [
@@ -38,6 +41,16 @@ export default defineConfig({
         ],
       },
     }),
+    ...(isAnalyze
+      ? [
+          visualizer({
+            open: true,
+            filename: 'stats.html',
+            gzipSize: true,
+            brotliSize: true,
+          }),
+        ]
+      : []),
   ],
   resolve: {
     alias: {
@@ -50,7 +63,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          echarts: ['echarts', 'echarts-for-react'],
+          echarts: ['echarts/core', 'echarts/charts', 'echarts/components', 'echarts/renderers', 'echarts-for-react'],
           react: ['react', 'react-dom', 'react-router-dom'],
           query: ['@tanstack/react-query'],
         },

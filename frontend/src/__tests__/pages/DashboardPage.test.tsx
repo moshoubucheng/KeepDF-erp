@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '../helpers/render'
 import DashboardPage from '@/pages/DashboardPage'
 
-// Mock echarts-for-react — jsdom has no canvas
-vi.mock('echarts-for-react', () => ({
+// Mock echarts-for-react/lib/core — jsdom has no canvas
+vi.mock('echarts-for-react/lib/core', () => ({
   default: (props: Record<string, unknown>) => (
     <div data-testid="echart-mock" style={props.style as React.CSSProperties} />
   ),
 }))
+
+vi.mock('@/lib/echarts', () => ({ default: {} }))
 
 vi.mock('@/api/endpoints/dashboard', () => ({
   dashboardApi: {

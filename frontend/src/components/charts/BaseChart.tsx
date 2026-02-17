@@ -1,5 +1,6 @@
-import ReactECharts from 'echarts-for-react'
+import ReactEChartsCore from 'echarts-for-react/lib/core'
 import type { EChartsOption } from 'echarts-for-react'
+import echarts from '@/lib/echarts'
 import { useMemo } from 'react'
 import { useChart } from '@/hooks/useChart'
 
@@ -79,7 +80,8 @@ export function BaseChart({
   )
 
   return (
-    <ReactECharts
+    <ReactEChartsCore
+      echarts={echarts}
       option={mergedOption}
       style={{ height, width: '100%' }}
       showLoading={loading}

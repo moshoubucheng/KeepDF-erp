@@ -12,3 +12,13 @@ node_modules/
 
 # OS files
 .DS_Store
+
+# Coverage
+frontend/coverage/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Bundle analysis
+frontend/stats.html
