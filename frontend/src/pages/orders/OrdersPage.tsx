@@ -307,6 +307,7 @@ export default function OrdersPage() {
             data={orders as (Order & Record<string, unknown>)[]}
             loading={isLoading}
             emptyMessage={t('orders.empty', 'No orders found')}
+            mobileCardView
           />
         </CardContent>
         {totalPages > 1 && (

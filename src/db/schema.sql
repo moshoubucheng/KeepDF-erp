@@ -748,3 +748,18 @@ CREATE INDEX IF NOT EXISTS idx_approval_requests_status ON approval_requests(sta
 CREATE INDEX IF NOT EXISTS idx_audit_snapshots_log ON audit_snapshots(audit_log_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_logs_endpoint ON webhook_logs(endpoint_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_distributor ON webhook_endpoints(distributor_id);
+
+-- ===== Push Subscriptions (Sprint 18) =====
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  distributor_id INTEGER NOT NULL,
+  endpoint TEXT NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  user_agent TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (distributor_id) REFERENCES distributors(id),
+  UNIQUE(distributor_id, endpoint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_sub_distributor ON push_subscriptions(distributor_id);

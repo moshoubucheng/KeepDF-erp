@@ -40,6 +40,7 @@ import {
 } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
+import { useSwipeGesture } from '@/hooks/useSwipeGesture'
 import { cn } from '@/utils/cn'
 
 // ---------------------------------------------------------------------------
@@ -163,9 +164,16 @@ function saveCollapsedGroups(collapsed: Set<string>) {
 export function Sidebar() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { sidebarOpen, sidebarHidden, closeSidebar } = useUIStore()
+  const { sidebarOpen, sidebarHidden, closeSidebar, toggleSidebar } = useUIStore()
   const { logout } = useAuthStore()
   const [collapsed, setCollapsed] = useState<Set<string>>(loadCollapsedGroups)
+
+  // Swipe to open/close sidebar on mobile
+  useSwipeGesture({
+    onSwipeRight: () => { if (!sidebarOpen) toggleSidebar() },
+    onSwipeLeft: () => { if (sidebarOpen) closeSidebar() },
+    enabled: typeof window !== 'undefined' && window.innerWidth < 768,
+  })
 
   // Persist collapsed state to localStorage on change
   useEffect(() => {

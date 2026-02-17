@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { BottomNav } from './BottomNav'
 import { CommandPalette } from '@/components/ui/CommandPalette'
 import { InlineErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineBanner } from '@/components/onboarding/OfflineBanner'
@@ -92,12 +93,15 @@ export function AppLayout() {
         <Header />
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto p-4 pb-20 md:p-6 md:pb-6">
           <InlineErrorBoundary>
             <Outlet />
           </InlineErrorBoundary>
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <BottomNav />
 
       {/* Command palette (global keyboard shortcuts + modal) */}
       <CommandPalette />

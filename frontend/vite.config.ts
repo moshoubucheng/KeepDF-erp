@@ -12,6 +12,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.svg'],
       manifest: {
@@ -26,19 +29,8 @@ export default defineConfig({
           { src: 'icon-192.svg', sizes: '512x512', type: 'image/svg+xml' },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^\/api\/v1\//,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: { maxEntries: 100, maxAgeSeconds: 3600 },
-              networkTimeoutSeconds: 5,
-            },
-          },
-        ],
       },
     }),
     ...(isAnalyze
@@ -69,6 +61,7 @@ export default defineConfig({
           query: ['@tanstack/react-query'],
           forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
           i18n: ['i18next', 'react-i18next'],
+          offline: ['idb'],
         },
       },
     },

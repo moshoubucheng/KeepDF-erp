@@ -116,7 +116,7 @@ export default function NotificationsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <DataTable columns={columns} data={notifications} loading={isLoading} emptyMessage={t('notifications.empty', 'No notifications')} keyField="id" />
+          <DataTable columns={columns} data={notifications} loading={isLoading} emptyMessage={t('notifications.empty', 'No notifications')} keyField="id" mobileCardView />
         </CardContent>
       </Card>
 

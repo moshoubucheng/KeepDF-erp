@@ -6,6 +6,8 @@ export type Bindings = {
     ORDER_QUEUE: Queue
     ENCRYPTION_KEY: string
     ASSETS: Fetcher
+    VAPID_PUBLIC_KEY: string
+    VAPID_PRIVATE_KEY: string
 }
 
 // ===== Hono Context Variables =====

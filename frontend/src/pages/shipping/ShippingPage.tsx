@@ -212,6 +212,7 @@ export default function ShippingPage() {
             data={filteredShipments as (Shipment & Record<string, unknown>)[]}
             loading={isLoading}
             emptyMessage={t('shipping.empty', 'No shipments found')}
+            mobileCardView
             onRowClick={(row) => handleRowClick(row as unknown as Shipment)}
           />
         </CardContent>

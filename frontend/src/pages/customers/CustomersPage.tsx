@@ -278,6 +278,7 @@ export default function CustomersPage() {
             loading={isLoading}
             emptyMessage={t('customers.empty')}
             keyField="id"
+            mobileCardView
           />
         </CardContent>
       </Card>

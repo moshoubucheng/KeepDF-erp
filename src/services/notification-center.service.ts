@@ -1,11 +1,16 @@
 import { decodeCursor, buildCursorWhere, encodeCursor } from '../utils/cursor'
+import type { PushService } from './push.service'
 
 /**
  * NotificationCenterService - In-app notifications (站内通知)
  * Different from NotificationService which handles external webhooks
  */
 export class NotificationCenterService {
-    constructor(private db: D1Database) {}
+    private pushService?: PushService
+
+    constructor(private db: D1Database, pushService?: PushService) {
+        this.pushService = pushService
+    }
 
     /** Create a notification and push to external channels if configured */
     async create(params: {
@@ -28,6 +33,21 @@ export class NotificationCenterService {
                 params.relatedResourceType ?? null,
                 params.relatedResourceId ?? null,
             ).run()
+
+            // Send web push notification
+            if (this.pushService) {
+                try {
+                    await this.pushService.sendToDistributor(params.distributorId, {
+                        title: params.title,
+                        body: params.message,
+                        url: params.relatedResourceType && params.relatedResourceId
+                            ? `/${params.relatedResourceType}s`
+                            : '/notifications',
+                    })
+                } catch (e) {
+                    console.error('[NOTIFICATION_CENTER] Push send failed:', e)
+                }
+            }
 
             // Check external channel preferences
             await this.pushToExternalChannels(params)

@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2, ArrowUp, ArrowDown, Settings2, X, ChevronDown } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { useIsMobile } from '@/hooks/useMediaQuery'
+import { MobileCard } from './MobileCard'
 
 // ──────────────────────────────────────────────
 // Types
@@ -48,6 +50,10 @@ export interface DataTableProps<T> {
   stickyHeader?: boolean
   /** Server-side sort callback. If provided, sorting is NOT done client-side. */
   onSort?: (sort: SortState) => void
+  /** Show mobile card view on small screens */
+  mobileCardView?: boolean
+  /** Custom card renderer for mobile view */
+  cardRender?: (row: T) => React.ReactNode
 }
 
 // ──────────────────────────────────────────────
@@ -86,6 +92,8 @@ export function DataTable<T extends object>({
   columnToggle = false,
   stickyHeader = false,
   onSort,
+  mobileCardView = false,
+  cardRender,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
 
@@ -291,6 +299,9 @@ export function DataTable<T extends object>({
     return result
   }, [data, filters, sortState, onSort, columns])
 
+  const isMobile = useIsMobile()
+  const showCards = mobileCardView && isMobile
+
   // ── Render: loading ──
   if (loading) {
     return (
@@ -305,6 +316,46 @@ export function DataTable<T extends object>({
     return (
       <div className="flex items-center justify-center py-20 text-text-muted text-sm">
         {emptyMessage ?? t('common.noData', 'No data')}
+      </div>
+    )
+  }
+
+  // ── Render: mobile card view ──
+  if (showCards) {
+    return (
+      <div className="space-y-3 px-1">
+        {hasSelection && onSelectAll && (
+          <label className="flex items-center gap-2 px-2 py-1 text-xs text-text-muted">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(el) => { if (el) el.indeterminate = someSelected }}
+              onChange={onSelectAll}
+              className="h-4 w-4 rounded border-border bg-bg-input accent-accent-purple"
+            />
+            {t('table.selectAll', 'Select all')}
+          </label>
+        )}
+        {processedData.map((row, idx) => {
+          const rowId = getKey(row)
+          return (
+            <MobileCard
+              key={rowId ?? idx}
+              row={row}
+              columns={visibleColumns}
+              keyField={keyField}
+              onClick={onRowClick}
+              selected={hasSelection ? selectedRows!.has(rowId) : undefined}
+              onSelect={onSelectRow}
+              cardRender={cardRender}
+            />
+          )
+        })}
+        {processedData.length === 0 && (
+          <div className="py-12 text-center text-sm text-text-muted">
+            {t('table.noResults', 'No matching results')}
+          </div>
+        )}
       </div>
     )
   }

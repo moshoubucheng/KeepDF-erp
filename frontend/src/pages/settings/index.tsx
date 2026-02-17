@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { User, Shield, Settings } from 'lucide-react'
+import { User, Shield, Settings, Bell } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { cn } from '@/utils/cn'
 import { ProfileTab } from './ProfileTab'
 import { SecurityTab } from './SecurityTab'
 import { SystemTab } from './SystemTab'
+import { NotificationsTab } from './NotificationsTab'
 
-type TabId = 'profile' | 'security' | 'system'
+type TabId = 'profile' | 'security' | 'notifications' | 'system'
 
 interface Tab {
   id: TabId
@@ -26,6 +27,7 @@ export default function SettingsPage() {
   const tabs: Tab[] = [
     { id: 'profile', label: t('settings.profile', 'Profile'), icon: <User size={16} /> },
     { id: 'security', label: t('settings.security', 'Security'), icon: <Shield size={16} /> },
+    { id: 'notifications', label: t('settings.notifications', 'Notifications'), icon: <Bell size={16} /> },
     { id: 'system', label: t('settings.system', 'System'), icon: <Settings size={16} />, adminOnly: true },
   ]
 
@@ -44,13 +46,13 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab navigation */}
-      <div className="flex gap-1 border-b border-border">
+      <div className="flex gap-1 border-b border-border overflow-x-auto">
         {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer',
+              'inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap',
               'border-b-2 -mb-px',
               activeTab === tab.id
                 ? 'border-accent-purple text-accent-purple'
@@ -66,6 +68,7 @@ export default function SettingsPage() {
       {/* Tab content */}
       {activeTab === 'profile' && <ProfileTab user={user} addToast={addToast} fetchMe={fetchMe} />}
       {activeTab === 'security' && <SecurityTab user={user} addToast={addToast} fetchMe={fetchMe} />}
+      {activeTab === 'notifications' && <NotificationsTab addToast={addToast} />}
       {activeTab === 'system' && isAdmin && <SystemTab addToast={addToast} />}
     </div>
   )

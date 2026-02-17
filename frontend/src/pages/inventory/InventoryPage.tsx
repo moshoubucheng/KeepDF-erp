@@ -307,6 +307,7 @@ export default function InventoryPage() {
             loading={isLoading}
             emptyMessage={t('inventory.empty')}
             keyField="id"
+            mobileCardView
           />
         </CardContent>
       </Card>
