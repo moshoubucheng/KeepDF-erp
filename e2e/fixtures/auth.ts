@@ -33,10 +33,11 @@ async function setupAuth(page: Page, role: 'admin' | 'distributor') {
     }),
   )
 
-  // Inject token into localStorage before page loads
+  // Inject token and English locale into localStorage before page loads
   await page.addInitScript(
     ({ token }) => {
       window.localStorage.setItem('erp_token', token)
+      window.localStorage.setItem('erp_lang', 'en')
     },
     { token },
   )
@@ -52,9 +53,12 @@ export const test = base.extend<AuthFixtures>({
     await setupAuth(page, 'admin')
     await use(page)
   },
-  distributorPage: async ({ page }, use) => {
+  distributorPage: async ({ browser }, use) => {
+    const context = await browser.newContext()
+    const page = await context.newPage()
     await setupAuth(page, 'distributor')
     await use(page)
+    await context.close()
   },
 })
 

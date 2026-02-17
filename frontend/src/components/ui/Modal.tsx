@@ -47,6 +47,8 @@ export function Modal({ open, onClose, title, className, children }: ModalProps)
       )}
     >
       <div
+        role="dialog"
+        aria-modal="true"
         className={cn(
           'relative w-full max-w-lg',
           'bg-bg-card border border-border rounded-xl shadow-2xl',
