@@ -5,8 +5,8 @@ async function mockAllAPIs(page: import('@playwright/test').Page) {
   // Catch-all for any API endpoint
   await page.route('**/api/v1/**', (route) => {
     const url = route.request().url()
-    // Auth/me is already mocked by fixture
-    if (url.includes('/auth/me')) return route.continue()
+    // Auth/me is already mocked by fixture — use fallback() to chain to fixture handler
+    if (url.includes('/auth/me')) return route.fallback()
 
     return route.fulfill({
       status: 200,
@@ -31,8 +31,8 @@ test.describe('Sidebar Navigation', () => {
     await adminPage.goto('/dashboard')
     await adminPage.waitForLoadState('networkidle')
 
-    // Sidebar should be visible on desktop
-    const sidebar = adminPage.locator('nav').first()
+    // Sidebar <aside> contains a <nav> element, visible on desktop
+    const sidebar = adminPage.locator('aside nav').first()
     await expect(sidebar).toBeVisible({ timeout: 10000 })
   })
 
@@ -40,8 +40,8 @@ test.describe('Sidebar Navigation', () => {
     await adminPage.goto('/dashboard')
     await adminPage.waitForLoadState('networkidle')
 
-    // Click on Orders link in sidebar
-    await adminPage.getByRole('link', { name: /order/i }).first().click()
+    // Click on Orders link in sidebar (Japanese: 注文管理)
+    await adminPage.locator('a[href="/orders"]').first().click()
     await expect(adminPage).toHaveURL(/\/orders/)
   })
 
@@ -49,8 +49,8 @@ test.describe('Sidebar Navigation', () => {
     await adminPage.goto('/dashboard')
     await adminPage.waitForLoadState('networkidle')
 
-    // Click on Inventory link in sidebar
-    await adminPage.getByRole('link', { name: /inventor/i }).first().click()
+    // Click on Inventory link in sidebar (Japanese: 在庫管理)
+    await adminPage.locator('a[href="/inventory"]').first().click()
     await expect(adminPage).toHaveURL(/\/inventory/)
   })
 
@@ -58,8 +58,8 @@ test.describe('Sidebar Navigation', () => {
     await adminPage.goto('/dashboard')
     await adminPage.waitForLoadState('networkidle')
 
-    // Dashboard link should have active styling
-    const dashboardLink = adminPage.getByRole('link', { name: /dashboard/i }).first()
+    // Dashboard link should have active styling (uses NavLink with href="/dashboard")
+    const dashboardLink = adminPage.locator('a[href="/dashboard"]').first()
     await expect(dashboardLink).toBeVisible()
   })
 })
@@ -109,21 +109,26 @@ test.describe('Mobile Navigation', () => {
     await adminPage.goto('/dashboard')
     await adminPage.waitForLoadState('networkidle')
 
-    // On mobile, sidebar should be off-screen (translated left)
-    const sidebar = adminPage.locator('nav').first()
-    await expect(sidebar).toBeVisible({ timeout: 10000 })
+    // On mobile, sidebar is off-screen; the hamburger button should be visible
+    const menuBtn = adminPage.getByRole('button', { name: /Toggle sidebar/i })
+    await expect(menuBtn).toBeVisible({ timeout: 10000 })
+
+    // Sidebar nav links should be out of viewport (translated off-screen)
+    const sidebarLink = adminPage.locator('a[href="/orders"]').first()
+    await expect(sidebarLink).not.toBeInViewport()
   })
 
   test('hamburger menu toggles sidebar', async ({ adminPage }) => {
     await adminPage.goto('/dashboard')
     await adminPage.waitForLoadState('networkidle')
 
-    // Click the hamburger menu button
-    const menuBtn = adminPage.getByRole('button', { name: /toggle sidebar/i })
+    // Click the hamburger menu button (aria-label="Toggle sidebar")
+    const menuBtn = adminPage.getByRole('button', { name: /Toggle sidebar/i })
     await expect(menuBtn).toBeVisible({ timeout: 10000 })
     await menuBtn.click()
 
-    // Wait for slide animation
-    await adminPage.waitForTimeout(500)
+    // After clicking, sidebar link should slide into viewport
+    const sidebarLink = adminPage.locator('a[href="/orders"]').first()
+    await expect(sidebarLink).toBeInViewport({ timeout: 5000 })
   })
 })

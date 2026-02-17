@@ -16,8 +16,8 @@ test.describe('Authentication', () => {
 
   test('can switch to token login mode', async ({ page }) => {
     await page.goto('/login')
-    // Click the token login link
-    await page.getByRole('button', { name: /token/i }).click()
+    // Click the token login link (text is Japanese: トークンでログイン)
+    await page.getByRole('button', { name: /token|トークン/i }).click()
     await expect(page.locator('input[placeholder="tok_xxxxxxxx"]')).toBeVisible()
   })
 

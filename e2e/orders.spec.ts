@@ -50,24 +50,26 @@ test.describe('Orders Page', () => {
     await adminPage.goto('/orders')
     await adminPage.waitForLoadState('networkidle')
 
-    await expect(adminPage.getByText('TIKTOK').first()).toBeVisible({ timeout: 10000 })
-    await expect(adminPage.getByText('TEMU').first()).toBeVisible({ timeout: 10000 })
+    // Use span selector to target badge elements, not hidden <option> elements in dropdowns
+    await expect(adminPage.locator('span.inline-flex', { hasText: 'TIKTOK' }).first()).toBeVisible({ timeout: 10000 })
+    await expect(adminPage.locator('span.inline-flex', { hasText: 'TEMU' }).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('shows status badges', async ({ adminPage }) => {
     await adminPage.goto('/orders')
     await adminPage.waitForLoadState('networkidle')
 
-    await expect(adminPage.getByText('PROCESSING').first()).toBeVisible({ timeout: 10000 })
-    await expect(adminPage.getByText('SHIPPED').first()).toBeVisible({ timeout: 10000 })
+    // Use span selector to target badge elements, not hidden <option> elements in dropdowns
+    await expect(adminPage.locator('span.inline-flex', { hasText: 'PROCESSING' }).first()).toBeVisible({ timeout: 10000 })
+    await expect(adminPage.locator('span.inline-flex', { hasText: 'SHIPPED' }).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('has search/filter controls', async ({ adminPage }) => {
     await adminPage.goto('/orders')
     await adminPage.waitForLoadState('networkidle')
 
-    // Search input should exist
-    const searchInput = adminPage.locator('input[type="text"], input[type="search"]').first()
+    // Search input (Input component renders without explicit type attr, use placeholder selector)
+    const searchInput = adminPage.locator('input[placeholder]').first()
     await expect(searchInput).toBeVisible({ timeout: 10000 })
   })
 

@@ -23,7 +23,8 @@ async function mockDashboardAPIs(page: import('@playwright/test').Page) {
     }),
   )
 
-  await page.route('**/api/v1/dashboard/recent-orders*', (route) =>
+  // dashboardApi.recentOrders() calls /orders?limit=5&page=1, NOT /dashboard/recent-orders
+  await page.route('**/api/v1/orders*', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -32,6 +33,7 @@ async function mockDashboardAPIs(page: import('@playwright/test').Page) {
           { id: 1, platform: 'TIKTOK', platform_order_id: 'TT-001', status: 'PROCESSING', total_amount: 5000, tax_total: 500, distributor_id: 1, created_at: '2024-01-15T10:00:00Z' },
           { id: 2, platform: 'TEMU', platform_order_id: 'TM-002', status: 'SHIPPED', total_amount: 3000, tax_total: 300, distributor_id: 1, created_at: '2024-01-14T09:00:00Z' },
         ],
+        count: 2,
         pagination: { total: 2, page: 1, limit: 5, pages: 1 },
       }),
     }),
@@ -118,9 +120,10 @@ test.describe('Dashboard', () => {
     await adminPage.goto('/dashboard')
     await adminPage.waitForLoadState('networkidle')
 
-    // Quick actions section should be visible
-    const quickActionsSection = adminPage.locator('text=/quick/i').first()
-    await expect(quickActionsSection).toBeVisible({ timeout: 10000 })
+    // Quick actions section renders navigation buttons (New Order, Add Product, etc.)
+    // Look for the quick action buttons by their navigation targets
+    const quickActionButtons = adminPage.locator('button').filter({ hasText: /quick_new_order|New Order|新規注文/i })
+    await expect(quickActionButtons.first()).toBeVisible({ timeout: 10000 })
   })
 
   test('shows recent orders table', async ({ adminPage }) => {
