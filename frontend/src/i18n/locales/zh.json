@@ -230,6 +230,7 @@
   "confirm.reset_token": "确认重置Token？旧Token将失效。",
   "prompt.tracking": "请输入物流单号:",
   "nav.reports": "报表",
+  "nav.operationsAnalysis": "运营分析",
   "reports.title": "报表",
   "reports.subtitle": "报表与分析",
   "reports.profit_analysis": "利润分析",

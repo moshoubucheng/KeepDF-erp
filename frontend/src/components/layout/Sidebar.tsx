@@ -100,6 +100,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { key: 'promotions', labelKey: 'nav.promotions', path: '/promotions', icon: <Gift className="h-4 w-4" /> },
       { key: 'shipping-fees', labelKey: 'nav.shippingFees', path: '/shipping-fees', icon: <Calculator className="h-4 w-4" /> },
       { key: 'financial-reports', labelKey: 'nav.financialReports', path: '/financial-reports', icon: <FileText className="h-4 w-4" /> },
+      { key: 'reports', labelKey: 'nav.operationsAnalysis', path: '/reports', icon: <BarChart3 className="h-4 w-4" /> },
       { key: 'invoices', labelKey: 'nav.invoices', path: '/invoices', icon: <Receipt className="h-4 w-4" /> },
     ],
   },
@@ -110,14 +111,6 @@ const NAV_GROUPS: NavGroupDef[] = [
       { key: 'customers', labelKey: 'nav.customers', path: '/customers', icon: <Users className="h-4 w-4" /> },
       { key: 'customer-segments', labelKey: 'nav.customerSegments', path: '/customer-segments', icon: <UserCheck className="h-4 w-4" /> },
       { key: 'communications', labelKey: 'nav.communications', path: '/communications', icon: <MessageSquare className="h-4 w-4" /> },
-    ],
-  },
-  {
-    key: 'analytics',
-    labelKey: 'nav.group.analytics',
-    items: [
-      { key: 'reports', labelKey: 'nav.reports', path: '/reports', icon: <BarChart3 className="h-4 w-4" /> },
-      { key: 'data-screen', labelKey: 'nav.datascreen', path: '/data-screen', icon: <Monitor className="h-4 w-4" /> },
     ],
   },
   {
@@ -268,6 +261,23 @@ export function Sidebar() {
             >
               <BarChart3 className="h-4 w-4" />
               {t('nav.dashboard')}
+            </NavLink>
+
+            {/* Data Screen -- standalone, below dashboard */}
+            <NavLink
+              to="/data-screen"
+              onClick={handleNavClick}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-accent-purple/15 text-accent-purple'
+                    : 'text-text-secondary hover:bg-bg-card hover:text-text-primary',
+                )
+              }
+            >
+              <Monitor className="h-4 w-4" />
+              {t('nav.datascreen')}
             </NavLink>
 
             {/* Grouped navigation */}

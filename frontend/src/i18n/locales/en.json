@@ -230,6 +230,7 @@
   "confirm.reset_token": "Reset token? The old token will be invalidated.",
   "prompt.tracking": "Enter tracking number:",
   "nav.reports": "Reports",
+  "nav.operationsAnalysis": "Operations Analysis",
   "reports.title": "Reports",
   "reports.subtitle": "Reports & Analytics",
   "reports.profit_analysis": "Profit Analysis",
