@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS orders (
     CHECK(status IN ('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED')),
   total_amount REAL,
   tax_total REAL,
-  distributor_id INTEGER,
+  distributor_id INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   delivered_at DATETIME,
   cancelled_at DATETIME,
@@ -763,3 +763,9 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_push_sub_distributor ON push_subscriptions(distributor_id);
+
+-- Additional indexes (migration-v19)
+CREATE INDEX IF NOT EXISTS idx_customers_distributor_created ON customers(distributor_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_coupon_usage_distributor ON coupon_usage(distributor_id);
+CREATE INDEX IF NOT EXISTS idx_platform_mappings_platform ON platform_mappings(platform);

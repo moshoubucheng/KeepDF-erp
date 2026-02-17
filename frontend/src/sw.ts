@@ -43,6 +43,8 @@ self.addEventListener('push', (event) => {
       badge: '/icon-192.svg',
       tag: payload.tag || 'keepdf-notification',
       data: { url: payload.url || '/' },
+    }).catch((err) => {
+      console.error('[SW] showNotification failed:', err)
     }),
   )
 })

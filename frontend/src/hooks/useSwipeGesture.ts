@@ -59,12 +59,13 @@ export function useSwipeGesture({
       touchRef.current = null
     }
 
-    document.addEventListener('touchstart', handleTouchStart, { passive: true })
-    document.addEventListener('touchend', handleTouchEnd, { passive: true })
+    const opts: AddEventListenerOptions = { passive: true }
+    document.addEventListener('touchstart', handleTouchStart, opts)
+    document.addEventListener('touchend', handleTouchEnd, opts)
 
     return () => {
-      document.removeEventListener('touchstart', handleTouchStart)
-      document.removeEventListener('touchend', handleTouchEnd)
+      document.removeEventListener('touchstart', handleTouchStart, opts)
+      document.removeEventListener('touchend', handleTouchEnd, opts)
     }
   }, [enabled, edgeThreshold, minDistance, onSwipeRight, onSwipeLeft])
 }

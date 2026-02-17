@@ -60,9 +60,15 @@ settings.get('/system-info', async (c) => {
         { name: 'notifications', label: 'Notifications' },
     ]
 
+    // Whitelist: only allow known table names to prevent SQL injection
+    const ALLOWED_TABLES = new Set(tables.map(t => t.name))
+
     const counts: Record<string, number> = {}
     for (const table of tables) {
-        const result = await c.env.DB.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).first<{ count: number }>()
+        if (!ALLOWED_TABLES.has(table.name)) continue
+        const result = await c.env.DB.prepare(
+            `SELECT COUNT(*) as count FROM "${table.name}"`
+        ).first<{ count: number }>()
         counts[table.label] = result?.count || 0
     }
 

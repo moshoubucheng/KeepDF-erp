@@ -14,14 +14,20 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
   const sheetRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startY: number; startTranslate: number } | null>(null)
 
-  // Lock body scroll when open
+  // Lock body scroll when open (ref-counted for nesting)
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
+    if (!open) return
+    const count = parseInt(document.body.dataset.scrollLock || '0', 10)
+    document.body.dataset.scrollLock = String(count + 1)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      const next = parseInt(document.body.dataset.scrollLock || '1', 10) - 1
+      document.body.dataset.scrollLock = String(next)
+      if (next <= 0) {
+        document.body.style.overflow = ''
+        delete document.body.dataset.scrollLock
+      }
     }
-    return () => { document.body.style.overflow = '' }
   }, [open])
 
   // Escape key to close

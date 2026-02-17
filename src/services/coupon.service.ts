@@ -194,16 +194,39 @@ export class CouponService {
     }
 
     async apply(couponId: number, orderId: number, distributorId: number, discountAmount: number, discountAmountJpy: number): Promise<CouponUsage> {
+        // Re-validate usage limits atomically before applying (prevents race condition)
+        const coupon = await this.db.prepare('SELECT * FROM coupons WHERE id = ?')
+            .bind(couponId).first<Coupon>()
+        if (!coupon) throw new Error('Coupon not found')
+
+        if (coupon.usage_limit > 0 && coupon.usage_count >= coupon.usage_limit) {
+            throw new Error('Coupon usage limit reached')
+        }
+
+        if (coupon.per_user_limit > 0) {
+            const userUsage = await this.db.prepare(
+                'SELECT COUNT(*) as cnt FROM coupon_usage WHERE coupon_id = ? AND distributor_id = ?'
+            ).bind(couponId, distributorId).first<{ cnt: number }>()
+            if (userUsage && userUsage.cnt >= coupon.per_user_limit) {
+                throw new Error('Per-user usage limit reached')
+            }
+        }
+
+        // Atomic: increment usage_count only if still within limit
+        const updateResult = await this.db.prepare(
+            `UPDATE coupons SET usage_count = usage_count + 1, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND (usage_limit = 0 OR usage_count < usage_limit)`
+        ).bind(couponId).run()
+
+        if (!updateResult.meta.changes) {
+            throw new Error('Coupon usage limit reached (concurrent)')
+        }
+
         // Insert usage record
         const { meta } = await this.db.prepare(
             `INSERT INTO coupon_usage (coupon_id, order_id, distributor_id, discount_amount, discount_amount_jpy)
              VALUES (?, ?, ?, ?, ?)`
         ).bind(couponId, orderId, distributorId, discountAmount, discountAmountJpy).run()
-
-        // Increment usage_count
-        await this.db.prepare(
-            'UPDATE coupons SET usage_count = usage_count + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-        ).bind(couponId).run()
 
         return this.db.prepare('SELECT * FROM coupon_usage WHERE id = ?')
             .bind(meta.last_row_id).first<CouponUsage>() as Promise<CouponUsage>

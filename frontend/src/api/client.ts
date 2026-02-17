@@ -1,6 +1,7 @@
 import { useAuthStore } from '@/stores/auth.store'
 
 const API_BASE = '/api/v1'
+const REQUEST_TIMEOUT_MS = 30000
 
 export class ApiError extends Error {
   constructor(
@@ -11,6 +12,9 @@ export class ApiError extends Error {
     this.name = 'ApiError'
   }
 }
+
+// Prevent multiple concurrent 401 logouts
+let logoutTriggered = false
 
 async function request<T>(
   path: string,
@@ -29,13 +33,34 @@ async function request<T>(
     throw new ApiError(0, { error: 'offline' })
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  })
+  // Add timeout via AbortController
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    })
+  } catch (err) {
+    clearTimeout(timeoutId)
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(0, { error: 'Request timeout' })
+    }
+    throw new ApiError(0, { error: 'Network error' })
+  } finally {
+    clearTimeout(timeoutId)
+  }
 
   if (res.status === 401) {
-    useAuthStore.getState().logout()
+    // Only trigger logout once across concurrent requests
+    if (!logoutTriggered) {
+      logoutTriggered = true
+      setTimeout(() => { logoutTriggered = false }, 1000)
+      useAuthStore.getState().logout()
+    }
     throw new ApiError(401, { error: 'Unauthorized' })
   }
 

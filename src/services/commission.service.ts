@@ -110,19 +110,22 @@ export class CommissionService {
             details.push({ orderId: order.id, status: 'SETTLED', amount: totalCommission })
         }
 
-        const distributor = await this.db.prepare(
-            'SELECT balance FROM distributors WHERE id = ?'
-        ).bind(distributorId).first<{ balance: number }>()
+        // Atomic balance deduction — prevents negative balance from concurrent requests
+        const updateResult = await this.db.prepare(
+            'UPDATE distributors SET balance = balance - ? WHERE id = ? AND balance >= ?'
+        ).bind(totalAmount, distributorId, totalAmount).run()
 
-        if (!distributor || distributor.balance < totalAmount) {
+        if (!updateResult.meta.changes) {
             throw new Error('Insufficient balance')
         }
 
-        const newBalance = distributor.balance - totalAmount
+        // Read new balance for snapshot
+        const distributor = await this.db.prepare(
+            'SELECT balance FROM distributors WHERE id = ?'
+        ).bind(distributorId).first<{ balance: number }>()
+        const newBalance = distributor?.balance ?? 0
 
         const batch = [
-            this.db.prepare('UPDATE distributors SET balance = ? WHERE id = ?')
-                .bind(newBalance, distributorId),
             this.db.prepare(`
                 INSERT INTO wallet_transactions (distributor_id, type, amount, related_order_id, balance_snapshot)
                 VALUES (?, 'DEDUCT', ?, ?, ?)

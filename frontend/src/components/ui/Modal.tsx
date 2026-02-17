@@ -22,11 +22,19 @@ export function Modal({ open, onClose, title, className, children }: ModalProps)
     }
 
     document.addEventListener('keydown', handleKeyDown)
+    // Ref-counted scroll lock for nesting
+    const count = parseInt(document.body.dataset.scrollLock || '0', 10)
+    document.body.dataset.scrollLock = String(count + 1)
     document.body.style.overflow = 'hidden'
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
+      const next = parseInt(document.body.dataset.scrollLock || '1', 10) - 1
+      document.body.dataset.scrollLock = String(next)
+      if (next <= 0) {
+        document.body.style.overflow = ''
+        delete document.body.dataset.scrollLock
+      }
     }
   }, [open, onClose])
 

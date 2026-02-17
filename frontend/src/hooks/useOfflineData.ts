@@ -95,11 +95,14 @@ export function useOfflineData<T>({
   }, [refetchInterval, enabled, isOffline, fetchAndCache])
 
   // Re-fetch when coming back online
+  const prevOfflineRef = useRef(isOffline)
   useEffect(() => {
-    if (!isOffline && enabled) {
+    // Only refetch on transition from offline → online
+    if (prevOfflineRef.current && !isOffline && enabled) {
       fetchAndCache()
     }
-  }, [isOffline]) // eslint-disable-line react-hooks/exhaustive-deps
+    prevOfflineRef.current = isOffline
+  }, [isOffline, enabled, fetchAndCache])
 
   const refetch = useCallback(async () => {
     setIsLoading(true)

@@ -26,8 +26,8 @@ wallet.get('/balance/:id', async (c) => {
 wallet.post('/deposit', async (c) => {
     const body = await c.req.json<{ distributor_id: number; amount: number }>()
 
-    if (!body.distributor_id || !body.amount || body.amount <= 0) {
-        return c.json({ error: 'Invalid request: distributor_id and positive amount required' }, 400)
+    if (!body.distributor_id || !body.amount || body.amount <= 0 || body.amount > 10000000) {
+        return c.json({ error: 'Invalid request: distributor_id and positive amount required (max 10,000,000)' }, 400)
     }
 
     const distributorId = c.get('distributorId')

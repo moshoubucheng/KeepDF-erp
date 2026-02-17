@@ -67,8 +67,17 @@ purchaseOrders.post('/', async (c) => {
         expected_delivery?: string
     }>()
 
-    if (!body.supplier_id || !body.items) {
-        return c.json({ error: 'supplier_id and items are required' }, 400)
+    if (!body.supplier_id || !body.items || !Array.isArray(body.items) || body.items.length === 0) {
+        return c.json({ error: 'supplier_id and non-empty items array are required' }, 400)
+    }
+
+    for (const item of body.items) {
+        if (!item.sku || typeof item.qty !== 'number' || item.qty <= 0 || item.qty > 1000000) {
+            return c.json({ error: 'Each item must have sku, qty > 0 (max 1,000,000)' }, 400)
+        }
+        if (typeof item.unit_cost !== 'number' || item.unit_cost <= 0 || item.unit_cost > 100000000) {
+            return c.json({ error: 'Each item must have unit_cost > 0 (max 100,000,000)' }, 400)
+        }
     }
 
     const service = new PurchaseOrderService(c.env.DB)

@@ -26,56 +26,65 @@ export function usePullToRefresh({
   })
 
   const touchRef = useRef<{ startY: number; scrollTop: number } | null>(null)
+  const pullDistanceRef = useRef(0)
+  const refreshingRef = useRef(false)
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
-      if (!enabled || state.refreshing) return
+      if (!enabled || refreshingRef.current) return
       const container = e.currentTarget
       touchRef.current = {
         startY: e.touches[0].clientY,
         scrollTop: container.scrollTop,
       }
     },
-    [enabled, state.refreshing],
+    [enabled],
   )
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
-      if (!touchRef.current || !enabled || state.refreshing) return
+      if (!touchRef.current || !enabled || refreshingRef.current) return
       // Only pull when scrolled to top
       if (touchRef.current.scrollTop > 0) return
 
       const diff = e.touches[0].clientY - touchRef.current.startY
       if (diff <= 0) {
-        setState((s) => (s.pulling ? { ...s, pulling: false, pullDistance: 0 } : s))
+        if (pullDistanceRef.current > 0) {
+          pullDistanceRef.current = 0
+          setState({ pulling: false, pullDistance: 0, refreshing: false })
+        }
         return
       }
 
       // Apply resistance
       const distance = Math.min(diff * 0.5, maxPull)
+      pullDistanceRef.current = distance
       setState({ pulling: true, pullDistance: distance, refreshing: false })
     },
-    [enabled, maxPull, state.refreshing],
+    [enabled, maxPull],
   )
 
   const handleTouchEnd = useCallback(async () => {
-    if (!touchRef.current || state.refreshing) {
+    if (!touchRef.current || refreshingRef.current) {
       touchRef.current = null
       return
     }
 
-    if (state.pullDistance >= threshold) {
+    if (pullDistanceRef.current >= threshold) {
+      refreshingRef.current = true
       setState({ pulling: false, pullDistance: 0, refreshing: true })
       try {
         await onRefresh()
       } finally {
+        refreshingRef.current = false
         setState({ pulling: false, pullDistance: 0, refreshing: false })
       }
     } else {
       setState({ pulling: false, pullDistance: 0, refreshing: false })
     }
+    pullDistanceRef.current = 0
     touchRef.current = null
-  }, [state.pullDistance, state.refreshing, threshold, onRefresh])
+  }, [threshold, onRefresh])
 
   return {
     ...state,
