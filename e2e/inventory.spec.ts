@@ -10,7 +10,7 @@ const MOCK_PRODUCTS = {
 }
 
 async function mockInventoryAPIs(page: import('@playwright/test').Page) {
-  await page.route('**/api/v1/products*', (route) => {
+  await page.route('**/api/v1/inventory*', (route) => {
     if (route.request().method() === 'GET') {
       const url = new URL(route.request().url())
       const search = url.searchParams.get('search') || url.searchParams.get('q')
