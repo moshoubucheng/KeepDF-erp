@@ -34,6 +34,7 @@ export interface Distributor {
     phone: string | null
     address: string | null
     contact_person: string | null
+    onboarding_completed: number
     role: 'admin' | 'distributor'
     created_at: string
 }

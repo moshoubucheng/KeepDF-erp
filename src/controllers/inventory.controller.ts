@@ -40,12 +40,19 @@ inventory.get('/:sku', async (c) => {
     return c.json({ product, locations, platformMappings: mappings })
 })
 
-/** POST /inventory/products - 新增商品 */
+/** POST /inventory/products - 新増商品 */
 inventory.post('/products', async (c) => {
     const body = await c.req.json<{
         sku: string; name_cn?: string; name_jp?: string;
         cost_price: number; tax_category?: string
     }>()
+
+    if (!body.sku || typeof body.sku !== 'string' || body.sku.trim().length === 0 || body.sku.length > 50) {
+        return c.json({ error: 'sku is required (1-50 characters)' }, 400)
+    }
+    if (typeof body.cost_price !== 'number' || body.cost_price <= 0 || body.cost_price > 100000000) {
+        return c.json({ error: 'cost_price must be positive (max 100,000,000)' }, 400)
+    }
 
     try {
         await c.env.DB.prepare(
@@ -62,12 +69,25 @@ inventory.post('/products', async (c) => {
     }
 })
 
-/** POST /inventory/inbound - 入库记录 */
+/** POST /inventory/inbound - 入庫記録 */
 inventory.post('/inbound', async (c) => {
     const body = await c.req.json<{
         sku: string; location_code: string;
         expected_qty: number; actual_qty: number
     }>()
+
+    if (!body.sku || typeof body.sku !== 'string') {
+        return c.json({ error: 'sku is required' }, 400)
+    }
+    if (!body.location_code || typeof body.location_code !== 'string') {
+        return c.json({ error: 'location_code is required' }, 400)
+    }
+    if (typeof body.expected_qty !== 'number' || body.expected_qty < 0 || body.expected_qty > 1000000) {
+        return c.json({ error: 'expected_qty must be 0-1,000,000' }, 400)
+    }
+    if (typeof body.actual_qty !== 'number' || body.actual_qty < 0 || body.actual_qty > 1000000) {
+        return c.json({ error: 'actual_qty must be 0-1,000,000' }, 400)
+    }
 
     const batch = [
         c.env.DB.prepare(

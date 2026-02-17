@@ -1,3 +1,17 @@
+/** Validate webhook URL: must be HTTPS, no private/localhost targets */
+function isValidWebhookUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url)
+        if (parsed.protocol !== 'https:') return false
+        const host = parsed.hostname.toLowerCase()
+        if (['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(host)) return false
+        // Block private IP ranges
+        if (host.startsWith('10.') || host.startsWith('192.168.') || host.startsWith('172.')) return false
+        if (host.endsWith('.local') || host.endsWith('.internal')) return false
+        return true
+    } catch { return false }
+}
+
 const SUPPORTED_EVENTS = [
     'ORDER_CREATED', 'ORDER_SHIPPED', 'ORDER_DELIVERED', 'ORDER_CANCELLED',
     'RETURN_CREATED', 'RETURN_REFUNDED', 'STOCK_LOW', 'COMMISSION_SETTLED',
@@ -26,6 +40,7 @@ export class WebhookService {
         events: string[]
     }, distributorId: number): Promise<any> {
         if (!data.name || !data.url) throw new Error('name and url are required')
+        if (!isValidWebhookUrl(data.url)) throw new Error('URL must be HTTPS and cannot target private/localhost addresses')
         if (!data.events?.length) throw new Error('At least one event is required')
 
         const invalidEvents = data.events.filter(e => !SUPPORTED_EVENTS.includes(e as any))

@@ -133,8 +133,11 @@ export function NotificationsTab({ addToast }: NotificationsTabProps) {
           <p className="text-sm text-text-muted">
             {t('push.eventDescription', 'Choose which events trigger push notifications')}
           </p>
+          <p className="text-xs text-text-muted italic">
+            {t('push.eventComingSoon', 'Per-event preferences coming soon. All events are currently enabled.')}
+          </p>
 
-          <div className="space-y-2">
+          <div className="space-y-2 opacity-60 pointer-events-none">
             {[
               { key: 'ORDER_SHIPPED', label: t('push.event.orderShipped', 'Order Shipped') },
               { key: 'ORDER_DELIVERED', label: t('push.event.orderDelivered', 'Order Delivered') },
@@ -143,17 +146,18 @@ export function NotificationsTab({ addToast }: NotificationsTabProps) {
               { key: 'COMMISSION_SETTLED', label: t('push.event.commissionSettled', 'Commission Settled') },
               { key: 'IMPORT_COMPLETE', label: t('push.event.importComplete', 'Import Complete') },
             ].map((event) => (
-              <label
+              <div
                 key={event.key}
-                className="flex items-center justify-between rounded-lg border border-border p-3 cursor-pointer hover:bg-bg-card-hover transition-colors"
+                className="flex items-center justify-between rounded-lg border border-border p-3"
               >
                 <span className="text-sm text-text-primary">{event.label}</span>
                 <input
                   type="checkbox"
-                  defaultChecked
+                  checked
+                  readOnly
                   className="h-4 w-4 rounded border-border accent-accent-purple"
                 />
-              </label>
+              </div>
             ))}
           </div>
         </CardContent>

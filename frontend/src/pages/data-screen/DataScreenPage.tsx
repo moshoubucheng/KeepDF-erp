@@ -69,9 +69,17 @@ export default function DataScreenPage() {
   }, [addToast])
 
   useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, 60_000) // Auto-refresh every 60s
-    return () => clearInterval(interval)
+    let cancelled = false
+    let timeoutId: ReturnType<typeof setTimeout>
+
+    async function tick() {
+      if (cancelled) return
+      await fetchData()
+      if (!cancelled) timeoutId = setTimeout(tick, 60_000)
+    }
+
+    tick()
+    return () => { cancelled = true; clearTimeout(timeoutId) }
   }, [fetchData])
 
   const toggleFullscreen = () => {

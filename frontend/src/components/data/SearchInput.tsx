@@ -21,6 +21,8 @@ export function SearchInput({
   const [localValue, setLocalValue] = useState(controlledValue ?? '')
   const debouncedValue = useDebounce(localValue, delay)
   const isFirstRender = useRef(true)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
 
   // Sync with controlled value from parent
   useEffect(() => {
@@ -31,14 +33,13 @@ export function SearchInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controlledValue])
 
-  // Emit debounced value to parent
+  // Emit debounced value to parent (uses ref to avoid stale closure)
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
       return
     }
-    onChange(debouncedValue)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    onChangeRef.current(debouncedValue)
   }, [debouncedValue])
 
   const handleClear = useCallback(() => {

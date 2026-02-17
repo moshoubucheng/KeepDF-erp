@@ -41,6 +41,7 @@ import {
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { useSwipeGesture } from '@/hooks/useSwipeGesture'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { cn } from '@/utils/cn'
 
 // ---------------------------------------------------------------------------
@@ -168,11 +169,12 @@ export function Sidebar() {
   const { logout } = useAuthStore()
   const [collapsed, setCollapsed] = useState<Set<string>>(loadCollapsedGroups)
 
-  // Swipe to open/close sidebar on mobile
+  // Swipe to open/close sidebar on mobile (reactive to viewport changes)
+  const isMobile = useIsMobile()
   useSwipeGesture({
     onSwipeRight: () => { if (!sidebarOpen) toggleSidebar() },
     onSwipeLeft: () => { if (sidebarOpen) closeSidebar() },
-    enabled: typeof window !== 'undefined' && window.innerWidth < 768,
+    enabled: isMobile,
   })
 
   // Persist collapsed state to localStorage on change

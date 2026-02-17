@@ -32,13 +32,13 @@ export function ProfileTab({ user, addToast, fetchMe }: ProfileTabProps) {
 
   const profileForm = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
+    values: {
       name: user?.name ?? '',
-      contact_person: '',
+      contact_person: (user as any)?.contact_person ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
-      address: '',
-      tax_reg_number: '',
+      address: (user as any)?.address ?? '',
+      tax_reg_number: (user as any)?.tax_reg_number ?? '',
     },
   })
 

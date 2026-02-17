@@ -87,7 +87,7 @@ describe('WalletService', () => {
         it('不存在的分销商冻结抛错', async () => {
             await expect(
                 service.freeze(999, 1000, 'ORD-TEST-003')
-            ).rejects.toThrow('Distributor not found')
+            ).rejects.toThrow('Insufficient balance')
         })
     })
 
@@ -112,7 +112,7 @@ describe('WalletService', () => {
         it('不存在的分销商扣款抛错', async () => {
             await expect(
                 service.deduct(999, 1000, 'ORD-TEST-006')
-            ).rejects.toThrow('Distributor not found')
+            ).rejects.toThrow('Frozen amount insufficient')
         })
     })
 

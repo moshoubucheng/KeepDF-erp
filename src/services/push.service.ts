@@ -147,15 +147,27 @@ export class PushService {
     const payloadB64 = base64urlEncode(JSON.stringify(jwtPayload))
     const unsignedToken = `${headerB64}.${payloadB64}`
 
-    // Import VAPID private key
+    // Import VAPID private key (supports both PKCS8 and raw 32-byte formats)
     const privateKeyBytes = base64urlDecode(this.vapidPrivateKey)
-    const key = await crypto.subtle.importKey(
-      'pkcs8',
-      toAB(privateKeyBytes),
-      { name: 'ECDSA', namedCurve: 'P-256' },
-      false,
-      ['sign'],
-    )
+    let key: CryptoKey
+    if (privateKeyBytes.length === 32) {
+      // Raw 32-byte private key — wrap into PKCS8 for import
+      key = await crypto.subtle.importKey(
+        'pkcs8',
+        toAB(rawToPkcs8(privateKeyBytes)),
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        false,
+        ['sign'],
+      )
+    } else {
+      key = await crypto.subtle.importKey(
+        'pkcs8',
+        toAB(privateKeyBytes),
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        false,
+        ['sign'],
+      )
+    }
 
     // Sign
     const signature = await crypto.subtle.sign(
@@ -325,6 +337,19 @@ function concat(...arrays: Uint8Array[]): Uint8Array {
     offset += arr.length
   }
   return result
+}
+
+/** Wrap a raw 32-byte EC private key into PKCS8 DER format for P-256 */
+function rawToPkcs8(raw: Uint8Array): Uint8Array {
+  // PKCS8 prefix for EC P-256 private key (RFC 5958 / 5915)
+  const prefix = new Uint8Array([
+    0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06,
+    0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01,
+    0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03,
+    0x01, 0x07, 0x04, 0x27, 0x30, 0x25, 0x02, 0x01,
+    0x01, 0x04, 0x20,
+  ])
+  return concat(prefix, raw)
 }
 
 /** Convert DER-encoded ECDSA signature to raw (r || s) format */

@@ -80,7 +80,7 @@ describe('Password Authentication', () => {
             expect(data.token).toBeDefined()
             expect(data.distributor.id).toBe(1)
             expect(data.distributor.role).toBe('admin')
-            expect(data.distributor.language).toBe('zh')
+            expect(data.distributor.language).toBe('ja')
             expect(data.expiresIn).toBe(3600)
         })
 

@@ -48,17 +48,20 @@ export class BatchService {
                     continue
                 }
 
-                // Build update
-                let updateSql: string
+                // Build update (parameterized to prevent SQL injection)
                 if (targetStatus === 'DELIVERED') {
-                    updateSql = "UPDATE orders SET status = 'DELIVERED', delivered_at = CURRENT_TIMESTAMP WHERE id = ?"
+                    await this.db.prepare(
+                        "UPDATE orders SET status = 'DELIVERED', delivered_at = CURRENT_TIMESTAMP WHERE id = ?"
+                    ).bind(id).run()
                 } else if (targetStatus === 'CANCELLED') {
-                    updateSql = "UPDATE orders SET status = 'CANCELLED', cancelled_at = CURRENT_TIMESTAMP WHERE id = ?"
+                    await this.db.prepare(
+                        "UPDATE orders SET status = 'CANCELLED', cancelled_at = CURRENT_TIMESTAMP WHERE id = ?"
+                    ).bind(id).run()
                 } else {
-                    updateSql = `UPDATE orders SET status = '${targetStatus}' WHERE id = ?`
+                    await this.db.prepare(
+                        'UPDATE orders SET status = ? WHERE id = ?'
+                    ).bind(targetStatus, id).run()
                 }
-
-                await this.db.prepare(updateSql).bind(id).run()
                 success++
             } catch (e: any) {
                 errors.push({ id, error: e.message })

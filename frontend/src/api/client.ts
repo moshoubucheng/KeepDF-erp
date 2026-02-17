@@ -45,7 +45,6 @@ async function request<T>(
       signal: controller.signal,
     })
   } catch (err) {
-    clearTimeout(timeoutId)
     if (err instanceof DOMException && err.name === 'AbortError') {
       throw new ApiError(0, { error: 'Request timeout' })
     }

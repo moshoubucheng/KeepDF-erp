@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { api } from '@/api/client'
+import { api, ApiError } from '@/api/client'
 import type { User } from '@/api/types'
 
 interface AuthState {
@@ -96,8 +96,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAdmin: user.role === 'admin',
         isLoading: false,
       })
-    } catch {
-      get().logout()
+    } catch (err) {
+      // Only logout on 401 (invalid/expired token), not on network errors
+      if (err instanceof ApiError && err.status === 401) {
+        get().logout()
+      } else {
+        set({ isLoading: false })
+      }
     }
   },
 }))

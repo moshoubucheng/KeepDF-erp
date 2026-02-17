@@ -141,9 +141,20 @@ orders.patch('/:id/ship', async (c) => {
     const distributorId = c.get('distributorId')
     const body = await c.req.json<{ tracking_number: string }>()
 
+    // Validate tracking_number
+    if (!body.tracking_number || typeof body.tracking_number !== 'string' ||
+        body.tracking_number.trim().length < 1 || body.tracking_number.length > 100) {
+        return c.json({ error: 'tracking_number must be 1-100 characters' }, 400)
+    }
+
     const result = await getAuthorizedOrder(c.env.DB, id, distributorId)
     if ('error' in result) return c.json({ error: result.error }, result.status)
     const { order } = result
+
+    // Only PROCESSING orders can be shipped
+    if (order.status !== 'PROCESSING') {
+        return c.json({ error: 'Only PROCESSING orders can be shipped' }, 400)
+    }
 
     const batch = [
         c.env.DB.prepare("UPDATE orders SET status = 'SHIPPED' WHERE id = ?").bind(id),

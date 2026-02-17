@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS distributors (
   password_hash TEXT,
   totp_secret TEXT,
   totp_enabled INTEGER DEFAULT 0,
-  language TEXT DEFAULT 'zh',
+  language TEXT DEFAULT 'ja',
+  onboarding_completed INTEGER DEFAULT 0,
   balance REAL DEFAULT 0.0,
   frozen_balance REAL DEFAULT 0.0,
   tax_reg_number TEXT,
@@ -66,8 +67,8 @@ CREATE TABLE IF NOT EXISTS orders (
   platform_order_id TEXT NOT NULL,
   status TEXT DEFAULT 'PENDING'
     CHECK(status IN ('PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED')),
-  total_amount REAL,
-  tax_total REAL,
+  total_amount REAL NOT NULL DEFAULT 0,
+  tax_total REAL NOT NULL DEFAULT 0,
   distributor_id INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   delivered_at DATETIME,
@@ -133,7 +134,8 @@ CREATE TABLE IF NOT EXISTS commissions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   sku TEXT NOT NULL,
   platform TEXT NOT NULL,
-  rate REAL NOT NULL DEFAULT 0.0
+  rate REAL NOT NULL DEFAULT 0.0,
+  UNIQUE(sku, platform)
 );
 
 CREATE TABLE IF NOT EXISTS invoices (

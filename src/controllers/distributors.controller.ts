@@ -49,7 +49,7 @@ distributors.post('/:id/reset-token', async (c) => {
         return c.json({ success: true, token: result.token })
     } catch (e: any) {
         if (e.message === 'Distributor not found') return c.json({ error: e.message }, 404)
-        return c.json({ error: e.message }, 500)
+        return c.json({ error: 'Internal server error' }, 500)
     }
 })
 
@@ -161,7 +161,7 @@ distributors.post('/', async (c) => {
         if (e.message === 'Username already exists') {
             return c.json({ error: e.message }, 409)
         }
-        return c.json({ error: e.message }, 500)
+        return c.json({ error: 'Internal server error' }, 500)
     }
 })
 

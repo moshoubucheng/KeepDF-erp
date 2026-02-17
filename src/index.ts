@@ -161,12 +161,27 @@ export default {
       const { platform, payload } = body
       console.log(`[QUEUE] Processing ${platform} order: ${payload.order_id}`)
 
+      // Resolve distributor_id from payload or platform mapping
+      let distributorId: number | null = (body as any).payload?.distributor_id || null
+      if (!distributorId) {
+        const mapping = await env.DB.prepare(
+          'SELECT distributor_id FROM platform_mappings WHERE platform = ? LIMIT 1'
+        ).bind(platform).first<{ distributor_id: number }>()
+        distributorId = mapping?.distributor_id || null
+      }
+
+      if (!distributorId) {
+        console.error(`[QUEUE] No distributor_id for ${platform} order ${payload.order_id}, skipping`)
+        message.ack()
+        continue
+      }
+
       try {
         // 1. 写入订单
         const { meta } = await env.DB.prepare(
-          `INSERT INTO orders (platform, platform_order_id, status, total_amount, tax_total)
-           VALUES (?, ?, 'PROCESSING', ?, 0)`
-        ).bind(platform, payload.order_id, payload.total).run()
+          `INSERT INTO orders (platform, platform_order_id, status, total_amount, tax_total, distributor_id)
+           VALUES (?, ?, 'PROCESSING', ?, 0, ?)`
+        ).bind(platform, payload.order_id, payload.total, distributorId).run()
 
         const orderId = meta.last_row_id
 

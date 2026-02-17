@@ -65,15 +65,29 @@ auditRecovery.post('/restore/:logId', adminOnly, async (c) => {
         price_rule: 'price_rules',
     }
 
+    // Column whitelists per table to prevent SQL injection via JSON keys
+    const allowedColumns: Record<string, Set<string>> = {
+        orders: new Set(['platform', 'platform_order_id', 'status', 'total_amount', 'tax_total', 'tracking_number', 'distributor_id', 'customer_id', 'currency', 'exchange_rate', 'total_amount_jpy', 'discount_amount', 'coupon_id']),
+        products: new Set(['sku', 'name_cn', 'name_jp', 'cost_price', 'tax_category', 'image_url']),
+        returns: new Set(['order_id', 'distributor_id', 'status', 'reason', 'refund_amount']),
+        customers: new Set(['name', 'email', 'phone', 'address', 'platform', 'platform_customer_id', 'distributor_id']),
+        suppliers: new Set(['name', 'contact_person', 'email', 'phone', 'address', 'lead_time_days', 'is_active']),
+        purchase_orders: new Set(['supplier_id', 'status', 'total_amount', 'notes', 'distributor_id']),
+        price_rules: new Set(['sku', 'platform', 'base_price', 'sale_price', 'start_date', 'end_date', 'is_active', 'distributor_id']),
+    }
+
     const tableName = tableMap[resourceType]
     if (!tableName) return c.json({ error: `Restore not supported for: ${resourceType}` }, 400)
 
-    // Build UPDATE statement from before_data
+    const allowed = allowedColumns[tableName]
+    if (!allowed) return c.json({ error: `No column whitelist for: ${tableName}` }, 400)
+
+    // Build UPDATE statement from before_data (only whitelisted columns)
     const fields: string[] = []
     const binds: any[] = []
     for (const [key, value] of Object.entries(beforeData)) {
-        if (key === 'id') continue
-        fields.push(`${key} = ?`)
+        if (key === 'id' || !allowed.has(key)) continue
+        fields.push(`"${key}" = ?`)
         binds.push(value)
     }
 

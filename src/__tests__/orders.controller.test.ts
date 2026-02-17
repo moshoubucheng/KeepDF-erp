@@ -120,8 +120,8 @@ describe('Orders Controller', () => {
 
     describe('PATCH /api/v1/orders/:id/ship', () => {
         it('发货成功', async () => {
-            // 订单 4 属于分销商 2
-            const res = await SELF.fetch('http://localhost/api/v1/orders/4/ship', {
+            // 订单 3 属于分销商 2, 状态为 PROCESSING
+            const res = await SELF.fetch('http://localhost/api/v1/orders/3/ship', {
                 method: 'PATCH',
                 headers: {
                     ...authHeaders(TOKEN_2),
@@ -135,7 +135,7 @@ describe('Orders Controller', () => {
             expect(data.tracking).toBe('JP-TEST-1234567890')
 
             // 验证数据库状态已更新
-            const order = await env.DB.prepare('SELECT status FROM orders WHERE id = 4').first<{ status: string }>()
+            const order = await env.DB.prepare('SELECT status FROM orders WHERE id = 3').first<{ status: string }>()
             expect(order!.status).toBe('SHIPPED')
         })
 

@@ -100,6 +100,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Botto
             <h3 className="text-base font-semibold text-text-primary">{title}</h3>
             <button
               onClick={onClose}
+              aria-label="Close"
               className="rounded-lg p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-card-hover transition-colors"
             >
               <X className="h-5 w-5" />

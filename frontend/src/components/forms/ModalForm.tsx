@@ -42,15 +42,19 @@ export function ModalForm<T extends FieldValues>({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
-  // Lock body scroll when open
+  // Lock body scroll when open (ref-counted for nested modals)
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
+    if (!isOpen) return
+    const count = parseInt(document.body.dataset.scrollLock || '0', 10)
+    document.body.dataset.scrollLock = String(count + 1)
+    document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = ''
+      const next = parseInt(document.body.dataset.scrollLock || '1', 10) - 1
+      document.body.dataset.scrollLock = String(next)
+      if (next <= 0) {
+        document.body.style.overflow = ''
+        delete document.body.dataset.scrollLock
+      }
     }
   }, [isOpen])
 

@@ -28,7 +28,7 @@ export function OfflineBanner() {
   return (
     <div
       className={cn(
-        'fixed top-0 inset-x-0 z-[9999] transition-all duration-500',
+        'fixed top-0 inset-x-0 z-[60] transition-all duration-500',
         (isOffline || showSyncBar) ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0',
       )}
     >

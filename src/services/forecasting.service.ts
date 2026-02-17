@@ -10,9 +10,9 @@ export class ForecastingService {
         const limit = Math.min(filters?.limit || 50, 200)
         const offset = filters?.offset || 0
 
-        const sql = `SELECT f.*, w.qty as current_stock, p.name_jp as product_name
+        const sql = `SELECT f.*, w.total_stock as current_stock, p.name_jp as product_name
                      FROM inventory_forecasts f
-                     LEFT JOIN warehouse_locations w ON w.sku = f.sku
+                     LEFT JOIN (SELECT sku, SUM(qty) as total_stock FROM warehouse_locations GROUP BY sku) w ON w.sku = f.sku
                      LEFT JOIN products p ON p.sku = f.sku
                      ORDER BY f.days_of_stock ASC
                      LIMIT ? OFFSET ?`
@@ -29,9 +29,9 @@ export class ForecastingService {
 
     async getBySku(sku: string): Promise<any | null> {
         const forecast = await this.db.prepare(
-            `SELECT f.*, w.qty as current_stock, p.name_jp as product_name, p.cost_price
+            `SELECT f.*, w.total_stock as current_stock, p.name_jp as product_name, p.cost_price
              FROM inventory_forecasts f
-             LEFT JOIN warehouse_locations w ON w.sku = f.sku
+             LEFT JOIN (SELECT sku, SUM(qty) as total_stock FROM warehouse_locations GROUP BY sku) w ON w.sku = f.sku
              LEFT JOIN products p ON p.sku = f.sku
              WHERE f.sku = ?`
         ).bind(sku).first()
@@ -52,15 +52,15 @@ export class ForecastingService {
 
     async getReorderSuggestions(): Promise<any[]> {
         const { results } = await this.db.prepare(
-            `SELECT f.*, w.qty as current_stock, p.name_jp as product_name, p.cost_price,
-                    s.name as supplier_name, s.lead_time_days as supplier_lead_time
+            `SELECT f.*, w.total_stock as current_stock, p.name_jp as product_name, p.cost_price,
+                    MIN(s.name) as supplier_name, MIN(s.lead_time_days) as supplier_lead_time
              FROM inventory_forecasts f
-             LEFT JOIN warehouse_locations w ON w.sku = f.sku
+             LEFT JOIN (SELECT sku, SUM(qty) as total_stock FROM warehouse_locations GROUP BY sku) w ON w.sku = f.sku
              LEFT JOIN products p ON p.sku = f.sku
              LEFT JOIN purchase_order_items poi ON poi.sku = f.sku
              LEFT JOIN purchase_orders po ON po.id = poi.po_id AND po.status IN ('DRAFT','SUBMITTED','CONFIRMED','SHIPPED')
              LEFT JOIN suppliers s ON s.id = po.supplier_id
-             WHERE COALESCE(w.qty, 0) <= f.reorder_point AND f.daily_velocity > 0
+             WHERE COALESCE(w.total_stock, 0) <= f.reorder_point AND f.daily_velocity > 0
              GROUP BY f.sku
              ORDER BY f.days_of_stock ASC`
         ).all()

@@ -40,10 +40,11 @@ wallet.post('/deposit', async (c) => {
     try {
         tx = await service.deposit(body.distributor_id, body.amount)
     } catch (e: any) {
-        return c.json({ error: e.message }, 400)
+        const knownErrors = ['Distributor not found', 'Insufficient balance']
+        return c.json({ error: knownErrors.includes(e.message) ? e.message : 'Deposit failed' }, 400)
     }
 
-    // 充值通知（不影响充值结果）
+    // 充値通知（不影响充值结果）
     try {
         const notification = new NotificationService(c.env.DB)
         const distributor = await c.env.DB.prepare(
