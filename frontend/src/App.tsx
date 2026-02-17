@@ -2,23 +2,24 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { RequireAuth } from './components/layout/RequireAuth'
 import { AppLayout } from './components/layout/AppLayout'
+import { PrefetchRoutes } from './components/layout/PrefetchRoutes'
 import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/DashboardPage'
 import NotFoundPage from './pages/NotFoundPage'
 import { Toaster } from './components/ui/Toast'
 import { Spinner } from './components/ui/Spinner'
 import { ErrorBoundary, InlineErrorBoundary } from './components/ui/ErrorBoundary'
 
-// Sprint 15 core pages (eager)
-import OrdersPage from './pages/orders/OrdersPage'
-import InventoryPage from './pages/inventory/InventoryPage'
-import ShippingPage from './pages/shipping/ShippingPage'
-import ReturnsPage from './pages/returns/ReturnsPage'
-import CustomersPage from './pages/customers/CustomersPage'
-import CommissionsPage from './pages/commissions/CommissionsPage'
-import WalletPage from './pages/wallet/WalletPage'
-import SettingsPage from './pages/settings/SettingsPage'
-import OnboardingPage from './pages/onboarding/OnboardingPage'
+// All pages lazy-loaded for bundle splitting
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const OrdersPage = lazy(() => import('./pages/orders/OrdersPage'))
+const InventoryPage = lazy(() => import('./pages/inventory/InventoryPage'))
+const ShippingPage = lazy(() => import('./pages/shipping/ShippingPage'))
+const ReturnsPage = lazy(() => import('./pages/returns/ReturnsPage'))
+const CustomersPage = lazy(() => import('./pages/customers/CustomersPage'))
+const CommissionsPage = lazy(() => import('./pages/commissions/CommissionsPage'))
+const WalletPage = lazy(() => import('./pages/wallet/WalletPage'))
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
+const OnboardingPage = lazy(() => import('./pages/onboarding/OnboardingPage'))
 
 // Sprint 16 pages (lazy loaded)
 const DistributorsPage = lazy(() => import('./pages/distributors/DistributorsPage'))
@@ -61,24 +62,24 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
-          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/onboarding" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><OnboardingPage /></InlineErrorBoundary></Suspense>} />
           <Route element={<AppLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="dashboard" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><DashboardPage /></InlineErrorBoundary></Suspense>} />
             {/* Orders */}
-            <Route path="orders" element={<OrdersPage />} />
-            <Route path="shipping" element={<ShippingPage />} />
-            <Route path="returns" element={<ReturnsPage />} />
+            <Route path="orders" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><OrdersPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="shipping" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ShippingPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="returns" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ReturnsPage /></InlineErrorBoundary></Suspense>} />
             {/* Inventory */}
-            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="inventory" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><InventoryPage /></InlineErrorBoundary></Suspense>} />
             <Route path="purchase-orders" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><PurchaseOrdersPage /></InlineErrorBoundary></Suspense>} />
             <Route path="suppliers" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><SuppliersPage /></InlineErrorBoundary></Suspense>} />
             <Route path="stocktakes" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><StocktakesPage /></InlineErrorBoundary></Suspense>} />
             <Route path="sku-mappings" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><SkuMappingsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="forecasting" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ForecastingPage /></InlineErrorBoundary></Suspense>} />
             {/* Finance */}
-            <Route path="wallet" element={<WalletPage />} />
-            <Route path="commissions" element={<CommissionsPage />} />
+            <Route path="wallet" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><WalletPage /></InlineErrorBoundary></Suspense>} />
+            <Route path="commissions" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CommissionsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="pricing" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><PricingPage /></InlineErrorBoundary></Suspense>} />
             <Route path="currency" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CurrencyPage /></InlineErrorBoundary></Suspense>} />
             <Route path="coupons" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CouponsPage /></InlineErrorBoundary></Suspense>} />
@@ -87,14 +88,14 @@ export default function App() {
             <Route path="financial-reports" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><FinancialReportsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="invoices" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><InvoicesPage /></InlineErrorBoundary></Suspense>} />
             {/* CRM */}
-            <Route path="customers" element={<CustomersPage />} />
+            <Route path="customers" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CustomersPage /></InlineErrorBoundary></Suspense>} />
             <Route path="customer-segments" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CustomerSegmentsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="communications" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CommunicationsPage /></InlineErrorBoundary></Suspense>} />
             {/* Analytics */}
             <Route path="reports" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ReportsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="data-screen" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><DataScreenPage /></InlineErrorBoundary></Suspense>} />
             {/* System */}
-            <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><SettingsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="distributors" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><DistributorsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="audit" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><AuditPage /></InlineErrorBoundary></Suspense>} />
             <Route path="notifications" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><NotificationsPage /></InlineErrorBoundary></Suspense>} />
@@ -108,6 +109,7 @@ export default function App() {
           </Route>
         </Route>
       </Routes>
+      <PrefetchRoutes />
       <Toaster />
     </ErrorBoundary>
   )

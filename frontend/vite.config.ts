@@ -60,12 +60,15 @@ export default defineConfig({
   build: {
     outDir: '../public',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
           echarts: ['echarts/core', 'echarts/charts', 'echarts/components', 'echarts/renderers', 'echarts-for-react'],
           react: ['react', 'react-dom', 'react-router-dom'],
           query: ['@tanstack/react-query'],
+          forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
+          i18n: ['i18next', 'react-i18next'],
         },
       },
     },
