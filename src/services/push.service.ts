@@ -151,7 +151,7 @@ export class PushService {
     const privateKeyBytes = base64urlDecode(this.vapidPrivateKey)
     const key = await crypto.subtle.importKey(
       'pkcs8',
-      privateKeyBytes.buffer as ArrayBuffer,
+      toAB(privateKeyBytes),
       { name: 'ECDSA', namedCurve: 'P-256' },
       false,
       ['sign'],
@@ -188,7 +188,7 @@ export class PushService {
     // Import subscriber's public key
     const subscriberPubKey = await crypto.subtle.importKey(
       'raw',
-      subscriberPubKeyBytes.buffer as ArrayBuffer,
+      toAB(subscriberPubKeyBytes),
       { name: 'ECDH', namedCurve: 'P-256' },
       false,
       [],
@@ -216,7 +216,7 @@ export class PushService {
     )
 
     // HKDF: auth_secret + shared_secret → PRK
-    const prkKey = await crypto.subtle.importKey('raw', authSecret.buffer as ArrayBuffer, { name: 'HKDF' }, false, ['deriveBits'])
+    const prkKey = await crypto.subtle.importKey('raw', toAB(authSecret), { name: 'HKDF' }, false, ['deriveBits'])
     const ikm = concat(
       new TextEncoder().encode('WebPush: info\x00'),
       subscriberPubKeyBytes,
@@ -226,14 +226,14 @@ export class PushService {
     const authInfo = new TextEncoder().encode('Content-Encoding: auth\x00')
     const ikmBits = new Uint8Array(
       await crypto.subtle.deriveBits(
-        { name: 'HKDF', hash: 'SHA-256', salt: sharedSecret.buffer as ArrayBuffer, info: authInfo.buffer as ArrayBuffer },
+        { name: 'HKDF', hash: 'SHA-256', salt: toAB(sharedSecret), info: toAB(authInfo) },
         prkKey,
         256,
       ),
     )
 
     // Import IKM for final HKDF
-    const ikmKey = await crypto.subtle.importKey('raw', ikmBits.buffer as ArrayBuffer, { name: 'HKDF' }, false, ['deriveBits'])
+    const ikmKey = await crypto.subtle.importKey('raw', toAB(ikmBits), { name: 'HKDF' }, false, ['deriveBits'])
 
     // Derive CEK (Content Encryption Key) — 16 bytes
     const cekInfo = concat(
@@ -241,7 +241,7 @@ export class PushService {
     )
     const cek = new Uint8Array(
       await crypto.subtle.deriveBits(
-        { name: 'HKDF', hash: 'SHA-256', salt: authSecret.buffer as ArrayBuffer, info: cekInfo.buffer as ArrayBuffer },
+        { name: 'HKDF', hash: 'SHA-256', salt: toAB(authSecret), info: toAB(cekInfo) },
         ikmKey,
         128,
       ),
@@ -251,27 +251,28 @@ export class PushService {
     const nonceInfo = new TextEncoder().encode('Content-Encoding: nonce\x00')
     const nonce = new Uint8Array(
       await crypto.subtle.deriveBits(
-        { name: 'HKDF', hash: 'SHA-256', salt: authSecret.buffer as ArrayBuffer, info: nonceInfo.buffer as ArrayBuffer },
+        { name: 'HKDF', hash: 'SHA-256', salt: toAB(authSecret), info: toAB(nonceInfo) },
         ikmKey,
         96,
       ),
     )
 
     // Import CEK as AES-GCM key
-    const aesKey = await crypto.subtle.importKey('raw', cek.buffer as ArrayBuffer, { name: 'AES-GCM' }, false, ['encrypt'])
+    const aesKey = await crypto.subtle.importKey('raw', toAB(cek), { name: 'AES-GCM' }, false, ['encrypt'])
 
     // Add padding delimiter (0x02) as per RFC 8291
     const padded = concat(plaintext, new Uint8Array([2]))
 
     // Encrypt
     const encrypted = new Uint8Array(
-      await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce.buffer as ArrayBuffer }, aesKey, padded.buffer as ArrayBuffer),
+      await crypto.subtle.encrypt({ name: 'AES-GCM', iv: toAB(nonce) }, aesKey, toAB(padded)),
     )
 
     // Build aes128gcm header: salt(16) + rs(4) + idlen(1) + keyid(65) + encrypted
     const salt = crypto.getRandomValues(new Uint8Array(16))
-    const rs = new Uint8Array(4)
-    new DataView(rs.buffer as ArrayBuffer).setUint32(0, 4096)
+    const rsBuf = new ArrayBuffer(4)
+    new DataView(rsBuf).setUint32(0, 4096)
+    const rs = new Uint8Array(rsBuf)
 
     const header = concat(
       salt,
@@ -280,11 +281,18 @@ export class PushService {
       ephemeralPubKeyRaw,
     )
 
-    return concat(header, encrypted).buffer as ArrayBuffer
+    return toAB(concat(header, encrypted))
   }
 }
 
 // ── Utility functions ──
+
+/** Convert Uint8Array to ArrayBuffer (fixes TS 5.7+ Uint8Array<ArrayBufferLike> incompatibility with Web Crypto API) */
+function toAB(data: Uint8Array): ArrayBuffer {
+  const buf = new ArrayBuffer(data.byteLength)
+  new Uint8Array(buf).set(data)
+  return buf
+}
 
 function base64urlEncode(str: string): string {
   return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
