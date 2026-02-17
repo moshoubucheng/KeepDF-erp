@@ -43,7 +43,7 @@ jobs:
         run: npm ci
 
       - name: Run backend tests
-        run: npx vitest run --retry 2
+        run: npx vitest run --retry 2 --fileParallelism=false
 
   frontend-tests:
     name: Frontend Tests
