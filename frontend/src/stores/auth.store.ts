@@ -97,8 +97,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       })
     } catch (err) {
-      // Logout on 401/403 (invalid/expired token), not on network errors
-      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      // Logout only on 401 (invalid/expired token), not on 403 or network errors
+      if (err instanceof ApiError && err.status === 401) {
         get().logout()
       } else {
         set({ isLoading: false })
