@@ -2,6 +2,8 @@ import { getPendingMutations, removePendingMutation, updateMutationRetry, getPen
 import { useOfflineStore } from '@/stores/offline.store'
 
 const MAX_RETRIES = 3
+let resetTimerId: ReturnType<typeof setTimeout> | null = null
+let autoSyncRegistered = false
 
 /**
  * Process queued offline mutations when back online.
@@ -11,6 +13,12 @@ export async function syncPendingMutations(): Promise<{ synced: number; failed: 
   const store = useOfflineStore.getState()
   store.setSyncStatus('syncing')
   store.setSyncError(null)
+
+  // Clear any pending reset timer
+  if (resetTimerId !== null) {
+    clearTimeout(resetTimerId)
+    resetTimerId = null
+  }
 
   let synced = 0
   let failed = 0
@@ -66,10 +74,11 @@ export async function syncPendingMutations(): Promise<{ synced: number; failed: 
     store.setSyncStatus(failed > 0 && synced === 0 ? 'error' : 'synced')
 
     // Reset to idle after a short delay
-    setTimeout(() => {
+    resetTimerId = setTimeout(() => {
       if (useOfflineStore.getState().syncStatus === 'synced') {
-        store.setSyncStatus('idle')
+        useOfflineStore.getState().setSyncStatus('idle')
       }
+      resetTimerId = null
     }, 3000)
   } catch (err) {
     store.setSyncStatus('error')
@@ -79,9 +88,10 @@ export async function syncPendingMutations(): Promise<{ synced: number; failed: 
   return { synced, failed }
 }
 
-/** Auto-sync when coming back online */
+/** Auto-sync when coming back online (registers only once) */
 export function setupAutoSync() {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined' || autoSyncRegistered) return
+  autoSyncRegistered = true
 
   window.addEventListener('online', () => {
     // Short delay to let network stabilize

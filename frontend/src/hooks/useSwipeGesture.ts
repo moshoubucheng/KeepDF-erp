@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
 interface SwipeGestureOptions {
   /** Callback when user swipes right from left edge */
@@ -25,39 +25,45 @@ export function useSwipeGesture({
   enabled = true,
 }: SwipeGestureOptions) {
   const touchRef = useRef<{ startX: number; startY: number; fromEdge: boolean } | null>(null)
+  const onSwipeRightRef = useRef(onSwipeRight)
+  const onSwipeLeftRef = useRef(onSwipeLeft)
+
+  // Keep refs in sync without causing re-registration of listeners
+  onSwipeRightRef.current = onSwipeRight
+  onSwipeLeftRef.current = onSwipeLeft
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    const touch = e.touches[0]
+    touchRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      fromEdge: touch.clientX <= edgeThreshold,
+    }
+  }, [edgeThreshold])
+
+  const handleTouchEnd = useCallback((e: TouchEvent) => {
+    if (!touchRef.current) return
+    const touch = e.changedTouches[0]
+    const diffX = touch.clientX - touchRef.current.startX
+    const diffY = Math.abs(touch.clientY - touchRef.current.startY)
+
+    // Ignore if vertical scroll is dominant
+    if (diffY > Math.abs(diffX)) {
+      touchRef.current = null
+      return
+    }
+
+    if (diffX > minDistance && touchRef.current.fromEdge) {
+      onSwipeRightRef.current?.()
+    } else if (diffX < -minDistance) {
+      onSwipeLeftRef.current?.()
+    }
+
+    touchRef.current = null
+  }, [minDistance])
 
   useEffect(() => {
     if (!enabled) return
-
-    const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0]
-      touchRef.current = {
-        startX: touch.clientX,
-        startY: touch.clientY,
-        fromEdge: touch.clientX <= edgeThreshold,
-      }
-    }
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (!touchRef.current) return
-      const touch = e.changedTouches[0]
-      const diffX = touch.clientX - touchRef.current.startX
-      const diffY = Math.abs(touch.clientY - touchRef.current.startY)
-
-      // Ignore if vertical scroll is dominant
-      if (diffY > Math.abs(diffX)) {
-        touchRef.current = null
-        return
-      }
-
-      if (diffX > minDistance && touchRef.current.fromEdge) {
-        onSwipeRight?.()
-      } else if (diffX < -minDistance) {
-        onSwipeLeft?.()
-      }
-
-      touchRef.current = null
-    }
 
     const opts: AddEventListenerOptions = { passive: true }
     document.addEventListener('touchstart', handleTouchStart, opts)
@@ -67,5 +73,5 @@ export function useSwipeGesture({
       document.removeEventListener('touchstart', handleTouchStart, opts)
       document.removeEventListener('touchend', handleTouchEnd, opts)
     }
-  }, [enabled, edgeThreshold, minDistance, onSwipeRight, onSwipeLeft])
+  }, [enabled, handleTouchStart, handleTouchEnd])
 }

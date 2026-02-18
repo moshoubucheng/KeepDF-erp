@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { purchaseOrdersApi, type PurchaseOrder } from '@/api/endpoints/purchase-orders';
 import { suppliersApi, type Supplier } from '@/api/endpoints/suppliers';
@@ -53,6 +53,11 @@ export default function PurchaseOrdersPage() {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
 
+  const addToastRef = useRef(addToast);
+  addToastRef.current = addToast;
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
@@ -65,11 +70,11 @@ export default function PurchaseOrdersPage() {
       setOrders(res.orders || []);
       setTotalPages(Math.ceil(res.total / limit) || 1);
     } catch {
-      addToast('error', t('po.error_fetch'));
+      addToastRef.current('error', tRef.current('po.error_fetch'));
     } finally {
       setLoading(false);
     }
-  }, [page, limit, statusFilter, addToast, t]);
+  }, [page, limit, statusFilter]);
 
   const fetchSuppliers = useCallback(async () => {
     try {

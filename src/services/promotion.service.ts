@@ -180,9 +180,9 @@ export class PromotionService {
                     ? Math.floor(orderAmount * promotion.discount_value / 100)
                     : 0
             case 'BUY_X_GET_Y':
-                if (!items) return 0
+                if (!items || !promotion.buy_quantity || promotion.buy_quantity <= 0) return 0
                 const totalQty = items.reduce((s: number, i: any) => s + (i.qty || 0), 0)
-                if (totalQty >= (promotion.buy_quantity || 0)) {
+                if (totalQty >= promotion.buy_quantity) {
                     const freeItems = Math.floor(totalQty / promotion.buy_quantity) * (promotion.get_quantity || 0)
                     const avgPrice = orderAmount / Math.max(totalQty, 1)
                     return Math.floor(freeItems * avgPrice)

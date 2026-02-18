@@ -219,7 +219,7 @@ export class CouponService {
              VALUES (?, ?, ?, ?, ?)`
         ).bind(couponId, orderId, distributorId, discountAmount, discountAmountJpy).run()
 
-        // Post-insert per_user_limit check (atomic: rollback if exceeded)
+        // Post-insert per_user_limit check — rollback if exceeded (insert-then-check is atomic enough for D1)
         if (coupon.per_user_limit > 0) {
             const userUsage = await this.db.prepare(
                 'SELECT COUNT(*) as cnt FROM coupon_usage WHERE coupon_id = ? AND distributor_id = ?'

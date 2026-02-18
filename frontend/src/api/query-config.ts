@@ -1,5 +1,6 @@
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query'
 import { ApiError } from './client'
+import { useUIStore } from '@/stores/ui.store'
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
   // Don't retry client errors (4xx)
@@ -20,13 +21,10 @@ export function createQueryClient(): QueryClient {
         // Skip 401 — already handled by api client (auto-logout)
         if (error instanceof ApiError && error.status === 401) return
 
-        // Dynamic import to avoid circular deps
-        import('@/stores/ui.store').then(({ useUIStore }) => {
-          const message = error instanceof ApiError
-            ? error.data.error || error.message
-            : 'An unexpected error occurred'
-          useUIStore.getState().addToast('error', message)
-        })
+        const message = error instanceof ApiError
+          ? error.data.error || error.message
+          : 'An unexpected error occurred'
+        useUIStore.getState().addToast('error', message)
       },
     }),
     mutationCache: new MutationCache({
@@ -36,12 +34,10 @@ export function createQueryClient(): QueryClient {
         // Skip 401
         if (error instanceof ApiError && error.status === 401) return
 
-        import('@/stores/ui.store').then(({ useUIStore }) => {
-          const message = error instanceof ApiError
-            ? error.data.error || error.message
-            : 'An unexpected error occurred'
-          useUIStore.getState().addToast('error', message)
-        })
+        const message = error instanceof ApiError
+          ? error.data.error || error.message
+          : 'An unexpected error occurred'
+        useUIStore.getState().addToast('error', message)
       },
     }),
     defaultOptions: {

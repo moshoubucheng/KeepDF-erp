@@ -53,7 +53,7 @@ async function request<T>(
     clearTimeout(timeoutId)
   }
 
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
     // Only trigger logout once across concurrent requests
     if (!logoutTriggered) {
       logoutTriggered = true
@@ -61,6 +61,11 @@ async function request<T>(
       useAuthStore.getState().logout()
     }
     throw new ApiError(res.status, { error: 'Unauthorized' })
+  }
+
+  if (res.status === 403) {
+    const data = await res.json().catch(() => ({}))
+    throw new ApiError(res.status, data.error ? data : { error: 'Forbidden' })
   }
 
   if (!res.ok) {

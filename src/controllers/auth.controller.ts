@@ -342,7 +342,7 @@ auth.post('/logout', async (c) => {
 auth.get('/me', async (c) => {
     const distributorId = c.get('distributorId')
     const distributor = await c.env.DB.prepare(
-        'SELECT id, name, username, balance, frozen_balance, tax_reg_number, email, phone, address, contact_person, role, language, totp_enabled, created_at FROM distributors WHERE id = ?'
+        'SELECT id, name, username, balance, frozen_balance, tax_reg_number, email, phone, address, contact_person, role, language, totp_enabled, onboarding_completed, created_at FROM distributors WHERE id = ?'
     ).bind(distributorId).first<Distributor>()
 
     if (!distributor) {
@@ -364,9 +364,19 @@ auth.get('/me', async (c) => {
             role: distributor.role || 'distributor',
             language: distributor.language || 'zh',
             totp_enabled: !!distributor.totp_enabled,
+            onboarding_completed: distributor.onboarding_completed ?? 0,
             created_at: distributor.created_at,
         },
     })
+})
+
+/** PUT /auth/onboarding/complete - Mark onboarding as completed */
+auth.put('/onboarding/complete', async (c) => {
+    const distributorId = c.get('distributorId')
+    await c.env.DB.prepare(
+        'UPDATE distributors SET onboarding_completed = 1 WHERE id = ?'
+    ).bind(distributorId).run()
+    return c.json({ success: true })
 })
 
 /** PUT /auth/profile - Update company profile */

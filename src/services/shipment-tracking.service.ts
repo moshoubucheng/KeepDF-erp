@@ -46,8 +46,26 @@ export class ShipmentTrackingService {
         return fn ? fn(trackingNumber) : null
     }
 
+    private static readonly VALID_TRANSITIONS: Record<string, string[]> = {
+        PENDING: ['PICKED_UP', 'CANCELLED'],
+        PICKED_UP: ['IN_TRANSIT', 'CANCELLED'],
+        IN_TRANSIT: ['OUT_FOR_DELIVERY', 'EXCEPTION', 'CANCELLED'],
+        OUT_FOR_DELIVERY: ['DELIVERED', 'EXCEPTION'],
+        EXCEPTION: ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'],
+    }
+
     async updateStatusWithEvent(shipmentId: number, status: string, params?: { location?: string; description?: string }): Promise<{ shipment: any; event: ShipmentEvent }> {
         status = status.toUpperCase()
+
+        // Validate status transition
+        const current = await this.db.prepare('SELECT status FROM shipments WHERE id = ?')
+            .bind(shipmentId).first<{ status: string }>()
+        if (current) {
+            const allowed = ShipmentTrackingService.VALID_TRANSITIONS[current.status]
+            if (allowed && !allowed.includes(status)) {
+                throw new Error(`Invalid status transition: ${current.status} → ${status}`)
+            }
+        }
 
         // Update shipment status
         const updateFields = ['status = ?']

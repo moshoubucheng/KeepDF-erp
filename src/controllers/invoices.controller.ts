@@ -108,7 +108,7 @@ invoices.post('/generate/:orderId', async (c) => {
             success: true,
             invoice: {
                 ...invoice,
-                tax_details: JSON.parse(invoice.tax_details),
+                tax_details: (() => { try { return JSON.parse(invoice.tax_details) } catch { return {} } })(),
             },
         }, 201)
     } catch (e: any) {

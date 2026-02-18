@@ -28,6 +28,12 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: 
         const parts = cached.split(':')
         c.set('distributorId', Number(parts[0]))
         c.set('role', (parts[1] as 'admin' | 'distributor') || 'distributor')
+        // Refresh TTL on each request (sliding session), skip logout to avoid race
+        if (!path.endsWith('/auth/logout')) {
+            c.executionCtx.waitUntil(
+                c.env.KV.put(`session:${token}`, cached, { expirationTtl: 3600 })
+            )
+        }
         return next()
     }
 

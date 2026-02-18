@@ -82,11 +82,14 @@ customers.post('/', async (c) => {
         return c.json({ error: 'Name is required (1-200 characters)' }, 400)
     }
 
+    const allowedFields = ['name', 'email', 'phone', 'address', 'platform', 'platform_customer_id', 'tags', 'notes']
+    const sanitized: Record<string, unknown> = { distributor_id: distributorId }
+    for (const key of allowedFields) {
+        if (body[key] !== undefined) sanitized[key] = body[key]
+    }
+
     const service = new CustomerService(c.env.DB)
-    const customer = await service.create({
-        ...body,
-        distributor_id: distributorId,
-    })
+    const customer = await service.create(sanitized as any)
 
     const audit = new AuditService(c.env.DB)
     audit.log({

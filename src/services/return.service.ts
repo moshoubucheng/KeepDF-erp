@@ -97,8 +97,8 @@ export class ReturnService {
 
         // Check for existing active return
         const existingReturn = await this.db.prepare(
-            "SELECT id FROM returns WHERE order_id = ? AND status NOT IN ('REJECTED','REFUNDED')"
-        ).bind(data.orderId).first()
+            "SELECT id FROM returns WHERE order_id = ? AND distributor_id = ? AND status NOT IN ('REJECTED','REFUNDED')"
+        ).bind(data.orderId, order.distributor_id).first()
         if (existingReturn) throw new Error('An active return already exists for this order')
 
         const refundAmount = data.items.reduce((sum, item) => sum + item.qty * item.unit_price, 0)

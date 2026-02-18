@@ -37,8 +37,9 @@ automation.get('/logs', async (c) => {
 /** GET /automation/:id - Rule detail */
 automation.get('/:id', async (c) => {
     const id = Number(c.req.param('id'))
+    const distributorId = c.get('distributorId')
     const service = new AutomationService(c.env.DB)
-    const rule = await service.getById(id)
+    const rule = await service.getById(id, distributorId)
 
     if (!rule) return c.json({ error: 'Rule not found' }, 404)
     return c.json({ rule })

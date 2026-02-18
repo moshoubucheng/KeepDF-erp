@@ -17,7 +17,7 @@ export const settingsApi = {
     api.post<{ success: boolean }>(`/settings/users/${userId}/disable-2fa`),
 
   completeOnboarding: () =>
-    api.put<{ success: boolean; config: Record<string, unknown> }>('/settings/config', { onboarding_completed: '1' }),
+    api.put<{ success: boolean }>('/auth/onboarding/complete'),
 
   // List users via distributors endpoint
   users: () =>

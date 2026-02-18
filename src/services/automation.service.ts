@@ -34,7 +34,11 @@ export class AutomationService {
         return results
     }
 
-    async getById(id: number): Promise<AutomationRule | null> {
+    async getById(id: number, distributorId?: number): Promise<AutomationRule | null> {
+        if (distributorId) {
+            return this.db.prepare('SELECT * FROM automation_rules WHERE id = ? AND distributor_id = ?')
+                .bind(id, distributorId).first<AutomationRule>()
+        }
         return this.db.prepare('SELECT * FROM automation_rules WHERE id = ?')
             .bind(id).first<AutomationRule>()
     }

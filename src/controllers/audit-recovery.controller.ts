@@ -50,7 +50,12 @@ auditRecovery.post('/restore/:logId', adminOnly, async (c) => {
     ).bind(logId).first<any>()
     if (!snapshot || !snapshot.before_data) return c.json({ error: 'No restorable snapshot found' }, 404)
 
-    const beforeData = JSON.parse(snapshot.before_data)
+    let beforeData: Record<string, unknown>
+    try {
+        beforeData = JSON.parse(snapshot.before_data)
+    } catch {
+        return c.json({ error: 'Corrupted snapshot data' }, 400)
+    }
     const resourceType = auditLog.resource_type
     const resourceId = auditLog.resource_id
 
