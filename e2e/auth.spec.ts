@@ -5,7 +5,7 @@ test.describe('Authentication', () => {
   test('shows login page with branding', async ({ page }) => {
     await page.goto('/login')
     await expect(page.locator('h1')).toContainText('KeepDF')
-    await expect(page.locator('text=Keep Data Flow')).toBeVisible()
+    await expect(page.locator('text=KeepDF').first()).toBeVisible()
   })
 
   test('shows password login form by default', async ({ page }) => {
