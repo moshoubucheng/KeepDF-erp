@@ -505,7 +505,7 @@ export default function OnboardingPage() {
 
       {/* Footer branding */}
       <p className="mt-8 text-xs text-text-muted">
-        KeepDF &mdash; Keep Data Flow
+        KeepDF &mdash; {t('brand.tagline')}
       </p>
     </div>
   )

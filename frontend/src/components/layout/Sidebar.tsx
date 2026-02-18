@@ -237,7 +237,7 @@ export function Sidebar() {
                 KeepDF
               </span>
               <span className="text-[10px] leading-tight text-text-muted">
-                Keep Data Flow
+                {t('brand.tagline')}
               </span>
             </div>
           </button>

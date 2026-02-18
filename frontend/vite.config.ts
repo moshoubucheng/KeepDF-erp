@@ -20,7 +20,7 @@ export default defineConfig({
       manifest: {
         name: 'KeepDF ERP',
         short_name: 'KeepDF',
-        description: 'Keep Data Flow - Cross-border E-commerce Smart Platform',
+        description: 'KeepDF - Keep Data Flow. Cross-border E-commerce Smart ERP Platform.',
         theme_color: '#8b5cf6',
         background_color: '#0a0e1a',
         display: 'standalone',
