@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { RequireAuth } from './components/layout/RequireAuth'
 import { AppLayout } from './components/layout/AppLayout'
 import { PrefetchRoutes } from './components/layout/PrefetchRoutes'
@@ -57,6 +58,12 @@ function LazyFallback() {
 }
 
 export default function App() {
+  const { t, i18n } = useTranslation()
+
+  useEffect(() => {
+    document.title = t('brand.title')
+  }, [i18n.language, t])
+
   return (
     <ErrorBoundary>
       <Routes>
