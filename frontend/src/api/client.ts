@@ -53,14 +53,14 @@ async function request<T>(
     clearTimeout(timeoutId)
   }
 
-  if (res.status === 401) {
+  if (res.status === 401 || res.status === 403) {
     // Only trigger logout once across concurrent requests
     if (!logoutTriggered) {
       logoutTriggered = true
       setTimeout(() => { logoutTriggered = false }, 1000)
       useAuthStore.getState().logout()
     }
-    throw new ApiError(401, { error: 'Unauthorized' })
+    throw new ApiError(res.status, { error: 'Unauthorized' })
   }
 
   if (!res.ok) {

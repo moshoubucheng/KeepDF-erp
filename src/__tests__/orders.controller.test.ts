@@ -82,11 +82,11 @@ describe('Orders Controller', () => {
             expect(res.status).toBe(401)
         })
 
-        it('无效 token 返回 403', async () => {
+        it('无效 token 返回 401', async () => {
             const res = await SELF.fetch('http://localhost/api/v1/orders', {
                 headers: authHeaders('invalid_token'),
             })
-            expect(res.status).toBe(403)
+            expect(res.status).toBe(401)
         })
     })
 

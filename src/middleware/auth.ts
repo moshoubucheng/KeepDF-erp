@@ -37,7 +37,7 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: 
     ).bind(token).first<{ id: number; role: string }>()
 
     if (!distributor) {
-        return c.json({ error: 'Invalid token' }, 403)
+        return c.json({ error: 'Invalid token' }, 401)
     }
 
     const role = (distributor.role as 'admin' | 'distributor') || 'distributor'
