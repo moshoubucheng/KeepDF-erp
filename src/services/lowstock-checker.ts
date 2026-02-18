@@ -4,6 +4,15 @@ export class LowStockChecker {
     constructor(private db: D1Database) {}
 
     async check(threshold = 50): Promise<{ alertsSent: number; products: any[] }> {
+        // Idempotency: skip if already sent today
+        const today = new Date().toISOString().slice(0, 10)
+        const existing = await this.db.prepare(
+            "SELECT id FROM notifications WHERE type = 'WARNING' AND message LIKE '低在庫アラート%' AND created_at >= ? LIMIT 1"
+        ).bind(today + 'T00:00:00').first()
+        if (existing) {
+            return { alertsSent: 0, products: [] }
+        }
+
         const { results } = await this.db.prepare(`
             SELECT p.sku, p.name_jp, wl.qty, wl.code
             FROM warehouse_locations wl

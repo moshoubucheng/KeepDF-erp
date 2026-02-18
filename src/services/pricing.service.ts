@@ -100,6 +100,7 @@ export class PricingService {
         const values: (string | number | null)[] = []
 
         if (data.base_price !== undefined && data.base_price !== existing.base_price) {
+            if (data.base_price <= 0) throw new Error('base_price must be greater than 0')
             fields.push('base_price = ?')
             values.push(data.base_price)
             // Record history

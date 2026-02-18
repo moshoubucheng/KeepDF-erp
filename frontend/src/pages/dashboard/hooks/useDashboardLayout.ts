@@ -34,9 +34,14 @@ export function useDashboardLayout(isAdmin: boolean) {
     staleTime: 300_000,
   })
 
-  // Sync server data into state on first load
+  // Sync server data into state on first load (reset when isAdmin changes)
   const serverSynced = useRef(false)
+  const prevIsAdmin = useRef(isAdmin)
   useEffect(() => {
+    if (prevIsAdmin.current !== isAdmin) {
+      serverSynced.current = false
+      prevIsAdmin.current = isAdmin
+    }
     if (layoutQuery.data && !serverSynced.current) {
       serverSynced.current = true
       const normalized = normalizeLayout(layoutQuery.data.layout, isAdmin)

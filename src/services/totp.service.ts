@@ -19,16 +19,27 @@ export class TOTPService {
         return this.computeCode(secret, timeStep)
     }
 
-    /** Verify a TOTP code within ±window time steps */
+    /** Verify a TOTP code within ±window time steps (constant-time comparison) */
     static async verify(secret: string, code: string, window: number = 1): Promise<boolean> {
         const t = Math.floor(Date.now() / 1000)
         const timeStep = Math.floor(t / this.STEP)
 
+        let valid = false
         for (let i = -window; i <= window; i++) {
             const expected = await this.computeCode(secret, timeStep + i)
-            if (expected === code) return true
+            if (this.timingSafeEqual(expected, code)) valid = true
         }
-        return false
+        return valid
+    }
+
+    /** Constant-time string comparison to prevent timing attacks */
+    private static timingSafeEqual(a: string, b: string): boolean {
+        if (a.length !== b.length) return false
+        let result = 0
+        for (let i = 0; i < a.length; i++) {
+            result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+        }
+        return result === 0
     }
 
     /** Generate otpauth:// URI for QR code display */

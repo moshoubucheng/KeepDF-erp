@@ -9,13 +9,13 @@ export class WalletService {
     constructor(private db: D1Database) { }
 
     /** 获取分销商余额 */
-    async getBalance(distributorId: number): Promise<{ balance: number; frozen: number } | null> {
+    async getBalance(distributorId: number): Promise<{ balance: number; frozen: number; frozen_balance: number } | null> {
         const row = await this.db.prepare(
             'SELECT balance, frozen_balance FROM distributors WHERE id = ?'
         ).bind(distributorId).first<Distributor>()
 
         if (!row) return null
-        return { balance: row.balance, frozen: row.frozen_balance }
+        return { balance: row.balance, frozen: row.frozen_balance, frozen_balance: row.frozen_balance }
     }
 
     /** 充值（管理员審核後調用） — atomic balance + amount */
@@ -84,10 +84,10 @@ export class WalletService {
         ).bind(distributorId, amount, orderId, row?.balance ?? 0).run()
     }
 
-    /** 退款（訂単取消時調用） — atomic: balance += amount, frozen -= amount */
+    /** 退款 — atomic: balance += amount, frozen = MAX(0, frozen - amount) to prevent negative frozen */
     async refund(distributorId: number, amount: number, orderId: string): Promise<void> {
         const result = await this.db.prepare(
-            'UPDATE distributors SET balance = balance + ?, frozen_balance = frozen_balance - ? WHERE id = ?'
+            'UPDATE distributors SET balance = balance + ?, frozen_balance = MAX(0, frozen_balance - ?) WHERE id = ?'
         ).bind(amount, amount, distributorId).run()
 
         if (!result.meta.changes) throw new Error('Distributor not found')

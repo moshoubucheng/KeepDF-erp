@@ -30,8 +30,9 @@ export const useOfflineStore = create<OfflineState>((set) => ({
   setSyncError: (error) => set({ syncError: error }),
 }))
 
-// Listen to online/offline events
-if (typeof window !== 'undefined') {
+// Listen to online/offline events (guarded against HMR duplication)
+if (typeof window !== 'undefined' && !(window as any).__offlineListenersRegistered) {
+  (window as any).__offlineListenersRegistered = true
   window.addEventListener('online', () => useOfflineStore.getState().setOffline(false))
   window.addEventListener('offline', () => useOfflineStore.getState().setOffline(true))
 }

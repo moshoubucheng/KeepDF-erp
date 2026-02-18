@@ -27,5 +27,5 @@ export const authApi = {
     return api.get<{ notifications: Notification[]; unread_count: number }>(`/notifications${qs ? `?${qs}` : ''}`)
   },
 
-  markAllRead: () => api.post('/notifications/read-all'),
+  markAllRead: () => api.post('/notifications/mark-all-read'),
 }

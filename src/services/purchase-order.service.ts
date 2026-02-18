@@ -205,6 +205,7 @@ export class PurchaseOrderService {
         for (const item of poItems) {
             const received = receivedItems?.find(r => r.sku === item.sku)
             const receivedQty = received?.received_qty ?? item.qty
+            if (receivedQty < 0) continue // skip invalid negative qty
 
             // Update PO item received qty
             stmts.push(

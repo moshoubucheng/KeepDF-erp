@@ -379,6 +379,7 @@ export class AutomationService {
                 // Set price to achieve target margin: price = cost / (1 - margin_pct/100)
                 const costPrice = item.cost_price || 0
                 if (costPrice <= 0) continue
+                if (actions.adjust_value >= 100) continue // margin >= 100% is invalid (division by zero)
                 newPrice = Math.ceil(costPrice / (1 - actions.adjust_value / 100))
             } else if (actions.adjust_type === 'increase_pct') {
                 newPrice = Math.ceil(priceRule.base_price * (1 + actions.adjust_value / 100))

@@ -153,7 +153,7 @@ export default {
         typeof body.payload.total !== 'number' ||
         body.payload.total <= 0
       ) {
-        console.error('[QUEUE] Invalid message, skipping:', JSON.stringify(body))
+        console.error('[QUEUE] Invalid message structure, discarding (will not retry):', JSON.stringify(body).slice(0, 500))
         message.ack()
         continue
       }
@@ -161,14 +161,8 @@ export default {
       const { platform, payload } = body
       console.log(`[QUEUE] Processing ${platform} order: ${payload.order_id}`)
 
-      // Resolve distributor_id from payload or platform mapping
-      let distributorId: number | null = (body as any).payload?.distributor_id || null
-      if (!distributorId) {
-        const mapping = await env.DB.prepare(
-          'SELECT distributor_id FROM platform_mappings WHERE platform = ? LIMIT 1'
-        ).bind(platform).first<{ distributor_id: number }>()
-        distributorId = mapping?.distributor_id || null
-      }
+      // Resolve distributor_id from payload
+      const distributorId: number | null = (body as any).payload?.distributor_id || null
 
       if (!distributorId) {
         console.error(`[QUEUE] No distributor_id for ${platform} order ${payload.order_id}, skipping`)
@@ -177,7 +171,18 @@ export default {
       }
 
       try {
-        // 1. 写入订单
+        // 1. Check for duplicate platform_order_id
+        const existingOrder = await env.DB.prepare(
+          'SELECT id FROM orders WHERE platform_order_id = ? AND platform = ?'
+        ).bind(payload.order_id, platform).first<{ id: number }>()
+
+        if (existingOrder) {
+          console.log(`[QUEUE] Duplicate order ${platform}:${payload.order_id}, skipping`)
+          message.ack()
+          continue
+        }
+
+        // 2. 写入订单
         const { meta } = await env.DB.prepare(
           `INSERT INTO orders (platform, platform_order_id, status, total_amount, tax_total, distributor_id)
            VALUES (?, ?, 'PROCESSING', ?, 0, ?)`
@@ -196,9 +201,9 @@ export default {
         }
 
         // 3. 冻结分销商余额
-        if ((body as any).payload?.distributor_id) {
+        if (distributorId) {
           const walletService = new WalletService(env.DB)
-          await walletService.freeze((body as any).payload.distributor_id, payload.total, String(orderId))
+          await walletService.freeze(distributorId, payload.total, String(orderId))
         }
 
         message.ack()

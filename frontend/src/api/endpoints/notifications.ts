@@ -24,5 +24,5 @@ export const notificationsApi = {
 
   markRead: (id: number) => api.patch<{ success: boolean }>(`/notifications/${id}/read`),
 
-  markAllRead: () => api.post<{ success: boolean; marked: number }>('/notifications/read-all'),
+  markAllRead: () => api.post<{ success: boolean; marked: number }>('/notifications/mark-all-read'),
 }

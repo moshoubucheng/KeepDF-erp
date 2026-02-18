@@ -17,9 +17,20 @@ export class PasswordService {
         const parts = stored.split(':')
         if (parts.length !== 2) return false
         const salt = this.fromHex(parts[0])
-        const expectedHash = parts[1]
-        const hash = await this.pbkdf2(password, salt)
-        return this.toHex(new Uint8Array(hash)) === expectedHash
+        const expectedBytes = this.fromHex(parts[1])
+        const hashBuffer = await this.pbkdf2(password, salt)
+        const hashBytes = new Uint8Array(hashBuffer)
+        return this.timingSafeEqual(hashBytes, expectedBytes)
+    }
+
+    /** Constant-time comparison to prevent timing attacks */
+    private static timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+        if (a.length !== b.length) return false
+        let result = 0
+        for (let i = 0; i < a.length; i++) {
+            result |= a[i] ^ b[i]
+        }
+        return result === 0
     }
 
     private static async pbkdf2(password: string, salt: Uint8Array): Promise<ArrayBuffer> {

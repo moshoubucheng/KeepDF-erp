@@ -162,13 +162,13 @@ export class CommissionService {
             const { items, totalCommission } = await this.calculateOrderCommission(orderId, order.platform)
             if (totalCommission === 0) return
 
-            // 4. Create settlement records
+            // 4. Create settlement records (INSERT OR IGNORE to prevent duplicates on concurrent calls)
             const stmts: D1PreparedStatement[] = []
             for (const item of items) {
                 if (item.commission_amount > 0) {
                     stmts.push(
                         this.db.prepare(`
-                            INSERT INTO commission_settlements
+                            INSERT OR IGNORE INTO commission_settlements
                             (distributor_id, order_id, sku, platform, qty, unit_price, commission_rate, commission_amount, status, settled_at)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'SETTLED', datetime('now'))
                         `).bind(

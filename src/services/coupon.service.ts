@@ -203,15 +203,6 @@ export class CouponService {
             throw new Error('Coupon usage limit reached')
         }
 
-        if (coupon.per_user_limit > 0) {
-            const userUsage = await this.db.prepare(
-                'SELECT COUNT(*) as cnt FROM coupon_usage WHERE coupon_id = ? AND distributor_id = ?'
-            ).bind(couponId, distributorId).first<{ cnt: number }>()
-            if (userUsage && userUsage.cnt >= coupon.per_user_limit) {
-                throw new Error('Per-user usage limit reached')
-            }
-        }
-
         // Atomic: increment usage_count only if still within limit
         const updateResult = await this.db.prepare(
             `UPDATE coupons SET usage_count = usage_count + 1, updated_at = CURRENT_TIMESTAMP
@@ -227,6 +218,21 @@ export class CouponService {
             `INSERT INTO coupon_usage (coupon_id, order_id, distributor_id, discount_amount, discount_amount_jpy)
              VALUES (?, ?, ?, ?, ?)`
         ).bind(couponId, orderId, distributorId, discountAmount, discountAmountJpy).run()
+
+        // Post-insert per_user_limit check (atomic: rollback if exceeded)
+        if (coupon.per_user_limit > 0) {
+            const userUsage = await this.db.prepare(
+                'SELECT COUNT(*) as cnt FROM coupon_usage WHERE coupon_id = ? AND distributor_id = ?'
+            ).bind(couponId, distributorId).first<{ cnt: number }>()
+            if (userUsage && userUsage.cnt > coupon.per_user_limit) {
+                // Rollback: delete usage record and decrement usage_count
+                await this.db.prepare('DELETE FROM coupon_usage WHERE id = ?').bind(meta.last_row_id).run()
+                await this.db.prepare(
+                    'UPDATE coupons SET usage_count = usage_count - 1 WHERE id = ? AND usage_count > 0'
+                ).bind(couponId).run()
+                throw new Error('Per-user usage limit reached')
+            }
+        }
 
         return this.db.prepare('SELECT * FROM coupon_usage WHERE id = ?')
             .bind(meta.last_row_id).first<CouponUsage>() as Promise<CouponUsage>

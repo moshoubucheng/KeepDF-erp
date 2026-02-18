@@ -43,7 +43,9 @@ export function usePushNotifications(): UsePushNotificationsResult {
         setIsSubscribed(!!sub)
         setPermission(getPermissionState())
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.warn('[Push] Failed to check subscription:', err)
+      })
       .finally(() => setLoading(false))
   }, [supported])
 

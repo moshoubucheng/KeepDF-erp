@@ -141,24 +141,23 @@ export class BatchService {
                     continue
                 }
 
-                const location = await this.db.prepare(
-                    'SELECT id, qty FROM warehouse_locations WHERE sku = ?'
-                ).bind(adj.sku).first<{ id: number; qty: number }>()
+                // Atomic stock adjustment: prevents race conditions
+                const updateResult = await this.db.prepare(
+                    'UPDATE warehouse_locations SET qty = qty + ? WHERE sku = ? AND (qty + ?) >= 0'
+                ).bind(adj.qty, adj.sku, adj.qty).run()
 
-                if (!location) {
-                    errors.push({ sku: adj.sku, error: 'SKU not found in warehouse' })
+                if (!updateResult.meta.changes) {
+                    // Determine if SKU not found or insufficient stock
+                    const location = await this.db.prepare(
+                        'SELECT qty FROM warehouse_locations WHERE sku = ?'
+                    ).bind(adj.sku).first<{ qty: number }>()
+                    if (!location) {
+                        errors.push({ sku: adj.sku, error: 'SKU not found in warehouse' })
+                    } else {
+                        errors.push({ sku: adj.sku, error: `Insufficient stock: current=${location.qty}, adjustment=${adj.qty}` })
+                    }
                     continue
                 }
-
-                const newQty = location.qty + adj.qty
-                if (newQty < 0) {
-                    errors.push({ sku: adj.sku, error: `Insufficient stock: current=${location.qty}, adjustment=${adj.qty}` })
-                    continue
-                }
-
-                await this.db.prepare(
-                    'UPDATE warehouse_locations SET qty = ? WHERE id = ?'
-                ).bind(newQty, location.id).run()
 
                 // Create inbound record for positive adjustments
                 if (adj.qty > 0) {

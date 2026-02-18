@@ -142,14 +142,17 @@ export class ShippingFeeService {
         const order = await this.db.prepare('SELECT * FROM orders WHERE id = ?').bind(orderId).first<any>()
         if (!order) return null
 
-        // Find matching template
+        // Find matching template (match weight range if specified)
+        const weightG = order.weight_g || 0
         const template = await this.db.prepare(
             `SELECT * FROM shipping_fee_templates
              WHERE is_active = 1
                AND (platform IS NULL OR platform = ?)
+               AND (weight_min_g IS NULL OR weight_min_g <= ?)
+               AND (weight_max_g IS NULL OR weight_max_g >= ?)
              ORDER BY priority DESC, base_fee ASC
              LIMIT 1`
-        ).bind(order.platform || '').first<any>()
+        ).bind(order.platform || '', weightG, weightG).first<any>()
 
         if (!template) return null
 

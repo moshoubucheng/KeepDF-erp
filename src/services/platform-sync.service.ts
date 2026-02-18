@@ -42,6 +42,12 @@ export class PlatformSyncService {
                 }
             }
 
+            // Resolve default distributor_id (admin) for platform-synced orders
+            const adminDistributor = await this.db.prepare(
+                "SELECT id FROM distributors WHERE role = 'admin' LIMIT 1"
+            ).first<{ id: number }>()
+            const defaultDistributorId = adminDistributor?.id || null
+
             // Enqueue new orders
             for (const order of newOrders) {
                 await this.queue.send({
@@ -50,6 +56,7 @@ export class PlatformSyncService {
                         order_id: order.platform_order_id,
                         items: order.items,
                         total: order.total,
+                        distributor_id: defaultDistributorId,
                     },
                     receivedAt: new Date().toISOString(),
                 })

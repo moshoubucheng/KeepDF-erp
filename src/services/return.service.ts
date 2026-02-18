@@ -193,7 +193,7 @@ export class ReturnService {
 
         const stmts: D1PreparedStatement[] = []
 
-        // Restock warehouse
+        // Restock warehouse (update first matching location per SKU)
         for (const item of items) {
             stmts.push(
                 this.db.prepare(
@@ -227,10 +227,13 @@ export class ReturnService {
         // 1. Process wallet refund
         await this.walletService.refund(ret.distributor_id, refundAmount, String(ret.order_id))
 
-        // 2. Get the wallet tx id
+        // 2. Get the wallet tx id (most recent REFUND for this order, matched by amount for accuracy)
         const walletTx = await this.db.prepare(
-            "SELECT id FROM wallet_transactions WHERE distributor_id = ? AND type = 'REFUND' AND related_order_id = ? ORDER BY id DESC LIMIT 1"
-        ).bind(ret.distributor_id, String(ret.order_id)).first<{ id: number }>()
+            "SELECT id FROM wallet_transactions WHERE distributor_id = ? AND type = 'REFUND' AND related_order_id = ? AND amount = ? ORDER BY id DESC LIMIT 1"
+        ).bind(ret.distributor_id, String(ret.order_id), refundAmount).first<{ id: number }>()
+        if (!walletTx) {
+            console.error(`[RETURN] Wallet transaction not found after refund for return ${id}`)
+        }
 
         // 3. Reverse commission (insert negative settlement)
         const { results: settlements } = await this.db.prepare(
