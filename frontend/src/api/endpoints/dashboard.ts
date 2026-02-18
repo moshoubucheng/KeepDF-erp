@@ -55,4 +55,10 @@ export const dashboardApi = {
 
   inventoryTurnover: () =>
     api.get<TurnoverResponse>('/dashboard/inventory-turnover'),
+
+  getLayout: () =>
+    api.get<{ layout: unknown[] }>('/dashboard/layout'),
+
+  saveLayout: (layout: unknown[]) =>
+    api.put<{ layout: unknown[] }>('/dashboard/layout', { layout }),
 }
