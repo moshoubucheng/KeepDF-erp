@@ -6,12 +6,15 @@ const PREFETCH_ROUTES = [
   () => import('../../pages/inventory/InventoryPage'),
 ]
 
+const rIC = typeof requestIdleCallback === 'function' ? requestIdleCallback : (cb: () => void) => setTimeout(cb, 1) as unknown as number
+const cIC = typeof cancelIdleCallback === 'function' ? cancelIdleCallback : (id: number) => clearTimeout(id)
+
 export function PrefetchRoutes() {
   useEffect(() => {
-    const id = requestIdleCallback(() => {
+    const id = rIC(() => {
       PREFETCH_ROUTES.forEach((load) => load())
     })
-    return () => cancelIdleCallback(id)
+    return () => cIC(id)
   }, [])
 
   return null
