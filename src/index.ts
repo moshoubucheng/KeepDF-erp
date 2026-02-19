@@ -49,6 +49,8 @@ import { LowStockChecker } from './services/lowstock-checker'
 import { PlatformSyncService } from './services/platform-sync.service'
 import { ForecastingService } from './services/forecasting.service'
 import { AutomationService } from './services/automation.service'
+import { DailyBriefingService } from './services/daily-briefing.service'
+import { PushService } from './services/push.service'
 
 const ALLOWED_ORIGINS = [
     'http://localhost:8787',
@@ -220,8 +222,23 @@ export default {
     }
   },
 
-  // Cron Trigger - 灾备快照 + 低库存检查
+  // Cron Trigger - 灾备快照 + 低库存检查 + AI 晨报
   async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext) {
+    // 0 23 * * * UTC = 8:00 AM JST — AI Daily Briefing
+    if (event.cron === '0 23 * * *') {
+      console.log('[CRON] AI Daily Briefing triggered (8:00 AM JST)')
+      try {
+        const pushService = new PushService(env.DB, env.VAPID_PUBLIC_KEY, env.VAPID_PRIVATE_KEY)
+        const briefingService = new DailyBriefingService(env.AI, env.DB, pushService)
+        const result = await briefingService.run()
+        console.log(`[CRON] Briefing: sent=${result.sent}, failed=${result.failed}`)
+      } catch (e) {
+        console.error('[CRON] Daily briefing failed:', e)
+      }
+      return
+    }
+
+    // 0 2 * * * UTC = 11:00 AM JST — Daily maintenance tasks
     console.log('[CRON] Daily tasks triggered')
 
     // 1. 灾备快照
