@@ -144,9 +144,10 @@ export class ReturnService {
         if (!ret) throw new Error('Return not found')
         if (ret.status !== 'REQUESTED') throw new Error('Only REQUESTED returns can be approved')
 
-        await this.db.prepare(
-            "UPDATE returns SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        const result = await this.db.prepare(
+            "UPDATE returns SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'REQUESTED'"
         ).bind(id).run()
+        if (!result.meta.changes) throw new Error('Return already processed (concurrent update)')
 
         // Trigger communication
         try {
@@ -165,9 +166,10 @@ export class ReturnService {
         if (!ret) throw new Error('Return not found')
         if (ret.status !== 'REQUESTED') throw new Error('Only REQUESTED returns can be rejected')
 
-        await this.db.prepare(
-            "UPDATE returns SET status = 'REJECTED', notes = COALESCE(?, notes), updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        const result = await this.db.prepare(
+            "UPDATE returns SET status = 'REJECTED', notes = COALESCE(?, notes), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'REQUESTED'"
         ).bind(reason || null, id).run()
+        if (!result.meta.changes) throw new Error('Return already processed (concurrent update)')
 
         // Trigger communication
         try {

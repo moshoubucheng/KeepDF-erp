@@ -455,6 +455,7 @@ CREATE TABLE IF NOT EXISTS purchase_order_items (
 );
 CREATE INDEX IF NOT EXISTS idx_po_supplier ON purchase_orders(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_po_status ON purchase_orders(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_po_created_by ON purchase_orders(created_by, status, created_at);
 CREATE INDEX IF NOT EXISTS idx_po_items_po ON purchase_order_items(po_id);
 
 -- ===== Price Management =====

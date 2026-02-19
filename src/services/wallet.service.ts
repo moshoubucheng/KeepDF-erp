@@ -87,7 +87,7 @@ export class WalletService {
     /** 退款 — atomic: balance += amount, frozen -= amount; guard against negative frozen */
     async refund(distributorId: number, amount: number, orderId: string): Promise<void> {
         const result = await this.db.prepare(
-            'UPDATE distributors SET balance = balance + ?, frozen_balance = MAX(0, frozen_balance - ?) WHERE id = ? AND frozen_balance >= 0'
+            'UPDATE distributors SET balance = balance + ?, frozen_balance = MAX(0, frozen_balance - ?) WHERE id = ?'
         ).bind(amount, amount, distributorId).run()
 
         if (!result.meta.changes) throw new Error('Distributor not found')

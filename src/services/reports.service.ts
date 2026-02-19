@@ -287,7 +287,7 @@ export class ReportsService {
 
         const conditions = [
             'o.created_at >= ?',
-            "o.created_at <= ? || ' 23:59:59'",
+            "o.created_at <= ? || 'T23:59:59'",
         ]
         const bindings: unknown[] = [params.startDate, params.endDate]
 

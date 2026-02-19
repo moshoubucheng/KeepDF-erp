@@ -19,6 +19,7 @@ let logoutTriggered = false
 async function request<T>(
   path: string,
   options: RequestInit = {},
+  rawText = false,
 ): Promise<T> {
   const token = useAuthStore.getState().token
   const headers: Record<string, string> = {
@@ -75,11 +76,13 @@ async function request<T>(
 
   if (res.status === 204) return undefined as T
 
+  if (rawText) return res.text() as T
+
   return res.json()
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
+  get: <T>(path: string, rawText = false) => request<T>(path, {}, rawText),
 
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),

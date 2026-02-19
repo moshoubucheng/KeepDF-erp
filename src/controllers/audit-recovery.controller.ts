@@ -72,13 +72,14 @@ auditRecovery.post('/restore/:logId', adminOnly, async (c) => {
 
     // Column whitelists per table to prevent SQL injection via JSON keys
     const allowedColumns: Record<string, Set<string>> = {
-        orders: new Set(['platform', 'platform_order_id', 'status', 'total_amount', 'tax_total', 'tracking_number', 'distributor_id', 'customer_id', 'currency', 'exchange_rate', 'total_amount_jpy', 'discount_amount', 'coupon_id']),
+        // NOTE: distributor_id is intentionally excluded to prevent ownership transfer during restore
+        orders: new Set(['platform', 'platform_order_id', 'status', 'total_amount', 'tax_total', 'tracking_number', 'customer_id', 'currency', 'exchange_rate', 'total_amount_jpy', 'discount_amount', 'coupon_id']),
         products: new Set(['sku', 'name_cn', 'name_jp', 'cost_price', 'tax_category', 'image_url']),
-        returns: new Set(['order_id', 'distributor_id', 'status', 'reason', 'refund_amount']),
-        customers: new Set(['name', 'email', 'phone', 'address', 'platform', 'platform_customer_id', 'distributor_id']),
+        returns: new Set(['order_id', 'status', 'reason', 'refund_amount']),
+        customers: new Set(['name', 'email', 'phone', 'address', 'platform', 'platform_customer_id']),
         suppliers: new Set(['name', 'contact_person', 'email', 'phone', 'address', 'lead_time_days', 'is_active']),
-        purchase_orders: new Set(['supplier_id', 'status', 'total_amount', 'notes', 'distributor_id']),
-        price_rules: new Set(['sku', 'platform', 'base_price', 'sale_price', 'start_date', 'end_date', 'is_active', 'distributor_id']),
+        purchase_orders: new Set(['supplier_id', 'status', 'total_amount', 'notes']),
+        price_rules: new Set(['sku', 'platform', 'base_price', 'sale_price', 'start_date', 'end_date', 'is_active']),
     }
 
     const tableName = tableMap[resourceType]

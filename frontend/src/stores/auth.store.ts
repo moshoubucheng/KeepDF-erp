@@ -35,12 +35,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginWithPassword: async (username: string, password: string) => {
-    const res = await fetch('/api/v1/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    })
-    const data = await res.json()
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000)
+    let res: Response
+    try {
+      res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+        signal: controller.signal,
+      })
+    } catch {
+      throw new Error('Network error')
+    } finally {
+      clearTimeout(timeoutId)
+    }
+    const data = await res.json().catch(() => ({ error: 'Invalid response' }))
 
     if (!res.ok) {
       throw new Error(data.error || 'Login failed')
@@ -61,12 +71,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   verify2FA: async (tempToken: string, code: string) => {
-    const res = await fetch('/api/v1/auth/verify-2fa', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ temp_token: tempToken, code }),
-    })
-    const data = await res.json()
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 15000)
+    let res: Response
+    try {
+      res = await fetch('/api/v1/auth/verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ temp_token: tempToken, code }),
+        signal: controller.signal,
+      })
+    } catch {
+      throw new Error('Network error')
+    } finally {
+      clearTimeout(timeoutId)
+    }
+    const data = await res.json().catch(() => ({ error: 'Invalid response' }))
 
     if (!res.ok) {
       throw new Error(data.error || 'Verification failed')

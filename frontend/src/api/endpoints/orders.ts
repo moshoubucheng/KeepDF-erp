@@ -33,11 +33,6 @@ export const ordersApi = {
     if (params.platform) query.set('platform', params.platform)
     if (params.status) query.set('status', params.status)
     const qs = query.toString()
-    // Backend returns CSV as text/csv response, not JSON
-    return fetch(`/api/v1/orders/export${qs ? `?${qs}` : ''}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('erp_token') || ''}`,
-      },
-    }).then((r) => r.text())
+    return api.get<string>(`/orders/export${qs ? `?${qs}` : ''}`, true)
   },
 }

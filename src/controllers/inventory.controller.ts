@@ -215,8 +215,8 @@ inventory.post('/products/:id/image', adminOnly, async (c) => {
         return c.json({ error: 'File size must be <= 5MB' }, 400)
     }
 
-    const filename = blob.name || 'image.jpg'
-    const r2Key = `products/${id}/${filename}`
+    const ext = (blob.name?.split('.').pop() || 'jpg').replace(/[^a-zA-Z0-9]/g, '')
+    const r2Key = `products/${id}/${crypto.randomUUID()}.${ext}`
 
     await c.env.BUCKET.put(r2Key, await blob.arrayBuffer())
     await c.env.DB.prepare('UPDATE products SET image_url = ? WHERE id = ?').bind(r2Key, id).run()

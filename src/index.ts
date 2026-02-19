@@ -145,9 +145,11 @@ export default {
       const body = message.body
 
       // 验证消息结构
+      const VALID_PLATFORMS = ['TIKTOK', 'TEMU', 'RAKUTEN']
       if (
         !body ||
         typeof body.platform !== 'string' ||
+        !VALID_PLATFORMS.includes(body.platform.toUpperCase()) ||
         !body.payload ||
         typeof body.payload.order_id !== 'string' ||
         typeof body.payload.total !== 'number' ||

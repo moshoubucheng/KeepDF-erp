@@ -52,12 +52,12 @@ export async function syncPendingMutations(): Promise<{ synced: number; failed: 
         if (response.ok) {
           await removePendingMutation(mutation.id!)
           synced++
-        } else if (response.status >= 500) {
-          // Server error — retry later
+        } else if (response.status >= 500 || response.status === 429) {
+          // Server error or rate-limited — retry later
           await updateMutationRetry(mutation.id!)
           failed++
         } else {
-          // Client error (4xx) — remove, no point retrying
+          // Client error (4xx except 429) — remove, no point retrying
           await removePendingMutation(mutation.id!)
           failed++
         }

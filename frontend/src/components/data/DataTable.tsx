@@ -552,7 +552,7 @@ export function DataTable<T extends object>({
 
                 return (
                   <tr
-                    key={rowId ?? idx}
+                    key={rowId != null ? rowId : idx}
                     onClick={() => onRowClick?.(row)}
                     className={cn(
                       'border-b border-border transition-colors',

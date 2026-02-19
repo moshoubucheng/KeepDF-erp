@@ -464,31 +464,34 @@ export default function OnboardingPage() {
                 <Sparkles className="absolute -bottom-1 right-0 h-4 w-4 animate-pulse text-pink-400 delay-300" />
               </div>
 
-              {/* Confetti dots */}
+              {/* Confetti dots — deterministic positions to avoid re-render jitter */}
               <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute rounded-full animate-bounce"
-                    style={{
-                      width: `${4 + Math.random() * 6}px`,
-                      height: `${4 + Math.random() * 6}px`,
-                      left: `${10 + Math.random() * 80}%`,
-                      top: `${10 + Math.random() * 80}%`,
-                      backgroundColor: [
-                        '#a855f7',
-                        '#3b82f6',
-                        '#10b981',
-                        '#f59e0b',
-                        '#ef4444',
-                        '#ec4899',
-                      ][i % 6],
-                      opacity: 0.5 + Math.random() * 0.4,
-                      animationDelay: `${Math.random() * 2}s`,
-                      animationDuration: `${1.5 + Math.random() * 2}s`,
-                    }}
-                  />
-                ))}
+                {Array.from({ length: 20 }).map((_, i) => {
+                  const seed = (i * 7 + 3) % 20
+                  return (
+                    <div
+                      key={i}
+                      className="absolute rounded-full animate-bounce"
+                      style={{
+                        width: `${4 + (seed % 6)}px`,
+                        height: `${4 + ((seed * 3) % 6)}px`,
+                        left: `${10 + ((seed * 17) % 80)}%`,
+                        top: `${10 + ((seed * 13) % 80)}%`,
+                        backgroundColor: [
+                          '#a855f7',
+                          '#3b82f6',
+                          '#10b981',
+                          '#f59e0b',
+                          '#ef4444',
+                          '#ec4899',
+                        ][i % 6],
+                        opacity: 0.5 + ((seed % 8) * 0.05),
+                        animationDelay: `${(seed % 10) * 0.2}s`,
+                        animationDuration: `${1.5 + (seed % 10) * 0.2}s`,
+                      }}
+                    />
+                  )
+                })}
               </div>
 
               <h1 className="mb-2 text-2xl font-bold text-text-primary">{t('onboarding.congrats')}</h1>

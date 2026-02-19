@@ -16,6 +16,7 @@ importCtrl.post('/products', async (c) => {
         const formData = await c.req.formData()
         const file = formData.get('file') as File | null
         if (!file) return c.json({ error: 'CSV file is required' }, 400)
+        if (file.size > 10 * 1024 * 1024) return c.json({ error: 'File size must be <= 10MB' }, 400)
         csvText = await file.text()
     } else {
         const body = await c.req.json<{ csv: string }>()
@@ -52,6 +53,7 @@ importCtrl.post('/orders', async (c) => {
         const formData = await c.req.formData()
         const file = formData.get('file') as File | null
         if (!file) return c.json({ error: 'CSV file is required' }, 400)
+        if (file.size > 10 * 1024 * 1024) return c.json({ error: 'File size must be <= 10MB' }, 400)
         csvText = await file.text()
     } else {
         const body = await c.req.json<{ csv: string }>()

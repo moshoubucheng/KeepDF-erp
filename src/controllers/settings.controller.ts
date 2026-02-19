@@ -28,10 +28,22 @@ settings.get('/config', async (c) => {
 settings.put('/config', async (c) => {
     const body = await c.req.json<Record<string, any>>()
 
+    // Only allow known config keys to prevent injection
+    const ALLOWED_CONFIG_KEYS = new Set([
+        'low_stock_threshold', 'auto_sync_enabled', 'commission_auto_settle',
+        'backup_enabled', 'default_carrier', 'default_tax_category',
+        'company_name', 'company_address', 'company_phone', 'company_email',
+        'company_tax_number', 'default_language',
+    ])
+    const sanitized: Record<string, any> = {}
+    for (const [key, value] of Object.entries(body)) {
+        if (ALLOWED_CONFIG_KEYS.has(key)) sanitized[key] = value
+    }
+
     // Merge with existing config
     const existingStr = await c.env.KV.get('business_config')
     const existing = existingStr ? JSON.parse(existingStr) : {}
-    const merged = { ...existing, ...body }
+    const merged = { ...existing, ...sanitized }
 
     await c.env.KV.put('business_config', JSON.stringify(merged))
 
