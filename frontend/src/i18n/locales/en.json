@@ -1038,14 +1038,11 @@
   "audit.confirmRestoreTitle": "Confirm Restore",
   "audit.confirmRestoreMsg": "This will restore {{type}} #{{id}} to its previous state. This action cannot be undone.",
   "audit.restoreSuccess": "Restored {{table}} #{{id}}",
-
   "nav.more": "More",
   "mobile.pullToRefresh": "Pull to refresh",
   "mobile.releaseToRefresh": "Release to refresh",
   "mobile.refreshing": "Refreshing...",
   "table.selectAll": "Select all",
-
-  "pwa.offline": "You are offline. Some features may be limited.",
   "pwa.pending": "pending",
   "pwa.syncing": "Syncing offline changes...",
   "pwa.synced": "All changes synced",
@@ -1053,7 +1050,6 @@
   "pwa.retry": "Retry",
   "pwa.pendingChanges": "changes waiting to sync",
   "pwa.syncNow": "Sync now",
-
   "push.title": "Push Notifications",
   "push.description": "Receive real-time notifications even when the app is closed",
   "push.enable": "Enable",
@@ -1077,9 +1073,7 @@
   "push.event.lowStock": "Low Stock Alert",
   "push.event.commissionSettled": "Commission Settled",
   "push.event.importComplete": "Import Complete",
-
   "settings.notifications": "Notifications",
-
   "common.accessDenied": "Access denied",
   "common.actions": "Actions",
   "common.all": "All",
@@ -1088,7 +1082,6 @@
   "common.close": "Close",
   "common.date": "Date",
   "common.filters": "Filters",
-
   "orders.allPlatforms": "All Platforms",
   "orders.allStatuses": "All Statuses",
   "orders.cancelError": "Failed to cancel order",
@@ -1109,10 +1102,8 @@
   "orders.shipSuccess": "Order shipped successfully",
   "orders.syncing": "Refreshing orders...",
   "orders.trackingNumber": "Tracking Number",
-
   "inventory.actualQty": "Actual Qty",
   "inventory.expectedQty": "Expected Qty",
-
   "wallet.amount": "Amount",
   "wallet.availableBalance": "Available Balance",
   "wallet.balanceSnapshot": "Balance",
@@ -1130,7 +1121,6 @@
   "wallet.totalAssets": "Total Assets",
   "wallet.transactionHistory": "Transaction History",
   "wallet.type": "Type",
-
   "commissions.amount": "Commission",
   "commissions.date": "Date",
   "commissions.noRates": "No commission rates configured",
@@ -1143,20 +1133,17 @@
   "commissions.sku": "SKU",
   "commissions.status": "Status",
   "commissions.unitPrice": "Unit Price",
-
   "distributors.newTokenGenerated": "New token generated:",
   "distributors.resetToken": "Reset Token",
   "distributors.resetTokenConfirm": "Reset API token for",
   "distributors.taxRegNumber": "Tax Reg Number",
   "distributors.tokenResetSuccess": "Token reset successfully",
   "distributors.tokenWarning": "Save this token now. It cannot be shown again.",
-
   "audit.endDate": "End Date",
   "audit.resourceId": "Resource ID",
   "audit.resourceType": "Resource",
   "audit.startDate": "Start Date",
   "audit.user": "User",
-
   "reports.avgOrder": "Avg Order",
   "reports.avgOrderValue": "Avg Order Value",
   "reports.byPlatform": "By Platform",
@@ -1174,7 +1161,6 @@
   "reports.totalOrders": "Total Orders",
   "reports.totalRevenue": "Total Revenue",
   "reports.trendComparison": "Trend Comparison",
-
   "shipping.allStatuses": "All Statuses",
   "shipping.createError": "Failed to create shipment",
   "shipping.createShipment": "Create Shipment",
@@ -1186,7 +1172,6 @@
   "shipping.shippedAt": "Shipped At",
   "shipping.status": "Status",
   "shipping.trackingNumber": "Tracking Number",
-
   "notifications.markAllRead": "Mark all read",
   "notifications.markRead": "Read",
   "notifications.markedAllRead": "Marked {{count}} as read",
@@ -1196,7 +1181,6 @@
   "notifications.type": "Type",
   "notifications.unread": "unread",
   "notifications.unreadOnly": "Unread only",
-
   "returns.allStatuses": "All Statuses",
   "returns.approveError": "Failed to approve return",
   "returns.approveSuccess": "Return approved",
@@ -1217,19 +1201,14 @@
   "returns.rejectReasonPlaceholder": "e.g. Item not eligible for return",
   "returns.rejectReturn": "Reject Return",
   "returns.rejectSuccess": "Return rejected",
-
   "pricing.empty_history": "No price history",
   "pricing.empty_margins": "No margin data",
   "pricing.empty_rules": "No pricing rules",
-
   "segments.empty": "No segments found",
   "segments.empty_customers": "No customers in this segment",
   "segments.empty_rfm": "No RFM data available",
-
   "po.empty": "No purchase orders found",
-
   "push.eventComingSoon": "Per-event preferences coming soon. All events are currently enabled.",
-
   "settings.2faActive": "2FA is active",
   "settings.2faActiveDesc": "Your account is protected with two-factor authentication",
   "settings.2faDisableError": "Failed to disable 2FA",
@@ -1287,7 +1266,6 @@
   "settings.username": "Username",
   "settings.verificationCode": "Verification Code",
   "settings.verify2FA": "Verify & Enable",
-
   "shippingFees.allCarriers": "All Carriers",
   "shippingFees.allPlatforms": "All Platforms",
   "shippingFees.allRegions": "All Regions",
@@ -1310,7 +1288,6 @@
   "shippingFees.weightMax": "Weight Max (g)",
   "shippingFees.weightMin": "Weight Min (g)",
   "shippingFees.weightRange": "Weight (g)",
-
   "coupons.allPlatforms": "All Platforms",
   "coupons.amount": "Discount Amount",
   "coupons.confirmDeactivate": "Are you sure you want to deactivate this coupon?",
@@ -1338,7 +1315,6 @@
   "coupons.validFrom": "Valid From",
   "coupons.validResult": "Valid! Discount: {{discount}}",
   "coupons.validTo": "Valid To",
-
   "forecasting.allForecasts": "All Forecasts",
   "forecasting.avgDaysOfStock": "Avg Days of Stock",
   "forecasting.calculateError": "Failed to calculate forecast",
@@ -1366,7 +1342,6 @@
   "forecasting.totalProducts": "Total Products",
   "forecasting.urgency": "Urgency",
   "forecasting.velocity": "Daily Velocity",
-
   "automation.actions": "Actions (JSON)",
   "automation.activate": "On",
   "automation.active": "Active",
@@ -1395,7 +1370,6 @@
   "automation.toggleSuccess": "Rule status updated",
   "automation.triggerType": "Trigger",
   "automation.updateSuccess": "Rule updated successfully",
-
   "promotions.allStatuses": "All Statuses",
   "promotions.amount": "Discount Amount",
   "promotions.buyQuantity": "Buy Quantity",
@@ -1422,7 +1396,6 @@
   "promotions.updateError": "Failed to update promotion",
   "promotions.updateSuccess": "Promotion updated successfully",
   "promotions.usage": "Usage",
-
   "approvals.active": "Active",
   "approvals.approve": "Approve",
   "approvals.approveError": "Failed to approve request",
@@ -1454,7 +1427,6 @@
   "approvals.workflowNamePlaceholder": "e.g. Order approval",
   "approvals.workflowSaveError": "Failed to save workflow",
   "approvals.workflowUpdateSuccess": "Workflow updated",
-
   "webhooks.activate": "On",
   "webhooks.active": "Active",
   "webhooks.confirmDelete": "Delete this webhook endpoint?",
@@ -1538,5 +1510,25 @@
   "search.min_chars": "Type at least 2 characters",
   "search.order_subtitle": "{{platform}} · {{status}} · ¥{{amount}}",
   "search.product_subtitle": "{{sku}} · ¥{{price}}",
-  "search.customer_subtitle": "{{email}} · {{platform}}"
+  "search.customer_subtitle": "{{email}} · {{platform}}",
+  "scanner.title": "Scan Code",
+  "scanner.scanning": "Scanning...",
+  "scanner.camera_permission": "Allow camera access",
+  "scanner.camera_denied": "Camera access denied",
+  "scanner.manual_input": "Manual Input",
+  "scanner.manual_placeholder": "Enter SKU or barcode",
+  "scanner.switch_camera": "Switch Camera",
+  "scanner.switch_manual": "Switch to Manual",
+  "scanner.product_found": "Product Found",
+  "scanner.product_not_found": "Product Not Found",
+  "scanner.lookup": "Scan Lookup",
+  "scanner.scan_to_fill": "Scan to Fill",
+  "scanner.current_stock": "Current Stock",
+  "scanner.warehouse": "Warehouse",
+  "scanner.try_again": "Try Again",
+  "scanner.confirm": "Confirm",
+  "scanner.close": "Close",
+  "scanner.error": "Scan Error",
+  "scanner.initializing": "Initializing camera...",
+  "scanner.detected": "Detected"
 }

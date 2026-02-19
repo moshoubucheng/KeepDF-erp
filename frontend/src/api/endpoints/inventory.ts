@@ -20,6 +20,9 @@ export const inventoryApi = {
   inbound: (data: { sku: string; location_code: string; expected_qty: number; actual_qty: number }) =>
     api.post<{ status: string; sku: string; actual: number }>('/inventory/inbound', data),
 
+  barcodeLookup: (code: string) =>
+    api.get<{ product: Product; locations: { code: string; qty: number }[]; totalStock: number }>(`/inventory/barcode-lookup/${encodeURIComponent(code)}`),
+
   variants: (productId: number) =>
     api.get<{ variants: unknown[] }>(`/inventory/products/${productId}/variants`),
 

@@ -9,6 +9,8 @@ import { Select } from '@/components/ui/Select';
 import { Pagination } from '@/components/ui/Pagination';
 import { DataTable, type Column } from '@/components/data/DataTable';
 import { StatusBadge } from '@/components/data/StatusBadge';
+import { ScanButton } from '@/components/ui/ScanButton';
+import { ScanLookupSheet } from '@/pages/inventory/components/ScanLookupSheet';
 import { useUIStore } from '@/stores/ui.store';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePagination } from '@/hooks/usePagination';
@@ -46,6 +48,9 @@ export default function StocktakesPage() {
   const [countActualQty, setCountActualQty] = useState('');
   const [countNotes, setCountNotes] = useState('');
   const [counting, setCounting] = useState(false);
+
+  // Scan state for count modal
+  const [countScanOpen, setCountScanOpen] = useState(false);
 
   // Action loading
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -446,12 +451,26 @@ export default function StocktakesPage() {
       {/* Count Item Modal */}
       <Modal open={showCountModal} onClose={() => setShowCountModal(false)} title={t('stocktakes.itemCountModal')}>
         <div className="space-y-4">
-          <Input
-            label="SKU"
-            type="text"
-            value={countSku}
-            onChange={(e) => setCountSku(e.target.value)}
-            placeholder={t('stocktakes.skuPlaceholder')}
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Input
+                label="SKU"
+                type="text"
+                value={countSku}
+                onChange={(e) => setCountSku(e.target.value)}
+                placeholder={t('stocktakes.skuPlaceholder')}
+              />
+            </div>
+            <ScanButton onClick={() => setCountScanOpen(true)} />
+          </div>
+
+          <ScanLookupSheet
+            isOpen={countScanOpen}
+            onClose={() => setCountScanOpen(false)}
+            onSelect={(product) => {
+              setCountSku(product.sku);
+              setCountScanOpen(false);
+            }}
           />
 
           <Input

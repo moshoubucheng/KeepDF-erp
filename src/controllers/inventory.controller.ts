@@ -20,6 +20,37 @@ inventory.get('/', async (c) => {
     return c.json({ products: results })
 })
 
+/** GET /inventory/barcode-lookup/:code - バーコード/SKU検索 */
+inventory.get('/barcode-lookup/:code', async (c) => {
+    const code = c.req.param('code')
+
+    if (!code || code.trim().length === 0) {
+        return c.json({ error: 'Code is required' }, 400)
+    }
+
+    // 1. Try SKU lookup
+    let product = await c.env.DB.prepare('SELECT * FROM products WHERE sku = ?')
+        .bind(code).first<Product>()
+
+    // 2. If not found, try barcode lookup
+    if (!product) {
+        product = await c.env.DB.prepare('SELECT * FROM products WHERE barcode = ?')
+            .bind(code).first<Product>()
+    }
+
+    if (!product) {
+        return c.json({ error: 'Product not found' }, 404)
+    }
+
+    const { results: locations } = await c.env.DB.prepare(
+        'SELECT code, qty FROM warehouse_locations WHERE sku = ?'
+    ).bind(product.sku).all()
+
+    const totalStock = locations.reduce((sum, loc: any) => sum + (loc.qty || 0), 0)
+
+    return c.json({ product, locations, totalStock })
+})
+
 /** GET /inventory/:sku - 单个SKU库存及库位 */
 inventory.get('/:sku', async (c) => {
     const sku = c.req.param('sku')
@@ -145,7 +176,7 @@ inventory.put('/products/:id', adminOnly, async (c) => {
     const updates: string[] = []
     const params: any[] = []
     for (const [key, val] of Object.entries(body)) {
-        if (['name_cn', 'name_jp', 'cost_price', 'tax_category', 'image_url'].includes(key)) {
+        if (['name_cn', 'name_jp', 'cost_price', 'tax_category', 'image_url', 'barcode'].includes(key)) {
             updates.push(`${key} = ?`)
             params.push(val)
         }

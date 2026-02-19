@@ -635,7 +635,7 @@
   "theme.dark": "暗色模式",
   "theme.light": "亮色模式",
   "pwa.install": "安装应用",
-  "pwa.offline": "当前离线，部分功能可能受限。",
+  "pwa.offline": "您已离线。部分功能可能受限。",
   "error.page_not_found": "页面未找到",
   "error.page_not_found_desc": "您访问的页面不存在或已被移动。",
   "error.coming_soon": "部分页面将在 Sprint 16 中上线。",
@@ -1038,14 +1038,11 @@
   "audit.confirmRestoreTitle": "确认恢复",
   "audit.confirmRestoreMsg": "将 {{type}} #{{id}} 恢复到之前的状态。此操作不可撤销。",
   "audit.restoreSuccess": "已恢复 {{table}} #{{id}}",
-
   "nav.more": "更多",
   "mobile.pullToRefresh": "下拉刷新",
   "mobile.releaseToRefresh": "释放刷新",
   "mobile.refreshing": "刷新中...",
   "table.selectAll": "全选",
-
-  "pwa.offline": "您已离线。部分功能可能受限。",
   "pwa.pending": "待处理",
   "pwa.syncing": "正在同步离线变更...",
   "pwa.synced": "所有变更已同步",
@@ -1053,7 +1050,6 @@
   "pwa.retry": "重试",
   "pwa.pendingChanges": "个变更等待同步",
   "pwa.syncNow": "立即同步",
-
   "push.title": "推送通知",
   "push.description": "即使关闭应用也能收到实时通知",
   "push.enable": "启用",
@@ -1077,9 +1073,7 @@
   "push.event.lowStock": "低库存预警",
   "push.event.commissionSettled": "佣金结算",
   "push.event.importComplete": "导入完成",
-
   "settings.notifications": "通知",
-
   "common.accessDenied": "访问被拒绝",
   "common.actions": "操作",
   "common.all": "全部",
@@ -1088,7 +1082,6 @@
   "common.close": "关闭",
   "common.date": "日期",
   "common.filters": "筛选",
-
   "orders.allPlatforms": "全部平台",
   "orders.allStatuses": "全部状态",
   "orders.cancelError": "取消订单失败",
@@ -1109,10 +1102,8 @@
   "orders.shipSuccess": "订单已发货",
   "orders.syncing": "刷新订单中...",
   "orders.trackingNumber": "物流单号",
-
   "inventory.actualQty": "实际数量",
   "inventory.expectedQty": "期望数量",
-
   "wallet.amount": "金额",
   "wallet.availableBalance": "可用余额",
   "wallet.balanceSnapshot": "余额",
@@ -1130,7 +1121,6 @@
   "wallet.totalAssets": "总资产",
   "wallet.transactionHistory": "交易记录",
   "wallet.type": "类型",
-
   "commissions.amount": "佣金",
   "commissions.date": "日期",
   "commissions.noRates": "未配置佣金费率",
@@ -1143,20 +1133,17 @@
   "commissions.sku": "SKU",
   "commissions.status": "状态",
   "commissions.unitPrice": "单价",
-
   "distributors.newTokenGenerated": "新Token已生成:",
   "distributors.resetToken": "重置Token",
   "distributors.resetTokenConfirm": "重置API Token，对象:",
   "distributors.taxRegNumber": "税务登记号",
   "distributors.tokenResetSuccess": "Token已重置",
   "distributors.tokenWarning": "请立即保存此Token，之后无法再次查看。",
-
   "audit.endDate": "结束日期",
   "audit.resourceId": "资源ID",
   "audit.resourceType": "资源",
   "audit.startDate": "开始日期",
   "audit.user": "用户",
-
   "reports.avgOrder": "平均订单",
   "reports.avgOrderValue": "平均订单金额",
   "reports.byPlatform": "按平台",
@@ -1174,7 +1161,6 @@
   "reports.totalOrders": "总订单数",
   "reports.totalRevenue": "总销售额",
   "reports.trendComparison": "趋势对比",
-
   "shipping.allStatuses": "全部状态",
   "shipping.createError": "创建发货失败",
   "shipping.createShipment": "创建发货",
@@ -1186,7 +1172,6 @@
   "shipping.shippedAt": "发货时间",
   "shipping.status": "状态",
   "shipping.trackingNumber": "物流单号",
-
   "notifications.markAllRead": "全部标为已读",
   "notifications.markRead": "已读",
   "notifications.markedAllRead": "已标记{{count}}条为已读",
@@ -1196,7 +1181,6 @@
   "notifications.type": "类型",
   "notifications.unread": "未读",
   "notifications.unreadOnly": "仅未读",
-
   "returns.allStatuses": "全部状态",
   "returns.approveError": "批准退货失败",
   "returns.approveSuccess": "退货已批准",
@@ -1217,19 +1201,14 @@
   "returns.rejectReasonPlaceholder": "例: 商品不符合退货条件",
   "returns.rejectReturn": "拒绝退货",
   "returns.rejectSuccess": "退货已拒绝",
-
   "pricing.empty_history": "暂无价格变更历史",
   "pricing.empty_margins": "暂无利润率数据",
   "pricing.empty_rules": "暂无价格规则",
-
   "segments.empty": "暂无分群",
   "segments.empty_customers": "该分群暂无客户",
   "segments.empty_rfm": "暂无RFM数据",
-
   "po.empty": "暂无采购单",
-
   "push.eventComingSoon": "事件偏好设置即将推出。当前所有事件均已启用。",
-
   "settings.2faActive": "2FA已启用",
   "settings.2faActiveDesc": "您的账户已启用两步验证保护",
   "settings.2faDisableError": "禁用2FA失败",
@@ -1287,7 +1266,6 @@
   "settings.username": "用户名",
   "settings.verificationCode": "验证码",
   "settings.verify2FA": "验证并启用",
-
   "shippingFees.allCarriers": "全部承运商",
   "shippingFees.allPlatforms": "全部平台",
   "shippingFees.allRegions": "全部地区",
@@ -1310,7 +1288,6 @@
   "shippingFees.weightMax": "重量上限 (g)",
   "shippingFees.weightMin": "重量下限 (g)",
   "shippingFees.weightRange": "重量 (g)",
-
   "coupons.allPlatforms": "全部平台",
   "coupons.amount": "折扣金额",
   "coupons.confirmDeactivate": "确定要停用此优惠券吗？",
@@ -1338,7 +1315,6 @@
   "coupons.validFrom": "开始日期",
   "coupons.validResult": "有效！折扣：{{discount}}",
   "coupons.validTo": "截止日期",
-
   "forecasting.allForecasts": "全部预测数据",
   "forecasting.avgDaysOfStock": "平均库存天数",
   "forecasting.calculateError": "预测计算失败",
@@ -1366,7 +1342,6 @@
   "forecasting.totalProducts": "商品总数",
   "forecasting.urgency": "紧急程度",
   "forecasting.velocity": "日均销量",
-
   "automation.actions": "动作 (JSON)",
   "automation.activate": "启用",
   "automation.active": "启用",
@@ -1395,7 +1370,6 @@
   "automation.toggleSuccess": "规则状态已更新",
   "automation.triggerType": "触发器",
   "automation.updateSuccess": "规则更新成功",
-
   "promotions.allStatuses": "全部状态",
   "promotions.amount": "折扣金额",
   "promotions.buyQuantity": "购买数量",
@@ -1422,7 +1396,6 @@
   "promotions.updateError": "更新促销失败",
   "promotions.updateSuccess": "促销更新成功",
   "promotions.usage": "使用次数",
-
   "approvals.active": "启用",
   "approvals.approve": "批准",
   "approvals.approveError": "批准失败",
@@ -1454,7 +1427,6 @@
   "approvals.workflowNamePlaceholder": "例: 订单审批",
   "approvals.workflowSaveError": "保存工作流失败",
   "approvals.workflowUpdateSuccess": "工作流已更新",
-
   "webhooks.activate": "启用",
   "webhooks.active": "启用",
   "webhooks.confirmDelete": "确定删除此Webhook端点？",
@@ -1538,5 +1510,25 @@
   "search.min_chars": "请输入至少2个字符",
   "search.order_subtitle": "{{platform}} · {{status}} · ¥{{amount}}",
   "search.product_subtitle": "{{sku}} · ¥{{price}}",
-  "search.customer_subtitle": "{{email}} · {{platform}}"
+  "search.customer_subtitle": "{{email}} · {{platform}}",
+  "scanner.title": "扫码",
+  "scanner.scanning": "扫描中...",
+  "scanner.camera_permission": "请允许使用摄像头",
+  "scanner.camera_denied": "摄像头权限被拒绝",
+  "scanner.manual_input": "手动输入",
+  "scanner.manual_placeholder": "输入SKU或条码",
+  "scanner.switch_camera": "切换摄像头",
+  "scanner.switch_manual": "切换手动",
+  "scanner.product_found": "找到商品",
+  "scanner.product_not_found": "未找到商品",
+  "scanner.lookup": "扫码查询",
+  "scanner.scan_to_fill": "扫码填入",
+  "scanner.current_stock": "当前库存",
+  "scanner.warehouse": "仓库位置",
+  "scanner.try_again": "重试",
+  "scanner.confirm": "确认选择",
+  "scanner.close": "关闭",
+  "scanner.error": "扫码错误",
+  "scanner.initializing": "初始化摄像头...",
+  "scanner.detected": "已识别"
 }

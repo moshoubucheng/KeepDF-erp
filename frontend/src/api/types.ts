@@ -61,6 +61,7 @@ export interface Product {
   cost_price: number
   tax_category: TaxCategory
   image_url: string | null
+  barcode: string | null
 }
 
 export interface ProductVariant {

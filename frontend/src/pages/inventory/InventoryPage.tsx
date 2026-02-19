@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { Plus, PackagePlus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, PackagePlus, Pencil, Trash2, ScanLine } from 'lucide-react'
 
 import { inventoryApi } from '@/api/endpoints/inventory'
 import type { Product } from '@/api/types'
@@ -20,6 +20,8 @@ import { Select } from '@/components/ui/Select'
 import { Pagination } from '@/components/ui/Pagination'
 import { DataTable, type Column } from '@/components/data/DataTable'
 import { SearchInput } from '@/components/data/SearchInput'
+import { ScanButton } from '@/components/ui/ScanButton'
+import { ScanLookupSheet } from './components/ScanLookupSheet'
 
 // ---- Zod schemas ----
 
@@ -52,6 +54,9 @@ export default function InventoryPage() {
 
   // Search
   const [search, setSearch] = useState('')
+
+  // Scan lookup
+  const [scanLookupOpen, setScanLookupOpen] = useState(false)
 
   // Modal state
   const [productModalOpen, setProductModalOpen] = useState(false)
@@ -287,6 +292,10 @@ export default function InventoryPage() {
           className="w-full sm:w-72"
         />
         <div className="flex items-center gap-2 ml-auto">
+          <Button variant="secondary" size="sm" onClick={() => setScanLookupOpen(true)}>
+            <ScanLine size={16} />
+            {t('scanner.lookup')}
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => setInboundModalOpen(true)}>
             <PackagePlus size={16} />
             {t('inventory.inbound')}
@@ -342,6 +351,12 @@ export default function InventoryPage() {
         onClose={() => setInboundModalOpen(false)}
         saving={inboundMutation.isPending}
         onSubmit={(values) => inboundMutation.mutate(values)}
+      />
+
+      {/* Scan Lookup Sheet */}
+      <ScanLookupSheet
+        isOpen={scanLookupOpen}
+        onClose={() => setScanLookupOpen(false)}
       />
 
       {/* Delete confirmation */}
@@ -481,11 +496,13 @@ interface InboundModalProps {
 
 function InboundModal({ open, onClose, saving, onSubmit }: InboundModalProps) {
   const { t } = useTranslation()
+  const [scanOpen, setScanOpen] = useState(false)
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<InboundFormData>({
     resolver: zodResolver(inboundSchema),
@@ -502,6 +519,11 @@ function InboundModal({ open, onClose, saving, onSubmit }: InboundModalProps) {
     onClose()
   }
 
+  const handleScanSelect = useCallback((_product: Product, sku: string) => {
+    setValue('sku', sku, { shouldValidate: true })
+    setScanOpen(false)
+  }, [setValue])
+
   return (
     <Modal
       open={open}
@@ -512,11 +534,22 @@ function InboundModal({ open, onClose, saving, onSubmit }: InboundModalProps) {
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-4"
       >
-        <Input
-          label="SKU"
-          {...register('sku')}
-          error={errors.sku?.message}
-          autoFocus
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Input
+              label="SKU"
+              {...register('sku')}
+              error={errors.sku?.message}
+              autoFocus
+            />
+          </div>
+          <ScanButton onClick={() => setScanOpen(true)} />
+        </div>
+
+        <ScanLookupSheet
+          isOpen={scanOpen}
+          onClose={() => setScanOpen(false)}
+          onSelect={handleScanSelect}
         />
         <Input
           label="Location Code"
