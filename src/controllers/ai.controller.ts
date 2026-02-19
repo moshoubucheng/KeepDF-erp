@@ -52,4 +52,40 @@ ai.post('/chat', async (c) => {
     }
 })
 
+/** POST /ai/forecast — AI-powered replenishment suggestions */
+ai.post('/forecast', async (c) => {
+    const distributorId = c.get('distributorId')
+
+    const aiService = new AiService(c.env.AI, c.env.DB, c.env.KV)
+
+    const allowed = await aiService.checkRateLimit(distributorId)
+    if (!allowed) {
+        return c.json({ error: 'Rate limit exceeded. Please wait a minute.' }, 429)
+    }
+
+    try {
+        const result = await aiService.forecast()
+
+        // Audit log
+        try {
+            await c.env.DB.prepare(
+                `INSERT INTO audit_logs (distributor_id, action, resource_type, resource_id, details, ip_address, created_at)
+                 VALUES (?, 'AI_FORECAST', 'ai', NULL, ?, ?, datetime('now'))`,
+            ).bind(
+                distributorId,
+                JSON.stringify({ suggestions: result.suggestions.length }),
+                c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown',
+            ).run()
+        } catch {
+            // Audit log failure should not block response
+        }
+
+        return c.json({ success: true, ...result })
+    } catch (err) {
+        const errDetail = err instanceof Error ? err.message : String(err)
+        console.error('[AI] Forecast error:', errDetail)
+        return c.json({ error: `AI forecast error: ${errDetail}` }, 503)
+    }
+})
+
 export { ai }

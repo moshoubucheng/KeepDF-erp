@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, Calculator, Download, Package, TrendingUp } from 'lucide-react'
+import { AlertTriangle, Bot, Calculator, Download, Package, TrendingUp, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { forecastingApi, type Forecast, type ReorderSuggestion } from '@/api/endpoints/forecasting'
+import { aiApi, type AiForecastItem } from '@/api/endpoints/ai'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUIStore } from '@/stores/ui.store'
 import { usePagination } from '@/hooks/usePagination'
@@ -29,6 +30,39 @@ const URGENCY_BG: Record<string, string> = {
   LOW: 'bg-emerald-500/15 text-accent-emerald',
 }
 
+const URGENCY_ICON: Record<string, string> = { high: '🔴', medium: '🟡', low: '🟢' }
+
+function AiForecastRow({ item }: { item: AiForecastItem }) {
+  const { t } = useTranslation()
+  return (
+    <div className="flex items-start gap-3 px-4 py-3 hover:bg-bg-card-hover/50 transition-colors">
+      <span className="text-base mt-0.5">{URGENCY_ICON[item.urgency] || '⚪'}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono text-xs font-medium text-accent-purple">{item.sku}</span>
+          <span className="text-sm text-text-primary truncate">{item.name}</span>
+        </div>
+        <p className="text-xs text-text-muted mt-0.5">{item.reason}</p>
+        <div className="flex items-center gap-3 mt-1 text-xs text-text-muted">
+          <span>{t('forecasting.aiStock')}: {item.currentStock ?? 0}</span>
+          <span>{t('forecasting.aiDaysLeft')}: {item.daysOfStock ?? 0}</span>
+          {(item.incoming ?? 0) > 0 && <span>{t('forecasting.aiIncoming')}: {item.incoming}</span>}
+        </div>
+      </div>
+      <div className="text-right shrink-0">
+        {item.action === '発注' ? (
+          <div className="flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30 px-3 py-1">
+            <ArrowRight className="h-3 w-3 text-purple-600" />
+            <span className="text-sm font-semibold text-purple-600">{item.qty}</span>
+          </div>
+        ) : (
+          <span className="text-xs text-text-muted rounded-full bg-bg-card-hover px-3 py-1">{item.action}</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function ForecastingPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -37,6 +71,7 @@ export default function ForecastingPage() {
   const { page, limit, setPage } = usePagination(20)
 
   const [csvExporting, setCsvExporting] = useState(false)
+  const [aiExpanded, setAiExpanded] = useState(true)
 
   // Forecasts list query
   const forecastsQuery = useQuery({
@@ -58,6 +93,16 @@ export default function ForecastingPage() {
 
   const suggestions = suggestionsQuery.data?.suggestions ?? []
   const suggestionCount = suggestionsQuery.data?.count ?? 0
+
+  // AI forecast mutation
+  const aiForecastMutation = useMutation({
+    mutationFn: () => aiApi.forecast(),
+    onError: (err: Error) => {
+      addToast('error', err.message || t('forecasting.aiForecastError'))
+    },
+  })
+
+  const aiSuggestions = aiForecastMutation.data?.suggestions ?? []
 
   // Calculate mutation
   const calculateMutation = useMutation({
@@ -293,6 +338,74 @@ export default function ForecastingPage() {
           )}
         </div>
       </div>
+
+      {/* AI Smart Replenishment */}
+      <Card>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900/30">
+                <Bot className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-text-primary font-semibold text-base">
+                  {t('forecasting.aiTitle')}
+                </h3>
+                <p className="text-xs text-text-muted">{t('forecasting.aiSubtitle')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {aiSuggestions.length > 0 && (
+                <button
+                  onClick={() => setAiExpanded(!aiExpanded)}
+                  className="rounded-lg p-1.5 text-text-muted hover:text-text-primary hover:bg-bg-card-hover transition-colors"
+                >
+                  {aiExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+              )}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => aiForecastMutation.mutate()}
+                loading={aiForecastMutation.isPending}
+              >
+                <Bot size={14} />
+                {t('forecasting.aiGenerate')}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+
+        {/* AI Results */}
+        {aiForecastMutation.isPending && (
+          <CardContent className="border-t border-border">
+            <div className="flex items-center gap-3 py-4">
+              <div className="flex gap-1">
+                <span className="h-2 w-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="h-2 w-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="h-2 w-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="text-sm text-text-muted">{t('forecasting.aiAnalyzing')}</span>
+            </div>
+          </CardContent>
+        )}
+
+        {aiForecastMutation.data?.summary && (
+          <CardContent className="border-t border-border">
+            <p className="text-sm text-text-primary whitespace-pre-wrap">{aiForecastMutation.data.summary}</p>
+          </CardContent>
+        )}
+
+        {aiSuggestions.length > 0 && aiExpanded && (
+          <CardContent className="border-t border-border p-0">
+            <div className="divide-y divide-border">
+              {aiSuggestions.map((item) => (
+                <AiForecastRow key={item.sku} item={item} />
+              ))}
+            </div>
+          </CardContent>
+        )}
+      </Card>
 
       {/* Reorder Suggestions */}
       {suggestions.length > 0 && (

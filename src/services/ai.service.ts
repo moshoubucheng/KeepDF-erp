@@ -287,4 +287,196 @@ export class AiService {
 
         return { reply: JSON.stringify(parsed) }
     }
+
+    /** AI-powered replenishment forecast */
+    async forecast(): Promise<AiForecastResponse> {
+        // 1. Gather 3 months of monthly sales per SKU
+        const { results: monthlySales } = await this.db.prepare(`
+            SELECT oi.sku,
+                   COALESCE(p.name_jp, p.name_cn, oi.sku) as name,
+                   strftime('%Y-%m', o.created_at) as month,
+                   SUM(oi.qty) as qty,
+                   SUM(oi.qty * oi.unit_price) as revenue
+            FROM order_items oi
+            JOIN orders o ON o.id = oi.order_id
+            LEFT JOIN products p ON p.sku = oi.sku
+            WHERE o.status IN ('SHIPPED','DELIVERED')
+              AND o.created_at >= date('now', '-3 months')
+            GROUP BY oi.sku, month
+            ORDER BY oi.sku, month
+        `).all<{ sku: string; name: string; month: string; qty: number; revenue: number }>()
+
+        // 2. Current stock & forecast data
+        const { results: stockData } = await this.db.prepare(`
+            SELECT p.sku,
+                   COALESCE(p.name_jp, p.name_cn, p.sku) as name,
+                   p.cost_price,
+                   COALESCE(w.total_stock, 0) as current_stock,
+                   COALESCE(f.daily_velocity, 0) as daily_velocity,
+                   COALESCE(f.days_of_stock, 9999) as days_of_stock,
+                   COALESCE(f.reorder_point, 0) as reorder_point,
+                   COALESCE(f.lead_time_days, 7) as lead_time_days
+            FROM products p
+            LEFT JOIN (SELECT sku, SUM(qty) as total_stock FROM warehouse_locations GROUP BY sku) w ON w.sku = p.sku
+            LEFT JOIN inventory_forecasts f ON f.sku = p.sku
+            WHERE COALESCE(w.total_stock, 0) > 0 OR COALESCE(f.daily_velocity, 0) > 0
+            ORDER BY COALESCE(f.days_of_stock, 9999) ASC
+            LIMIT 30
+        `).all<{
+            sku: string; name: string; cost_price: number; current_stock: number;
+            daily_velocity: number; days_of_stock: number; reorder_point: number; lead_time_days: number
+        }>()
+
+        // 3. Pending purchase orders
+        const { results: pendingPOs } = await this.db.prepare(`
+            SELECT poi.sku, SUM(poi.qty - poi.received_qty) as incoming_qty
+            FROM purchase_order_items poi
+            JOIN purchase_orders po ON po.id = poi.po_id
+            WHERE po.status IN ('SUBMITTED','CONFIRMED','SHIPPED')
+            GROUP BY poi.sku
+        `).all<{ sku: string; incoming_qty: number }>()
+
+        const pendingMap = new Map(pendingPOs.map(p => [p.sku, p.incoming_qty]))
+
+        // 4. Build data summary for AI
+        const skuMap = new Map<string, {
+            name: string; cost: number; stock: number; velocity: number;
+            daysLeft: number; reorderPt: number; leadTime: number; incoming: number;
+            sales: { month: string; qty: number }[]
+        }>()
+
+        for (const s of stockData) {
+            skuMap.set(s.sku, {
+                name: s.name, cost: s.cost_price, stock: s.current_stock,
+                velocity: s.daily_velocity, daysLeft: s.days_of_stock,
+                reorderPt: s.reorder_point, leadTime: s.lead_time_days,
+                incoming: pendingMap.get(s.sku) || 0,
+                sales: [],
+            })
+        }
+
+        for (const ms of monthlySales) {
+            const entry = skuMap.get(ms.sku)
+            if (entry) {
+                entry.sales.push({ month: ms.month, qty: ms.qty })
+            }
+        }
+
+        // Build text for AI (top 20 items needing attention)
+        const items = Array.from(skuMap.entries())
+            .slice(0, 20)
+            .map(([sku, d]) => {
+                const salesStr = d.sales.map(s => `${s.month}: ${s.qty}個`).join(', ')
+                return `- ${sku}「${d.name}」: 在庫${d.stock}個, 日販${d.velocity.toFixed(1)}個, 残り${Math.round(d.daysLeft)}日, 発注点${d.reorderPt}, リードタイム${d.leadTime}日, 入荷予定${d.incoming}個, 原価¥${d.cost}, 月別販売[${salesStr || 'データなし'}]`
+            })
+            .join('\n')
+
+        const currentMonth = new Date().getMonth() + 1
+        const season = currentMonth >= 3 && currentMonth <= 5 ? '春'
+            : currentMonth >= 6 && currentMonth <= 8 ? '夏'
+            : currentMonth >= 9 && currentMonth <= 11 ? '秋' : '冬'
+
+        const dataPrompt = `現在は${new Date().toISOString().slice(0, 10)}、${season}です。
+
+以下は在庫が少ない順に並べた商品データ（過去3ヶ月の月別販売実績 + 現在の在庫状況）：
+
+${items}
+
+上記データに基づいて、各商品の補充提案を行ってください。`
+
+        // 5. Call AI
+        const messages: { role: 'system' | 'user'; content: string }[] = [
+            {
+                role: 'system',
+                content: `あなたはKeepDF ERPの在庫分析AIです。過去の販売データ、現在庫、季節要因を分析し、具体的な補充提案を行います。
+
+ルール:
+1. JSON配列で出力する（マークダウン不要、コードフェンス不要）
+2. 各要素は: {"sku": "...", "action": "発注" or "様子見", "qty": 数値, "reason": "理由（50文字以内）", "urgency": "high" or "medium" or "low"}
+3. 販売トレンド（増加/減少/安定）を分析する
+4. 季節要因を考慮する（例: 夏は飲料が増える）
+5. 入荷予定がある場合はそれも考慮する
+6. 在庫日数が7日以下は urgency: "high"
+7. 最大15商品まで`,
+            },
+            { role: 'user', content: dataPrompt },
+        ]
+
+        const aiResponse = await this.ai.run(
+            '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+            { messages, max_tokens: 1024, temperature: 0.3 },
+        )
+
+        // Parse response
+        const raw = aiResponse as Record<string, unknown>
+        let responseContent: unknown = null
+        if (typeof aiResponse === 'string') {
+            responseContent = aiResponse
+        } else if (raw && typeof raw === 'object' && 'response' in raw) {
+            responseContent = raw.response
+        }
+
+        let suggestions: AiForecastItem[] = []
+        try {
+            if (typeof responseContent === 'string') {
+                const cleaned = responseContent.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+                suggestions = JSON.parse(cleaned)
+            } else if (Array.isArray(responseContent)) {
+                suggestions = responseContent as AiForecastItem[]
+            } else if (responseContent && typeof responseContent === 'object') {
+                // Might be wrapped in an object
+                const obj = responseContent as Record<string, unknown>
+                if (Array.isArray(obj)) {
+                    suggestions = obj as unknown as AiForecastItem[]
+                } else {
+                    suggestions = [responseContent as AiForecastItem]
+                }
+            }
+        } catch {
+            // If parsing fails, return raw as summary
+            return {
+                suggestions: [],
+                summary: typeof responseContent === 'string' ? responseContent : JSON.stringify(responseContent),
+                generatedAt: new Date().toISOString(),
+            }
+        }
+
+        // Enrich suggestions with current stock data
+        const enriched = (Array.isArray(suggestions) ? suggestions : []).map(s => {
+            const data = skuMap.get(s.sku)
+            return {
+                ...s,
+                name: data?.name || s.sku,
+                currentStock: data?.stock ?? 0,
+                daysOfStock: data ? Math.round(data.daysLeft) : 0,
+                dailyVelocity: data?.velocity ?? 0,
+                incoming: data?.incoming ?? 0,
+            }
+        })
+
+        return {
+            suggestions: enriched,
+            summary: '',
+            generatedAt: new Date().toISOString(),
+        }
+    }
+}
+
+export interface AiForecastItem {
+    sku: string
+    name?: string
+    action: string
+    qty: number
+    reason: string
+    urgency: 'high' | 'medium' | 'low'
+    currentStock?: number
+    daysOfStock?: number
+    dailyVelocity?: number
+    incoming?: number
+}
+
+export interface AiForecastResponse {
+    suggestions: AiForecastItem[]
+    summary: string
+    generatedAt: string
 }

@@ -1545,5 +1545,13 @@
   "ai.example2": "库存最低的5个商品",
   "ai.example3": "各平台的订单数",
   "ai.example4": "上个月的退货率是多少？",
-  "ai.rate_limit": "请求频率超限"
+  "ai.rate_limit": "请求频率超限",
+  "forecasting.aiTitle": "AI 智能补货建议",
+  "forecasting.aiSubtitle": "AI 分析过去3个月销售数据与季节因素",
+  "forecasting.aiGenerate": "AI 分析",
+  "forecasting.aiAnalyzing": "正在分析销售数据...",
+  "forecasting.aiStock": "库存",
+  "forecasting.aiDaysLeft": "剩余天数",
+  "forecasting.aiIncoming": "在途",
+  "forecasting.aiForecastError": "AI 分析失败"
 }

@@ -1545,5 +1545,13 @@
   "ai.example2": "Top 5 low stock products",
   "ai.example3": "Orders by platform",
   "ai.example4": "What was last month's return rate?",
-  "ai.rate_limit": "Rate limit reached"
+  "ai.rate_limit": "Rate limit reached",
+  "forecasting.aiTitle": "AI Replenishment Suggestions",
+  "forecasting.aiSubtitle": "AI analyzes 3 months of sales data and seasonal factors",
+  "forecasting.aiGenerate": "AI Analyze",
+  "forecasting.aiAnalyzing": "Analyzing sales data...",
+  "forecasting.aiStock": "Stock",
+  "forecasting.aiDaysLeft": "Days Left",
+  "forecasting.aiIncoming": "Incoming",
+  "forecasting.aiForecastError": "AI analysis failed"
 }

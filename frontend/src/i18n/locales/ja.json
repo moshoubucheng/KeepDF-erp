@@ -1545,5 +1545,13 @@
   "ai.example2": "在庫が少ない商品トップ5",
   "ai.example3": "プラットフォーム別の注文数",
   "ai.example4": "先月の返品率は？",
-  "ai.rate_limit": "リクエスト制限に達しました"
+  "ai.rate_limit": "リクエスト制限に達しました",
+  "forecasting.aiTitle": "AI 補充提案",
+  "forecasting.aiSubtitle": "過去3ヶ月の販売データと季節要因をAIが分析",
+  "forecasting.aiGenerate": "AI分析",
+  "forecasting.aiAnalyzing": "販売データを分析中...",
+  "forecasting.aiStock": "在庫",
+  "forecasting.aiDaysLeft": "残日数",
+  "forecasting.aiIncoming": "入荷予定",
+  "forecasting.aiForecastError": "AI分析に失敗しました"
 }
