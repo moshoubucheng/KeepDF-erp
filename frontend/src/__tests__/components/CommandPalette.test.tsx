@@ -12,6 +12,24 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
+// Mock useGlobalSearch to avoid async API calls in tests
+import { useState } from 'react'
+const emptySearchResults = { success: true, orders: { items: [], total: 0 }, products: { items: [], total: 0 }, customers: { items: [], total: 0 } }
+vi.mock('@/hooks/useGlobalSearch', () => ({
+  useGlobalSearch: () => {
+    const [query, setQuery] = useState('')
+    return {
+      query,
+      setQuery,
+      results: emptySearchResults,
+      isSearching: false,
+      history: [],
+      addToHistory: vi.fn(),
+      clearHistory: vi.fn(),
+    }
+  },
+}))
+
 function dispatchKey(key: string, opts: Partial<KeyboardEventInit> = {}) {
   act(() => {
     document.dispatchEvent(
@@ -29,12 +47,12 @@ describe('CommandPalette', () => {
   it('opens with Cmd+K', async () => {
     render(<CommandPalette />)
 
-    expect(screen.queryByPlaceholderText('cmd.search_placeholder')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('search.global_placeholder')).not.toBeInTheDocument()
 
     dispatchKey('k', { metaKey: true })
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('cmd.search_placeholder')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('search.global_placeholder')).toBeInTheDocument()
     })
   })
 
@@ -44,14 +62,14 @@ describe('CommandPalette', () => {
     dispatchKey('k', { metaKey: true })
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('cmd.search_placeholder')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('search.global_placeholder')).toBeInTheDocument()
     })
 
     const user = userEvent.setup()
     await user.keyboard('{Escape}')
 
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText('cmd.search_placeholder')).not.toBeInTheDocument()
+      expect(screen.queryByPlaceholderText('search.global_placeholder')).not.toBeInTheDocument()
     })
   })
 
@@ -71,14 +89,14 @@ describe('CommandPalette', () => {
     dispatchKey('k', { metaKey: true })
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('cmd.search_placeholder')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('search.global_placeholder')).toBeInTheDocument()
     })
 
     const user = userEvent.setup()
-    await user.type(screen.getByPlaceholderText('cmd.search_placeholder'), 'zzzzz')
+    await user.type(screen.getByPlaceholderText('search.global_placeholder'), 'zzzzz')
 
     await waitFor(() => {
-      expect(screen.getByText('cmd.no_results')).toBeInTheDocument()
+      expect(screen.getByText('search.no_results')).toBeInTheDocument()
     })
   })
 
@@ -88,7 +106,7 @@ describe('CommandPalette', () => {
     dispatchKey('k', { metaKey: true })
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('cmd.search_placeholder')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('search.global_placeholder')).toBeInTheDocument()
     })
 
     const user = userEvent.setup()
@@ -117,7 +135,7 @@ describe('CommandPalette', () => {
     dispatchKey('k', { metaKey: true })
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('cmd.search_placeholder')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('search.global_placeholder')).toBeInTheDocument()
     })
 
     const user = userEvent.setup()
@@ -133,7 +151,7 @@ describe('CommandPalette', () => {
     dispatchKey('k', { metaKey: true })
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('cmd.search_placeholder')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('search.global_placeholder')).toBeInTheDocument()
     })
 
     // Click the overlay backdrop
@@ -144,7 +162,7 @@ describe('CommandPalette', () => {
     }
 
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText('cmd.search_placeholder')).not.toBeInTheDocument()
+      expect(screen.queryByPlaceholderText('search.global_placeholder')).not.toBeInTheDocument()
     })
   })
 })
