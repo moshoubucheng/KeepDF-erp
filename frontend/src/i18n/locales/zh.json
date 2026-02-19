@@ -1502,5 +1502,19 @@
   "dashboard.widget.trendChart": "订单趋势",
   "dashboard.widget.platformCharts": "平台分析",
   "dashboard.widget.adminCharts": "管理员图表",
-  "dashboard.widget.recentOrders": "最近订单"
+  "dashboard.widget.recentOrders": "最近订单",
+  "search.placeholder": "搜索...",
+  "search.global_placeholder": "搜索订单、商品、客户...",
+  "search.no_results": "未找到搜索结果",
+  "search.results_count": "{{count}}条结果",
+  "search.group.orders": "订单",
+  "search.group.products": "商品",
+  "search.group.customers": "客户",
+  "search.view_all": "查看全部",
+  "search.recent": "最近搜索",
+  "search.clear_recent": "清除历史",
+  "search.min_chars": "请输入至少2个字符",
+  "search.order_subtitle": "{{platform}} · {{status}} · ¥{{amount}}",
+  "search.product_subtitle": "{{sku}} · ¥{{price}}",
+  "search.customer_subtitle": "{{email}} · {{platform}}"
 }

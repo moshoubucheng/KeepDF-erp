@@ -46,6 +46,9 @@ import {
 import { useUIStore } from '@/stores/ui.store'
 import { cn } from '@/utils/cn'
 import { useKeyboardShortcuts, type ShortcutDef } from '@/hooks/useKeyboardShortcuts'
+import { useGlobalSearch } from '@/hooks/useGlobalSearch'
+import { GlobalSearchResults } from '@/components/search/GlobalSearchResults'
+import type { SearchResultItem } from '@/api/types'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -163,22 +166,49 @@ function ShortcutsHelp() {
 }
 
 // ---------------------------------------------------------------------------
+// Route map for search result navigation
+// ---------------------------------------------------------------------------
+
+const SEARCH_TYPE_ROUTES: Record<string, string> = {
+  order: '/orders',
+  product: '/inventory',
+  customer: '/customers',
+}
+
+// ---------------------------------------------------------------------------
 // CommandPalette
 // ---------------------------------------------------------------------------
 
 export function CommandPalette() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { theme, toggleTheme } = useUIStore()
+  const {
+    theme,
+    toggleTheme,
+    commandPaletteOpen: open,
+    openCommandPalette,
+    closeCommandPalette,
+  } = useUIStore()
 
-  const [open, setOpen] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
+
+  // Global search hook
+  const {
+    query,
+    setQuery,
+    results: searchResults,
+    isSearching,
+    history,
+    addToHistory,
+    clearHistory,
+  } = useGlobalSearch()
+
+  const hasSearchResults = query.trim().length >= 2
 
   // ------ Build command items ------
   const commandItems = useMemo<CommandItem[]>(() => {
@@ -255,7 +285,7 @@ export function CommandPalette() {
     ]
   }, [navigate, theme, toggleTheme])
 
-  // ------ Filtered + grouped results ------
+  // ------ Filtered + grouped command results ------
   const filteredItems = useMemo(() => {
     if (!query.trim()) return commandItems
     return commandItems.filter((item) => {
@@ -273,32 +303,44 @@ export function CommandPalette() {
     [filteredItems],
   )
 
-  const flatItems = useMemo(
+  const flatCommandItems = useMemo(
     () => [...navigationItems, ...actionItems],
     [navigationItems, actionItems],
   )
 
+  // Count total search result items for keyboard nav
+  const searchResultCount = useMemo(() => {
+    if (!searchResults) return 0
+    return searchResults.orders.items.length + searchResults.products.items.length + searchResults.customers.items.length
+  }, [searchResults])
+
+  // Total items for keyboard nav: commands + search results (when query >= 2)
+  // In search mode: search results first, then command items
+  const totalItems = hasSearchResults
+    ? searchResultCount + flatCommandItems.length
+    : (query.trim().length < 2 && history.length > 0 ? history.length : flatCommandItems.length)
+
   // ------ Open / close helpers ------
   const openPalette = useCallback(() => {
-    setOpen(true)
+    openCommandPalette()
     setShowHelp(false)
     setQuery('')
     setSelectedIndex(0)
-  }, [])
+  }, [openCommandPalette, setQuery])
 
   const openHelp = useCallback(() => {
-    setOpen(true)
+    openCommandPalette()
     setShowHelp(true)
     setQuery('')
     setSelectedIndex(0)
-  }, [])
+  }, [openCommandPalette, setQuery])
 
   const closePalette = useCallback(() => {
-    setOpen(false)
+    closeCommandPalette()
     setShowHelp(false)
     setQuery('')
     setSelectedIndex(0)
-  }, [])
+  }, [closeCommandPalette, setQuery])
 
   const executeItem = useCallback(
     (item: CommandItem) => {
@@ -306,6 +348,24 @@ export function CommandPalette() {
       requestAnimationFrame(() => item.action())
     },
     [closePalette],
+  )
+
+  const handleSearchResultSelect = useCallback(
+    (item: SearchResultItem) => {
+      addToHistory(query)
+      closePalette()
+      const route = SEARCH_TYPE_ROUTES[item.type] ?? '/dashboard'
+      requestAnimationFrame(() => navigate(route))
+    },
+    [closePalette, navigate, addToHistory, query],
+  )
+
+  const handleHistorySelect = useCallback(
+    (term: string) => {
+      setQuery(term)
+      setSelectedIndex(0)
+    },
+    [setQuery],
   )
 
   // ------ Keyboard shortcuts via hook ------
@@ -375,10 +435,10 @@ export function CommandPalette() {
   useEffect(() => {
     if (!showHelp) {
       setSelectedIndex((prev) =>
-        flatItems.length === 0 ? 0 : Math.min(prev, flatItems.length - 1),
+        totalItems === 0 ? 0 : Math.min(prev, totalItems - 1),
       )
     }
-  }, [flatItems.length, showHelp])
+  }, [totalItems, showHelp])
 
   // ------ Scroll selected item into view ------
   useEffect(() => {
@@ -409,20 +469,41 @@ export function CommandPalette() {
       if (e.key === 'ArrowDown') {
         e.preventDefault()
         setSelectedIndex((prev) =>
-          prev < flatItems.length - 1 ? prev + 1 : 0,
+          prev < totalItems - 1 ? prev + 1 : 0,
         )
       } else if (e.key === 'ArrowUp') {
         e.preventDefault()
         setSelectedIndex((prev) =>
-          prev > 0 ? prev - 1 : flatItems.length - 1,
+          prev > 0 ? prev - 1 : totalItems - 1,
         )
       } else if (e.key === 'Enter') {
         e.preventDefault()
-        const item = flatItems[selectedIndex]
-        if (item) executeItem(item)
+
+        // Handle history selection
+        if (query.trim().length < 2 && history.length > 0) {
+          const term = history[selectedIndex]
+          if (term) handleHistorySelect(term)
+          return
+        }
+
+        // Handle search result or command selection
+        if (hasSearchResults && selectedIndex < searchResultCount) {
+          // Build flat search items to find the one at selectedIndex
+          const allSearchItems = [
+            ...(searchResults?.orders.items ?? []),
+            ...(searchResults?.products.items ?? []),
+            ...(searchResults?.customers.items ?? []),
+          ]
+          const item = allSearchItems[selectedIndex]
+          if (item) handleSearchResultSelect(item)
+        } else {
+          const cmdIndex = hasSearchResults ? selectedIndex - searchResultCount : selectedIndex
+          const item = flatCommandItems[cmdIndex]
+          if (item) executeItem(item)
+        }
       }
     },
-    [flatItems, selectedIndex, showHelp, closePalette, executeItem],
+    [totalItems, selectedIndex, showHelp, closePalette, executeItem, hasSearchResults, searchResultCount, searchResults, flatCommandItems, query, history, handleHistorySelect, handleSearchResultSelect],
   )
 
   // ------ Backdrop click ------
@@ -436,6 +517,7 @@ export function CommandPalette() {
   if (!open) return null
 
   const navCount = navigationItems.length
+  const commandStartIndex = hasSearchResults ? searchResultCount : 0
 
   return createPortal(
     <div
@@ -457,7 +539,7 @@ export function CommandPalette() {
                 setQuery(e.target.value)
                 setSelectedIndex(0)
               }}
-              placeholder={t('cmd.search_placeholder')}
+              placeholder={t('search.global_placeholder')}
               className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted outline-none"
             />
             <kbd className="hidden sm:inline-flex items-center rounded-md border border-border bg-bg-input px-1.5 py-0.5 font-mono text-[11px] text-text-muted">
@@ -488,46 +570,81 @@ export function CommandPalette() {
           </div>
         ) : (
           <div ref={listRef} className="max-h-[60vh] overflow-y-auto py-2">
-            {flatItems.length === 0 && (
-              <div className="px-4 py-8 text-center text-sm text-text-muted">
-                {t('cmd.no_results')}
-              </div>
+            {/* Data search results (when query >= 2 chars) */}
+            {hasSearchResults && (
+              <GlobalSearchResults
+                results={searchResults}
+                isSearching={isSearching}
+                query={query}
+                history={history}
+                selectedIndex={selectedIndex}
+                onSelectResult={handleSearchResultSelect}
+                onSelectHistory={handleHistorySelect}
+                onClearHistory={clearHistory}
+                onHoverIndex={setSelectedIndex}
+              />
             )}
 
-            {navigationItems.length > 0 && (
-              <div>
-                <div className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-                  {t('cmd.group.navigation')}
-                </div>
-                {navigationItems.map((item, i) => (
-                  <CommandItemRow
-                    key={item.id}
-                    item={item}
-                    selected={selectedIndex === i}
-                    onSelect={() => executeItem(item)}
-                    onHover={() => setSelectedIndex(i)}
-                    t={t}
-                  />
-                ))}
-              </div>
+            {/* Search history (when query < 2 chars) */}
+            {!hasSearchResults && (
+              <GlobalSearchResults
+                results={null}
+                isSearching={false}
+                query={query}
+                history={history}
+                selectedIndex={selectedIndex}
+                onSelectResult={handleSearchResultSelect}
+                onSelectHistory={handleHistorySelect}
+                onClearHistory={clearHistory}
+                onHoverIndex={setSelectedIndex}
+              />
             )}
 
-            {actionItems.length > 0 && (
-              <div>
-                <div className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-                  {t('cmd.group.actions')}
-                </div>
-                {actionItems.map((item, i) => (
-                  <CommandItemRow
-                    key={item.id}
-                    item={item}
-                    selected={selectedIndex === navCount + i}
-                    onSelect={() => executeItem(item)}
-                    onHover={() => setSelectedIndex(navCount + i)}
-                    t={t}
-                  />
-                ))}
-              </div>
+            {/* Command items (always shown below search results) */}
+            {(hasSearchResults || (query.trim().length < 2 && history.length === 0)) && (
+              <>
+                {flatCommandItems.length === 0 && !hasSearchResults && (
+                  <div className="px-4 py-8 text-center text-sm text-text-muted">
+                    {t('cmd.no_results')}
+                  </div>
+                )}
+
+                {navigationItems.length > 0 && (
+                  <div>
+                    <div className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+                      {t('cmd.group.navigation')}
+                    </div>
+                    {navigationItems.map((item, i) => (
+                      <CommandItemRow
+                        key={item.id}
+                        item={item}
+                        selected={selectedIndex === commandStartIndex + i}
+                        onSelect={() => executeItem(item)}
+                        onHover={() => setSelectedIndex(commandStartIndex + i)}
+                        t={t}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {actionItems.length > 0 && (
+                  <div>
+                    <div className="px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+                      {t('cmd.group.actions')}
+                    </div>
+                    {actionItems.map((item, i) => (
+                      <CommandItemRow
+                        key={item.id}
+                        item={item}
+                        selected={selectedIndex === commandStartIndex + navCount + i}
+                        onSelect={() => executeItem(item)}
+                        onHover={() => setSelectedIndex(commandStartIndex + navCount + i)}
+                        t={t}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

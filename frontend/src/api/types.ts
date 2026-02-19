@@ -190,6 +190,30 @@ export interface Notification {
   created_at: string
 }
 
+// ===== Global Search =====
+
+export type SearchEntityType = 'order' | 'product' | 'customer'
+
+export interface SearchResultItem {
+  type: SearchEntityType
+  id: number
+  title: string
+  subtitle: string
+  meta?: Record<string, unknown>
+}
+
+export interface SearchGroupResult {
+  items: SearchResultItem[]
+  total: number
+}
+
+export interface SearchResponse {
+  success: boolean
+  orders: SearchGroupResult
+  products: SearchGroupResult
+  customers: SearchGroupResult
+}
+
 // API Response wrappers
 export interface PaginatedResponse<T> {
   success: boolean

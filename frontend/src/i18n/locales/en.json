@@ -1502,5 +1502,19 @@
   "dashboard.widget.trendChart": "Order Trends",
   "dashboard.widget.platformCharts": "Platform Analytics",
   "dashboard.widget.adminCharts": "Admin Charts",
-  "dashboard.widget.recentOrders": "Recent Orders"
+  "dashboard.widget.recentOrders": "Recent Orders",
+  "search.placeholder": "Search...",
+  "search.global_placeholder": "Search orders, products, customers...",
+  "search.no_results": "No results found",
+  "search.results_count": "{{count}} results",
+  "search.group.orders": "Orders",
+  "search.group.products": "Products",
+  "search.group.customers": "Customers",
+  "search.view_all": "View all",
+  "search.recent": "Recent searches",
+  "search.clear_recent": "Clear history",
+  "search.min_chars": "Type at least 2 characters",
+  "search.order_subtitle": "{{platform}} · {{status}} · ¥{{amount}}",
+  "search.product_subtitle": "{{sku}} · ¥{{price}}",
+  "search.customer_subtitle": "{{email}} · {{platform}}"
 }

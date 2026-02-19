@@ -41,6 +41,7 @@ import { approvals } from './controllers/approval.controller'
 import { webhooks } from './controllers/webhook.controller'
 import { auditRecovery } from './controllers/audit-recovery.controller'
 import { push } from './controllers/push.controller'
+import { search } from './controllers/search.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
@@ -117,6 +118,7 @@ app.route('/api/v1/webhooks', webhooks)
 // auditRecovery routes also mounted under /audit-logs (unique sub-paths)
 app.route('/api/v1/audit-recovery', auditRecovery)
 app.route('/api/v1/push', push)
+app.route('/api/v1/search', search)
 
 // ===== Error Handler =====
 app.onError((err, c) => {

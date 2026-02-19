@@ -13,6 +13,7 @@ interface UIState {
   sidebarHidden: boolean
   theme: Theme
   toasts: ToastItem[]
+  commandPaletteOpen: boolean
   toggleSidebar: () => void
   closeSidebar: () => void
   setSidebarHidden: (hidden: boolean) => void
@@ -20,6 +21,8 @@ interface UIState {
   toggleTheme: () => void
   addToast: (type: ToastItem['type'], message: string) => void
   removeToast: (id: string) => void
+  openCommandPalette: () => void
+  closeCommandPalette: () => void
 }
 
 function getInitialTheme(): Theme {
@@ -45,6 +48,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   sidebarHidden: false,
   theme: getInitialTheme(),
   toasts: [],
+  commandPaletteOpen: false,
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   closeSidebar: () => set({ sidebarOpen: false }),
@@ -70,4 +74,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   removeToast: (id) => {
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
   },
+
+  openCommandPalette: () => set({ commandPaletteOpen: true }),
+  closeCommandPalette: () => set({ commandPaletteOpen: false }),
 }))

@@ -550,6 +550,27 @@ export interface CouponUsage {
     used_at: string
 }
 
+// ===== Global Search =====
+
+export interface SearchResultItem {
+    type: 'order' | 'product' | 'customer'
+    id: number
+    title: string
+    subtitle: string
+    meta?: Record<string, unknown>
+}
+
+export interface SearchGroupResult {
+    items: SearchResultItem[]
+    total: number
+}
+
+export interface SearchResponse {
+    orders: SearchGroupResult
+    products: SearchGroupResult
+    customers: SearchGroupResult
+}
+
 // ===== Report Types =====
 
 export interface ReportParams {

@@ -1530,5 +1530,19 @@
   "dashboard.widget.trendChart": "注文トレンド",
   "dashboard.widget.platformCharts": "プラットフォーム分析",
   "dashboard.widget.adminCharts": "管理者チャート",
-  "dashboard.widget.recentOrders": "最近の注文"
+  "dashboard.widget.recentOrders": "最近の注文",
+  "search.placeholder": "検索...",
+  "search.global_placeholder": "注文・商品・顧客を検索...",
+  "search.no_results": "検索結果がありません",
+  "search.results_count": "{{count}}件の結果",
+  "search.group.orders": "注文",
+  "search.group.products": "商品",
+  "search.group.customers": "顧客",
+  "search.view_all": "すべて表示",
+  "search.recent": "最近の検索",
+  "search.clear_recent": "履歴をクリア",
+  "search.min_chars": "2文字以上入力してください",
+  "search.order_subtitle": "{{platform}} · {{status}} · ¥{{amount}}",
+  "search.product_subtitle": "{{sku}} · ¥{{price}}",
+  "search.customer_subtitle": "{{email}} · {{platform}}"
 }

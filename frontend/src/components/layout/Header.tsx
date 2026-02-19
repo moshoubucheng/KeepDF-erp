@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Menu, Sun, Moon, User, LogOut, ChevronDown } from 'lucide-react'
+import { Menu, Sun, Moon, User, LogOut, ChevronDown, Search } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
 import { NotificationBell } from './NotificationBell'
@@ -23,7 +23,7 @@ const ROUTE_TITLE_MAP: Record<string, string> = {
 export function Header() {
   const { t } = useTranslation()
   const location = useLocation()
-  const { toggleSidebar, theme, toggleTheme } = useUIStore()
+  const { toggleSidebar, theme, toggleTheme, openCommandPalette } = useUIStore()
   const { user, logout } = useAuthStore()
 
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -73,6 +73,19 @@ export function Header() {
 
       {/* Right: actions */}
       <div className="flex items-center gap-2">
+        {/* Search trigger */}
+        <button
+          onClick={openCommandPalette}
+          className="hidden md:flex items-center gap-2 rounded-lg border border-border bg-bg-card px-3 py-1.5 text-sm text-text-muted transition-colors hover:bg-bg-input hover:text-text-secondary"
+          aria-label={t('search.global_placeholder')}
+        >
+          <Search className="h-4 w-4" />
+          <span className="max-w-[140px] truncate">{t('search.placeholder')}</span>
+          <kbd className="ml-1 rounded border border-border bg-bg-input px-1.5 py-0.5 font-mono text-[10px]">
+            {navigator.platform?.toUpperCase().includes('MAC') ? '\u2318' : 'Ctrl'}+K
+          </kbd>
+        </button>
+
         {/* Notification bell */}
         <NotificationBell />
 
