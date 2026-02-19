@@ -46,8 +46,9 @@ ai.post('/chat', async (c) => {
 
         return c.json({ success: true, ...result })
     } catch (err) {
-        console.error('[AI] Chat error:', err)
-        return c.json({ error: 'AI service temporarily unavailable' }, 503)
+        const errDetail = err instanceof Error ? err.message : String(err)
+        console.error('[AI] Chat error:', errDetail, err instanceof Error ? err.stack : '')
+        return c.json({ error: `AI service error: ${errDetail}` }, 503)
     }
 })
 

@@ -263,9 +263,12 @@ export function AiChatPanel({ open, onClose }: AiChatPanelProps) {
       }
       setMessages((prev) => [...prev, aiMsg])
     } catch (err) {
-      const errMsg = err instanceof Error && err.message.includes('429')
-        ? t('ai.rate_limit')
-        : t('ai.error')
+      let errMsg = t('ai.error')
+      if (err instanceof Error) {
+        if (err.message.includes('429')) errMsg = t('ai.rate_limit')
+        else if (err.message.includes('AI service error')) errMsg = err.message
+        else errMsg = `${t('ai.error')}: ${err.message}`
+      }
       setError(errMsg)
     } finally {
       setLoading(false)

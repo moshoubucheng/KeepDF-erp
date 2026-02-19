@@ -204,25 +204,37 @@ export class AiService {
             { messages, max_tokens: 512, temperature: 0.1 },
         )
 
-        const responseText = typeof aiResponse === 'string'
-            ? aiResponse
-            : (aiResponse as { response?: string }).response || ''
+        // Extract response content from Workers AI
+        // Response shape: string | { response: string | object, tool_calls?, usage? }
+        let parsed: AiSqlResponse | AiTextResponse | null = null
+        const raw = aiResponse as Record<string, unknown>
 
-        if (!responseText) {
-            return { reply: 'No response from AI model.' }
+        if (typeof aiResponse === 'string') {
+            // Direct string response
+            try {
+                const cleaned = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+                parsed = JSON.parse(cleaned)
+            } catch {
+                return { reply: aiResponse.trim() || 'No response from AI model.' }
+            }
+        } else if (raw && typeof raw === 'object' && 'response' in raw) {
+            const inner = raw.response
+            if (typeof inner === 'string') {
+                // response is a JSON string
+                try {
+                    const cleaned = inner.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+                    parsed = JSON.parse(cleaned)
+                } catch {
+                    return { reply: inner.trim() || 'No response from AI model.' }
+                }
+            } else if (inner && typeof inner === 'object') {
+                // response is already a parsed object
+                parsed = inner as AiSqlResponse | AiTextResponse
+            }
         }
 
-        // Parse JSON from response (handle possible markdown fences)
-        let parsed: AiSqlResponse | AiTextResponse
-        try {
-            const cleaned = responseText
-                .replace(/```json\s*/g, '')
-                .replace(/```\s*/g, '')
-                .trim()
-            parsed = JSON.parse(cleaned)
-        } catch {
-            // If JSON parsing fails, treat as plain text answer
-            return { reply: responseText.trim() }
+        if (!parsed) {
+            return { reply: 'No response from AI model.' }
         }
 
         // Text-only answer (no SQL needed)
@@ -273,6 +285,6 @@ export class AiService {
             }
         }
 
-        return { reply: responseText.trim() }
+        return { reply: JSON.stringify(parsed) }
     }
 }
