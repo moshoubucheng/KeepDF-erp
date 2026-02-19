@@ -8,6 +8,7 @@ export type Bindings = {
     ASSETS: Fetcher
     VAPID_PUBLIC_KEY: string
     VAPID_PRIVATE_KEY: string
+    AI: Ai
 }
 
 // ===== Hono Context Variables =====

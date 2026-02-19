@@ -42,6 +42,7 @@ import { webhooks } from './controllers/webhook.controller'
 import { auditRecovery } from './controllers/audit-recovery.controller'
 import { push } from './controllers/push.controller'
 import { search } from './controllers/search.controller'
+import { ai } from './controllers/ai.controller'
 import { DisasterRecoveryService } from './services/disaster-recovery.service'
 import { WalletService } from './services/wallet.service'
 import { LowStockChecker } from './services/lowstock-checker'
@@ -119,6 +120,7 @@ app.route('/api/v1/webhooks', webhooks)
 app.route('/api/v1/audit-recovery', auditRecovery)
 app.route('/api/v1/push', push)
 app.route('/api/v1/search', search)
+app.route('/api/v1/ai', ai)
 
 // ===== Error Handler =====
 app.onError((err, c) => {

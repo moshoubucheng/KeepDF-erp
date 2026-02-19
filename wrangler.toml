@@ -46,5 +46,9 @@ max_batch_timeout = 5
 type = "Text"
 globs = ["**/*.sql"]
 
+# AI Binding (Workers AI)
+[ai]
+binding = "AI"
+
 [triggers]
 crons = ["0 2 * * *"]

@@ -1530,5 +1530,20 @@
   "scanner.close": "Close",
   "scanner.error": "Scan Error",
   "scanner.initializing": "Initializing camera...",
-  "scanner.detected": "Detected"
+  "scanner.detected": "Detected",
+  "ai.title": "AI Assistant",
+  "ai.placeholder": "Ask a question...",
+  "ai.send": "Send",
+  "ai.thinking": "Thinking...",
+  "ai.error": "An error occurred",
+  "ai.retry": "Try Again",
+  "ai.empty_title": "Ask about your data",
+  "ai.empty_subtitle": "Search orders, inventory, customers in natural language",
+  "ai.show_sql": "Show SQL",
+  "ai.hide_sql": "Hide SQL",
+  "ai.example1": "What's this week's total sales?",
+  "ai.example2": "Top 5 low stock products",
+  "ai.example3": "Orders by platform",
+  "ai.example4": "What was last month's return rate?",
+  "ai.rate_limit": "Rate limit reached"
 }

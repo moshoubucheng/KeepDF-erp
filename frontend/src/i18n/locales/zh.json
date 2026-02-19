@@ -1530,5 +1530,20 @@
   "scanner.close": "关闭",
   "scanner.error": "扫码错误",
   "scanner.initializing": "初始化摄像头...",
-  "scanner.detected": "已识别"
+  "scanner.detected": "已识别",
+  "ai.title": "AI 助手",
+  "ai.placeholder": "输入问题...",
+  "ai.send": "发送",
+  "ai.thinking": "思考中...",
+  "ai.error": "发生错误",
+  "ai.retry": "重试",
+  "ai.empty_title": "询问您的数据",
+  "ai.empty_subtitle": "用自然语言搜索订单、库存、客户数据",
+  "ai.show_sql": "显示 SQL",
+  "ai.hide_sql": "隐藏 SQL",
+  "ai.example1": "本周销售额是多少？",
+  "ai.example2": "库存最低的5个商品",
+  "ai.example3": "各平台的订单数",
+  "ai.example4": "上个月的退货率是多少？",
+  "ai.rate_limit": "请求频率超限"
 }

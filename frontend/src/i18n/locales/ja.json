@@ -1530,5 +1530,20 @@
   "scanner.close": "閉じる",
   "scanner.error": "スキャンエラー",
   "scanner.initializing": "カメラを初期化中...",
-  "scanner.detected": "検出しました"
+  "scanner.detected": "検出しました",
+  "ai.title": "AI アシスタント",
+  "ai.placeholder": "質問を入力...",
+  "ai.send": "送信",
+  "ai.thinking": "考え中...",
+  "ai.error": "エラーが発生しました",
+  "ai.retry": "もう一度試す",
+  "ai.empty_title": "データについて質問してください",
+  "ai.empty_subtitle": "注文・在庫・顧客データを自然言語で検索",
+  "ai.show_sql": "SQLを表示",
+  "ai.hide_sql": "SQLを非表示",
+  "ai.example1": "今週の売上合計は？",
+  "ai.example2": "在庫が少ない商品トップ5",
+  "ai.example3": "プラットフォーム別の注文数",
+  "ai.example4": "先月の返品率は？",
+  "ai.rate_limit": "リクエスト制限に達しました"
 }

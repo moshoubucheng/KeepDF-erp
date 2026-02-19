@@ -7,6 +7,8 @@ import { BottomNav } from './BottomNav'
 import { CommandPalette } from '@/components/ui/CommandPalette'
 import { InlineErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineBanner } from '@/components/onboarding/OfflineBanner'
+import { AiChatButton } from '@/components/ai/AiChatButton'
+import { AiChatPanel } from '@/components/ai/AiChatPanel'
 import { useUIStore } from '@/stores/ui.store'
 import { cn } from '@/utils/cn'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -14,6 +16,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 export function AppLayout() {
   const { t } = useTranslation()
   const { sidebarHidden, setSidebarHidden } = useUIStore()
+  const [aiOpen, setAiOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showToggle, setShowToggle] = useState(false)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
@@ -102,6 +105,10 @@ export function AppLayout() {
 
       {/* Mobile bottom navigation */}
       <BottomNav />
+
+      {/* AI Assistant */}
+      <AiChatButton onClick={() => setAiOpen(true)} />
+      <AiChatPanel open={aiOpen} onClose={() => setAiOpen(false)} />
 
       {/* Command palette (global keyboard shortcuts + modal) */}
       <CommandPalette />
