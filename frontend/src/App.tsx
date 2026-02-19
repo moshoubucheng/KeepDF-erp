@@ -45,6 +45,7 @@ const StocktakesPage = lazy(() => import('./pages/stocktakes/StocktakesPage'))
 const SkuMappingsPage = lazy(() => import('./pages/sku-mappings/SkuMappingsPage'))
 const InvoicesPage = lazy(() => import('./pages/invoices/InvoicesPage'))
 const DataScreenPage = lazy(() => import('./pages/data-screen/DataScreenPage'))
+const SupplyChainPage = lazy(() => import('./pages/supply-chain/SupplyChainPage'))
 const ImportPage = lazy(() => import('./pages/import/ImportPage'))
 const BatchPage = lazy(() => import('./pages/batch/BatchPage'))
 const PlatformSyncPage = lazy(() => import('./pages/platform-sync/PlatformSyncPage'))
@@ -99,6 +100,7 @@ export default function App() {
             <Route path="customer-segments" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CustomerSegmentsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="communications" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><CommunicationsPage /></InlineErrorBoundary></Suspense>} />
             {/* Analytics */}
+            <Route path="supply-chain" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><SupplyChainPage /></InlineErrorBoundary></Suspense>} />
             <Route path="reports" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><ReportsPage /></InlineErrorBoundary></Suspense>} />
             <Route path="data-screen" element={<Suspense fallback={<LazyFallback />}><InlineErrorBoundary><DataScreenPage /></InlineErrorBoundary></Suspense>} />
             {/* System */}

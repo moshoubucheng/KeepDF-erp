@@ -4,6 +4,10 @@ import { TrendChart } from '../TrendChart'
 import { PlatformCharts } from '../PlatformCharts'
 import { AdminCharts } from '../AdminCharts'
 import { RecentOrdersTable } from '../RecentOrdersTable'
+import { SupplyChainStatusWidget } from './SupplyChainStatusWidget'
+import { OrderPipelineWidget } from './OrderPipelineWidget'
+import { LowStockAlertsWidget } from './LowStockAlertsWidget'
+import { RevenueByPlatformWidget } from './RevenueByPlatformWidget'
 import type { DashboardData } from '../hooks/useDashboardData'
 
 interface Props {
@@ -66,6 +70,34 @@ export function WidgetRenderer({ widgetId, data }: Props) {
         <RecentOrdersTable
           orders={data.recentOrders}
           isLoading={data.recentOrdersLoading}
+        />
+      )
+    case 'supplyChainStatus':
+      return (
+        <SupplyChainStatusWidget
+          statuses={data.supplyChainStatuses}
+          isLoading={data.supplyChainLoading}
+        />
+      )
+    case 'orderStatusPipeline':
+      return (
+        <OrderPipelineWidget
+          statuses={data.orderPipelineStatuses}
+          isLoading={data.orderPipelineLoading}
+        />
+      )
+    case 'lowStockAlerts':
+      return (
+        <LowStockAlertsWidget
+          products={data.lowStockTopProducts}
+          isLoading={data.lowStockTopLoading}
+        />
+      )
+    case 'revenueByPlatform':
+      return (
+        <RevenueByPlatformWidget
+          platformData={data.platformData}
+          isLoading={data.platformLoading}
         />
       )
     default:

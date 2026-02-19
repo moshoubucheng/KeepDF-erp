@@ -1,0 +1,1 @@
+import{j as s}from"./query-DgB_v7oZ.js";import{a as o}from"./index-DLjUNz-i.js";import{a}from"./constants-BP8Fwr_R.js";function x({status:e,className:r}){const t=a[e]??"bg-gray-500/15 text-gray-400";return s.jsx("span",{className:o("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",t,r),children:e})}export{x as S};

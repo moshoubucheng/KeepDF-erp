@@ -37,6 +37,7 @@ import {
   Upload,
   Layers,
   RefreshCw,
+  Workflow,
 } from 'lucide-react'
 import { useUIStore } from '@/stores/ui.store'
 import { useAuthStore } from '@/stores/auth.store'
@@ -86,6 +87,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { key: 'stocktakes', labelKey: 'nav.stocktakes', path: '/stocktakes', icon: <Boxes className="h-4 w-4" /> },
       { key: 'sku-mappings', labelKey: 'nav.skuMappings', path: '/sku-mappings', icon: <Link2 className="h-4 w-4" /> },
       { key: 'forecasting', labelKey: 'nav.forecasting', path: '/forecasting', icon: <TrendingUp className="h-4 w-4" /> },
+      { key: 'supply-chain', labelKey: 'nav.supplyChain', path: '/supply-chain', icon: <Workflow className="h-4 w-4" /> },
     ],
   },
   {

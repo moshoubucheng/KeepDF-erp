@@ -38,6 +38,26 @@ interface TurnoverResponse {
   data: { sku: string; name: string; soldQty: number; currentStock: number; turnoverRate: number }[]
 }
 
+interface SupplyChainStatusResponse {
+  statuses: { status: string; count: number }[]
+}
+
+interface OrderPipelineResponse {
+  statuses: { status: string; count: number }[]
+}
+
+interface LowStockTopResponse {
+  products: { id: number; sku: string; name_jp: string; name_cn: string; current_stock: number; reorder_point: number; days_of_stock: number }[]
+}
+
+interface SupplyChainOverviewResponse {
+  procurement: { status: string; count: number }[]
+  orders: { status: string; count: number }[]
+  shipments: { status: string; count: number }[]
+  inventory: { totalProducts: number; totalStock: number; lowStockCount: number; avgDaysOfStock: number }
+  recentActivity: { type: string; id: number; status: string; created_at: string }[]
+}
+
 export const dashboardApi = {
   stats: () => api.get<StatsResponse>('/dashboard/stats'),
 
@@ -61,4 +81,16 @@ export const dashboardApi = {
 
   saveLayout: (layout: unknown[]) =>
     api.put<{ layout: unknown[] }>('/dashboard/layout', { layout }),
+
+  supplyChainStatus: () =>
+    api.get<SupplyChainStatusResponse>('/dashboard/supply-chain-status'),
+
+  orderPipeline: () =>
+    api.get<OrderPipelineResponse>('/dashboard/order-pipeline'),
+
+  lowStockTop: () =>
+    api.get<LowStockTopResponse>('/dashboard/low-stock-top'),
+
+  supplyChainOverview: () =>
+    api.get<SupplyChainOverviewResponse>('/dashboard/supply-chain-overview'),
 }

@@ -60,6 +60,13 @@ export interface DashboardData {
   // recent orders
   recentOrders: any[]
   recentOrdersLoading: boolean
+  // new widgets
+  supplyChainStatuses: { status: string; count: number }[]
+  supplyChainLoading: boolean
+  orderPipelineStatuses: { status: string; count: number }[]
+  orderPipelineLoading: boolean
+  lowStockTopProducts: { id: number; sku: string; name_jp: string; name_cn: string; current_stock: number; reorder_point: number; days_of_stock: number }[]
+  lowStockTopLoading: boolean
 }
 
 export function useDashboardData(): DashboardData {
@@ -102,6 +109,25 @@ export function useDashboardData(): DashboardData {
     queryFn: () => dashboardApi.inventoryTurnover(),
     staleTime: 120_000,
     enabled: isAdmin,
+  })
+
+  const supplyChainQuery = useQuery({
+    queryKey: ['dashboard', 'supply-chain-status'],
+    queryFn: () => dashboardApi.supplyChainStatus(),
+    staleTime: 120_000,
+    enabled: isAdmin,
+  })
+
+  const orderPipelineQuery = useQuery({
+    queryKey: ['dashboard', 'order-pipeline'],
+    queryFn: () => dashboardApi.orderPipeline(),
+    staleTime: 60_000,
+  })
+
+  const lowStockTopQuery = useQuery({
+    queryKey: ['dashboard', 'low-stock-top'],
+    queryFn: () => dashboardApi.lowStockTop(),
+    staleTime: 120_000,
   })
 
   const overview = statsQuery.data?.overview
@@ -182,5 +208,11 @@ export function useDashboardData(): DashboardData {
     turnoverData,
     recentOrders,
     recentOrdersLoading: recentOrdersQuery.isLoading,
+    supplyChainStatuses: supplyChainQuery.data?.statuses ?? [],
+    supplyChainLoading: supplyChainQuery.isLoading,
+    orderPipelineStatuses: orderPipelineQuery.data?.statuses ?? [],
+    orderPipelineLoading: orderPipelineQuery.isLoading,
+    lowStockTopProducts: lowStockTopQuery.data?.products ?? [],
+    lowStockTopLoading: lowStockTopQuery.isLoading,
   }
 }

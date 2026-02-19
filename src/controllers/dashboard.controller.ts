@@ -306,6 +306,107 @@ dashboard.get('/inventory-turnover', adminOnly, async (c) => {
     })
 })
 
+/** GET /dashboard/supply-chain-status - PO各状態数量 (admin only) */
+dashboard.get('/supply-chain-status', adminOnly, async (c) => {
+    const { results } = await c.env.DB.prepare(
+        `SELECT status, COUNT(*) as count FROM purchase_orders GROUP BY status ORDER BY count DESC`
+    ).all<{ status: string; count: number }>()
+
+    return c.json({ statuses: results })
+})
+
+/** GET /dashboard/order-pipeline - 注文各状態数量 */
+dashboard.get('/order-pipeline', async (c) => {
+    const distributorId = c.get('distributorId')
+    const role = c.get('role')
+    const isAdmin = role === 'admin'
+
+    const sql = isAdmin
+        ? `SELECT status, COUNT(*) as count FROM orders GROUP BY status ORDER BY count DESC`
+        : `SELECT status, COUNT(*) as count FROM orders WHERE distributor_id = ? GROUP BY status ORDER BY count DESC`
+
+    const stmt = isAdmin ? c.env.DB.prepare(sql) : c.env.DB.prepare(sql).bind(distributorId)
+    const { results } = await stmt.all<{ status: string; count: number }>()
+
+    return c.json({ statuses: results })
+})
+
+/** GET /dashboard/low-stock-top - 低库存Top5 */
+dashboard.get('/low-stock-top', async (c) => {
+    const { results } = await c.env.DB.prepare(`
+        SELECT
+            p.id, p.sku, p.name_jp, p.name_cn,
+            COALESCE(wl.qty, 0) as current_stock,
+            COALESCE(f.reorder_point, 50) as reorder_point,
+            COALESCE(f.days_of_stock, 0) as days_of_stock
+        FROM products p
+        LEFT JOIN warehouse_locations wl ON wl.sku = p.sku
+        LEFT JOIN inventory_forecasts f ON f.sku = p.sku
+        WHERE COALESCE(wl.qty, 0) <= COALESCE(f.reorder_point, 50)
+        ORDER BY COALESCE(wl.qty, 0) ASC
+        LIMIT 5
+    `).all<{ id: number; sku: string; name_jp: string; name_cn: string; current_stock: number; reorder_point: number; days_of_stock: number }>()
+
+    return c.json({ products: results })
+})
+
+/** GET /dashboard/supply-chain-overview - 供应链全局总览 (admin only) */
+dashboard.get('/supply-chain-overview', adminOnly, async (c) => {
+    const [poStatuses, orderStatuses, shipmentStatuses, inventorySummary, lowStockCount, recentActivity] = await Promise.all([
+        // PO by status
+        c.env.DB.prepare(`SELECT status, COUNT(*) as count FROM purchase_orders GROUP BY status`).all<{ status: string; count: number }>(),
+        // Orders by status
+        c.env.DB.prepare(`SELECT status, COUNT(*) as count FROM orders GROUP BY status`).all<{ status: string; count: number }>(),
+        // Shipments by status
+        c.env.DB.prepare(`SELECT status, COUNT(*) as count FROM shipments GROUP BY status`).all<{ status: string; count: number }>(),
+        // Inventory summary
+        c.env.DB.prepare(`
+            SELECT
+                COUNT(DISTINCT p.id) as total_products,
+                COALESCE(SUM(wl.qty), 0) as total_stock,
+                COALESCE(AVG(f.days_of_stock), 0) as avg_days_of_stock
+            FROM products p
+            LEFT JOIN warehouse_locations wl ON wl.sku = p.sku
+            LEFT JOIN inventory_forecasts f ON f.sku = p.sku
+        `).first<{ total_products: number; total_stock: number; avg_days_of_stock: number }>(),
+        // Low stock count
+        c.env.DB.prepare(`
+            SELECT COUNT(*) as count
+            FROM warehouse_locations wl
+            WHERE wl.qty <= 50
+        `).first<{ count: number }>(),
+        // Recent 10 activities (union of orders, POs, shipments)
+        c.env.DB.prepare(`
+            SELECT * FROM (
+                SELECT 'order' as type, id, status, created_at FROM orders ORDER BY created_at DESC LIMIT 4
+            )
+            UNION ALL
+            SELECT * FROM (
+                SELECT 'purchase_order' as type, id, status, created_at FROM purchase_orders ORDER BY created_at DESC LIMIT 3
+            )
+            UNION ALL
+            SELECT * FROM (
+                SELECT 'shipment' as type, id, status, created_at FROM shipments ORDER BY created_at DESC LIMIT 3
+            )
+            ORDER BY created_at DESC
+            LIMIT 10
+        `).all<{ type: string; id: number; status: string; created_at: string }>(),
+    ])
+
+    return c.json({
+        procurement: poStatuses.results,
+        orders: orderStatuses.results,
+        shipments: shipmentStatuses.results,
+        inventory: {
+            totalProducts: inventorySummary?.total_products || 0,
+            totalStock: inventorySummary?.total_stock || 0,
+            lowStockCount: lowStockCount?.count || 0,
+            avgDaysOfStock: Math.round(inventorySummary?.avg_days_of_stock || 0),
+        },
+        recentActivity: recentActivity.results,
+    })
+})
+
 /** GET /dashboard/layout - Get dashboard layout */
 dashboard.get('/layout', async (c) => {
     const service = new DashboardLayoutService(c.env.DB)

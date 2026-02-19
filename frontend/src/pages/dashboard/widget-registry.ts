@@ -19,6 +19,10 @@ export const WIDGET_REGISTRY: Record<string, WidgetDefinition> = {
   platformCharts: { id: 'platformCharts', titleKey: 'dashboard.widget.platformCharts', defaultWidth: 2, adminOnly: false },
   adminCharts: { id: 'adminCharts', titleKey: 'dashboard.widget.adminCharts', defaultWidth: 2, adminOnly: true },
   recentOrders: { id: 'recentOrders', titleKey: 'dashboard.widget.recentOrders', defaultWidth: 2, adminOnly: false },
+  supplyChainStatus: { id: 'supplyChainStatus', titleKey: 'dashboard.widget.supplyChainStatus', defaultWidth: 1, adminOnly: true },
+  orderStatusPipeline: { id: 'orderStatusPipeline', titleKey: 'dashboard.widget.orderStatusPipeline', defaultWidth: 1, adminOnly: false },
+  lowStockAlerts: { id: 'lowStockAlerts', titleKey: 'dashboard.widget.lowStockAlerts', defaultWidth: 1, adminOnly: false },
+  revenueByPlatform: { id: 'revenueByPlatform', titleKey: 'dashboard.widget.revenueByPlatform', defaultWidth: 1, adminOnly: false },
 }
 
 export const ALL_WIDGET_IDS = Object.keys(WIDGET_REGISTRY)
