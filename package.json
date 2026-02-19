@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev:backend": "wrangler dev",
+    "dev:backend:test": "wrangler dev --config wrangler.test.toml",
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "npx concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build:frontend": "cd frontend && npm run build",
