@@ -1,0 +1,45 @@
+name = "keepdf-erp"
+compatibility_date = "2024-02-11"
+
+# Main entry point
+main = "src/index.ts"
+
+# Static Assets (Frontend - built from frontend/ via Vite)
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# Database Binding (D1)
+[[d1_databases]]
+binding = "DB"
+database_name = "smart-erp-db"
+database_id = "6b047efb-2f02-4e44-aee6-431341f7e23f"
+
+# Object Storage Binding (R2)
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "smart-erp-disaster-recovery"
+
+# Key-Value Binding (KV)
+[[kv_namespaces]]
+binding = "KV"
+id = "de84b4fd932a4f97a1cfeaf725cd3053"
+
+# Queue - Order Processing
+[[queues.producers]]
+binding = "ORDER_QUEUE"
+queue = "order-ingestion-queue"
+
+[[queues.consumers]]
+queue = "order-ingestion-queue"
+max_batch_size = 10
+max_batch_timeout = 5
+
+# Module rules (for importing .sql as text in tests)
+[[rules]]
+type = "Text"
+globs = ["**/*.sql"]
+
+# NOTE: [ai] binding excluded — not supported in local miniflare mode.
+# AI is mocked via vitest.config.ts for tests.

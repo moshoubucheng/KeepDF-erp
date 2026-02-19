@@ -4,7 +4,8 @@ export default defineWorkersConfig({
   test: {
     poolOptions: {
       workers: {
-        wrangler: { configPath: './wrangler.toml' },
+        // Use test config without [ai] binding (not supported in local miniflare)
+        wrangler: { configPath: './wrangler.test.toml' },
       },
     },
     exclude: ['frontend/**', 'node_modules/**', 'e2e/**'],
