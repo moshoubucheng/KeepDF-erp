@@ -137,7 +137,7 @@ export class FinancialReportsService {
             period: { start, end },
             breakdown: results.map((r: any) => ({
                 tax_rate: r.tax_rate,
-                rate_label: r.tax_rate === 0.08 ? '軽減税率 (8%)' : '標準税率 (10%)',
+                rate_label: r.tax_rate === 0.08 ? 'Reduced (8%)' : r.tax_rate === 0.10 ? 'Standard (10%)' : `Custom (${(r.tax_rate * 100).toFixed(0)}%)`,
                 order_count: r.order_count,
                 taxable_amount: Math.round(r.taxable_amount),
                 tax_amount: Math.round(r.tax_amount),

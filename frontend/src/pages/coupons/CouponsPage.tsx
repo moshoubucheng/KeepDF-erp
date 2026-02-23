@@ -25,7 +25,7 @@ const initialForm = {
   type: 'PERCENTAGE' as string,
   value: '',
   min_order_amount: '',
-  max_uses: '',
+  usage_limit: '',
   per_user_limit: '',
   platform: '',
   valid_from: '',
@@ -128,7 +128,7 @@ export default function CouponsPage() {
       type: coupon.type,
       value: String(coupon.value),
       min_order_amount: String(coupon.min_order_amount),
-      max_uses: String(coupon.max_uses),
+      usage_limit: String(coupon.usage_limit),
       per_user_limit: String(coupon.per_user_limit),
       platform: coupon.platform ?? '',
       valid_from: coupon.valid_from ? coupon.valid_from.slice(0, 10) : '',
@@ -148,7 +148,7 @@ export default function CouponsPage() {
       type: form.type,
       value: form.type === 'FREE_SHIPPING' ? 0 : Number(form.value),
       min_order_amount: Number(form.min_order_amount) || 0,
-      max_uses: Number(form.max_uses) || 0,
+      usage_limit: Number(form.usage_limit) || 0,
       per_user_limit: Number(form.per_user_limit) || 0,
       platform: form.platform || null,
       valid_from: form.valid_from,
@@ -220,11 +220,11 @@ export default function CouponsPage() {
         hideOnMobile: true,
       },
       {
-        key: 'used_count',
+        key: 'usage_count',
         header: t('coupons.usage', 'Usage'),
         render: (row) => (
           <span className="text-text-secondary text-sm">
-            {row.used_count}/{row.max_uses || '\u221E'}
+            {row.usage_count}/{row.usage_limit || '\u221E'}
           </span>
         ),
         hideOnMobile: true,
@@ -428,8 +428,8 @@ export default function CouponsPage() {
             <Input
               label={t('coupons.maxUses', 'Max Uses')}
               type="number"
-              value={form.max_uses}
-              onChange={(e) => updateForm('max_uses', e.target.value)}
+              value={form.usage_limit}
+              onChange={(e) => updateForm('usage_limit', e.target.value)}
               placeholder="0 = unlimited"
             />
             <Input

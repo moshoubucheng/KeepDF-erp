@@ -22,11 +22,11 @@ invoices.get('/export', async (c) => {
 
     const csv = toCSV(results as Record<string, unknown>[], [
         { key: 'id', header: 'ID' },
-        { key: 'invoice_number', header: '請求書番号' },
-        { key: 'order_id', header: '注文ID' },
-        { key: 'platform', header: 'プラットフォーム' },
-        { key: 'total_amount', header: '金額' },
-        { key: 'created_at', header: '発行日' },
+        { key: 'invoice_number', header: 'Invoice Number' },
+        { key: 'order_id', header: 'Order ID' },
+        { key: 'platform', header: 'Platform' },
+        { key: 'total_amount', header: 'Amount' },
+        { key: 'created_at', header: 'Issue Date' },
     ])
 
     return csvResponse(csv, 'invoices.csv')

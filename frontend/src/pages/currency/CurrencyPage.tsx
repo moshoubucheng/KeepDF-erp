@@ -6,12 +6,10 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { Pagination } from '@/components/ui/Pagination';
 import { DataTable, type Column } from '@/components/data/DataTable';
 import { StatCard } from '@/components/data/StatCard';
 import { useUIStore } from '@/stores/ui.store';
 import { useAuthStore } from '@/stores/auth.store';
-import { usePagination } from '@/hooks/usePagination';
 import { formatDate } from '@/utils/format';
 
 interface ExchangeRate {
@@ -28,10 +26,7 @@ export default function CurrencyPage() {
   const { t } = useTranslation();
   const { addToast } = useUIStore();
   const { isAdmin } = useAuthStore();
-  const { page, limit, setPage } = usePagination();
-
   const [rates, setRates] = useState<ExchangeRate[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
 
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -50,7 +45,6 @@ export default function CurrencyPage() {
     try {
       const res = await currencyApi.getRates();
       setRates(res.rates || []);
-      setTotalPages(1);
     } catch {
       addToast('error', t('currency.error_fetch'));
     } finally {
@@ -256,10 +250,6 @@ export default function CurrencyPage() {
           </div>
 
           <DataTable columns={columns} data={rates} loading={loading} emptyMessage={t('currency.empty', 'No exchange rates')} />
-
-          <div className="mt-4">
-            <Pagination page={page} pages={totalPages} onPageChange={setPage} />
-          </div>
         </CardContent>
       </Card>
 

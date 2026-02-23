@@ -85,8 +85,8 @@ describe('CSV Export Routes', () => {
             })
             const text = await res.text()
             const firstLine = text.split('\r\n')[0]
-            expect(firstLine).toContain('手数料率')
-            expect(firstLine).toContain('手数料')
+            expect(firstLine).toContain('Commission Rate')
+            expect(firstLine).toContain('Commission Amount')
         })
     })
 
@@ -106,8 +106,8 @@ describe('CSV Export Routes', () => {
             })
             const text = await res.text()
             const firstLine = text.split('\r\n')[0]
-            expect(firstLine).toContain('請求書番号')
-            expect(firstLine).toContain('発行日')
+            expect(firstLine).toContain('Invoice Number')
+            expect(firstLine).toContain('Issue Date')
         })
     })
 })

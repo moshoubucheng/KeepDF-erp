@@ -360,7 +360,7 @@ export class AutomationService {
         // Filter by margin threshold
         let lowMargin: typeof margins
         if (conditions.margin_type === 'min_margin_pct') {
-            lowMargin = margins.filter(m => (m.margin_pct || 0) < conditions.threshold)
+            lowMargin = margins.filter(m => (m.margin_percent || 0) < conditions.threshold)
         } else {
             lowMargin = margins.filter(m => (m.margin || 0) < conditions.threshold)
         }

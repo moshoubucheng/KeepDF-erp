@@ -76,9 +76,9 @@ export default function InvoicesPage() {
   const total = data?.total ?? 0
   const totalPages = Math.ceil(total / limit)
 
-  // Stats (from full total, not just current page)
+  // Stats — count from current page data (prefixed label clarifies scope)
   const withPdf = useMemo(() => invoices.filter((inv) => inv.pdf_url).length, [invoices])
-  const withoutPdf = useMemo(() => invoices.length - withPdf, [invoices, withPdf])
+  const withoutPdf = useMemo(() => invoices.filter((inv) => !inv.pdf_url).length, [invoices])
 
   // Detail query
   const { data: detailData, isLoading: detailLoading } = useQuery({
@@ -293,13 +293,13 @@ export default function InvoicesPage() {
         <StatCard
           icon={<FileCheck size={20} />}
           title={t('invoices.with_pdf')}
-          value={withPdf}
+          value={`${withPdf}/${invoices.length}`}
           accent="emerald"
         />
         <StatCard
           icon={<FileWarning size={20} />}
           title={t('invoices.without_pdf')}
-          value={withoutPdf}
+          value={`${withoutPdf}/${invoices.length}`}
           accent="amber"
         />
       </div>

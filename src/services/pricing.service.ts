@@ -228,10 +228,10 @@ export class PricingService {
             SELECT pr.sku, pr.platform, pr.base_price, pr.sale_price,
                    p.cost_price,
                    COALESCE(pr.sale_price, pr.base_price) - p.cost_price as margin,
-                   CASE WHEN p.cost_price > 0
+                   CASE WHEN p.cost_price > 0 AND COALESCE(pr.sale_price, pr.base_price) > 0
                         THEN ROUND((COALESCE(pr.sale_price, pr.base_price) - p.cost_price) * 100.0 / COALESCE(pr.sale_price, pr.base_price), 1)
                         ELSE 0
-                   END as margin_pct
+                   END as margin_percent
             FROM price_rules pr
             LEFT JOIN products p ON p.sku = pr.sku
             ${where}

@@ -7,9 +7,9 @@ export interface Coupon {
   type: string
   value: number
   min_order_amount: number
-  max_uses: number
+  usage_limit: number
   per_user_limit: number
-  used_count: number
+  usage_count: number
   platform: string | null
   valid_from: string
   valid_to: string

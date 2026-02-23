@@ -31,17 +31,17 @@ financialReports.get('/pnl/export', async (c) => {
     })
 
     const rows = [
-        { item: '売上高', amount: pnl.revenue.total },
-        { item: '売上原価', amount: pnl.cogs },
-        { item: '粗利益', amount: pnl.gross_profit },
-        { item: '手数料', amount: pnl.expenses.commission },
-        { item: '返金', amount: pnl.expenses.refunds },
-        { item: '純利益', amount: pnl.net_profit },
+        { item: 'Revenue', amount: pnl.revenue.total },
+        { item: 'COGS', amount: pnl.cogs },
+        { item: 'Gross Profit', amount: pnl.gross_profit },
+        { item: 'Commission', amount: pnl.expenses.commission },
+        { item: 'Refunds', amount: pnl.expenses.refunds },
+        { item: 'Net Profit', amount: pnl.net_profit },
     ]
 
     const csv = toCSV(rows as Record<string, unknown>[], [
-        { key: 'item', header: '項目' },
-        { key: 'amount', header: '金額' },
+        { key: 'item', header: 'Item' },
+        { key: 'amount', header: 'Amount' },
     ])
 
     return csvResponse(csv, 'pnl-report.csv')
@@ -71,10 +71,10 @@ financialReports.get('/tax-summary/export', async (c) => {
     })
 
     const csv = toCSV(summary.breakdown as Record<string, unknown>[], [
-        { key: 'rate_label', header: '税率' },
-        { key: 'order_count', header: '注文数' },
-        { key: 'taxable_amount', header: '課税対象額' },
-        { key: 'tax_amount', header: '税額' },
+        { key: 'rate_label', header: 'Tax Rate' },
+        { key: 'order_count', header: 'Order Count' },
+        { key: 'taxable_amount', header: 'Taxable Amount' },
+        { key: 'tax_amount', header: 'Tax Amount' },
     ])
 
     return csvResponse(csv, 'tax-summary.csv')
@@ -104,9 +104,9 @@ financialReports.get('/reconciliation/export', async (c) => {
     })
 
     const csv = toCSV(reconciliation.transactions as Record<string, unknown>[], [
-        { key: 'type', header: '取引種別' },
-        { key: 'count', header: '件数' },
-        { key: 'total', header: '合計額' },
+        { key: 'type', header: 'Transaction Type' },
+        { key: 'count', header: 'Count' },
+        { key: 'total', header: 'Total' },
     ])
 
     return csvResponse(csv, 'reconciliation.csv')

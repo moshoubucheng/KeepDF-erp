@@ -76,16 +76,16 @@ export default function FinancialReportsPage() {
 
       if (tab === 'pnl') {
         csv = await financialReportsApi.pnlExport(dateRange)
-        if (csv) downloadCsv(`pnl_${dateStr}.csv`, csv)
+        if (csv != null) downloadCsv(`pnl_${dateStr}.csv`, csv)
       } else if (tab === 'tax') {
         csv = await financialReportsApi.taxSummaryExport(dateRange)
-        if (csv) downloadCsv(`tax_summary_${dateStr}.csv`, csv)
+        if (csv != null) downloadCsv(`tax_summary_${dateStr}.csv`, csv)
       } else if (tab === 'cashflow') {
         csv = await financialReportsApi.reconciliationExport(dateRange)
-        if (csv) downloadCsv(`reconciliation_${dateStr}.csv`, csv)
+        if (csv != null) downloadCsv(`reconciliation_${dateStr}.csv`, csv)
       }
 
-      if (csv) {
+      if (csv != null) {
         addToast('success', t('financial.export_success'))
       }
     } catch (err) {

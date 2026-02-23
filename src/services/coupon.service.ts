@@ -73,7 +73,7 @@ export class CouponService {
         if (!VALID_TYPES.includes(data.type as typeof VALID_TYPES[number])) {
             throw new Error(`Invalid coupon type. Must be one of: ${VALID_TYPES.join(', ')}`)
         }
-        if (data.value <= 0) throw new Error('Coupon value must be positive')
+        if (data.type !== 'FREE_SHIPPING' && data.value <= 0) throw new Error('Coupon value must be positive')
 
         const code = data.code ? data.code.toUpperCase() : generateCode()
 
@@ -219,17 +219,19 @@ export class CouponService {
              VALUES (?, ?, ?, ?, ?)`
         ).bind(couponId, orderId, distributorId, discountAmount, discountAmountJpy).run()
 
-        // Post-insert per_user_limit check — rollback if exceeded (insert-then-check is atomic enough for D1)
+        // Post-insert per_user_limit check — rollback atomically if exceeded
         if (coupon.per_user_limit > 0) {
             const userUsage = await this.db.prepare(
                 'SELECT COUNT(*) as cnt FROM coupon_usage WHERE coupon_id = ? AND distributor_id = ?'
             ).bind(couponId, distributorId).first<{ cnt: number }>()
             if (userUsage && userUsage.cnt > coupon.per_user_limit) {
-                // Rollback: delete usage record and decrement usage_count
-                await this.db.prepare('DELETE FROM coupon_usage WHERE id = ?').bind(meta.last_row_id).run()
-                await this.db.prepare(
-                    'UPDATE coupons SET usage_count = usage_count - 1 WHERE id = ? AND usage_count > 0'
-                ).bind(couponId).run()
+                // Atomic rollback: delete usage record and decrement usage_count in batch
+                await this.db.batch([
+                    this.db.prepare('DELETE FROM coupon_usage WHERE id = ?').bind(meta.last_row_id),
+                    this.db.prepare(
+                        'UPDATE coupons SET usage_count = usage_count - 1 WHERE id = ? AND usage_count > 0'
+                    ).bind(couponId),
+                ])
                 throw new Error('Per-user usage limit reached')
             }
         }

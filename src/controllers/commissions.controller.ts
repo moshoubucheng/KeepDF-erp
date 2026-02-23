@@ -16,15 +16,15 @@ commissions.get('/export', async (c) => {
 
     const csv = toCSV(results as unknown as Record<string, unknown>[], [
         { key: 'id', header: 'ID' },
-        { key: 'order_id', header: '注文ID' },
+        { key: 'order_id', header: 'Order ID' },
         { key: 'sku', header: 'SKU' },
-        { key: 'platform', header: 'プラットフォーム' },
-        { key: 'qty', header: '数量' },
-        { key: 'unit_price', header: '単価' },
-        { key: 'commission_rate', header: '手数料率' },
-        { key: 'commission_amount', header: '手数料' },
-        { key: 'status', header: 'ステータス' },
-        { key: 'created_at', header: '日時' },
+        { key: 'platform', header: 'Platform' },
+        { key: 'qty', header: 'Quantity' },
+        { key: 'unit_price', header: 'Unit Price' },
+        { key: 'commission_rate', header: 'Commission Rate' },
+        { key: 'commission_amount', header: 'Commission Amount' },
+        { key: 'status', header: 'Status' },
+        { key: 'created_at', header: 'Date' },
     ])
 
     return csvResponse(csv, 'commissions.csv')

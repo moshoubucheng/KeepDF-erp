@@ -17,7 +17,7 @@ currency.get('/convert', async (c) => {
     const from = c.req.query('from')
     const to = c.req.query('to')
 
-    if (!amount || !from || !to) {
+    if (isNaN(amount) || amount < 0 || !from || !to) {
         return c.json({ error: 'amount, from, and to are required' }, 400)
     }
 
