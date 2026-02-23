@@ -42,7 +42,7 @@ export default function OrdersPage() {
   // Query
   const { data, isLoading } = useQuery({
     queryKey: ['orders', { page, limit, platform, status, search }],
-    queryFn: () => ordersApi.list({ offset: (page - 1) * limit, limit, platform: platform || undefined, status: status || undefined }),
+    queryFn: () => ordersApi.list({ offset: (page - 1) * limit, limit, platform: platform || undefined, status: status || undefined, search: search || undefined }),
   })
 
   const orders = data?.orders ?? []
@@ -205,7 +205,7 @@ export default function OrdersPage() {
                 <span className="hidden sm:inline">{t('orders.ship', 'Ship')}</span>
               </Button>
             )}
-            {row.status === 'SHIPPED' && (
+            {isAdmin && row.status === 'SHIPPED' && (
               <Button
                 size="sm"
                 variant="secondary"
@@ -231,7 +231,7 @@ export default function OrdersPage() {
         ),
       },
     ],
-    [t, shipMutation.isPending, deliverMutation.isPending, cancelMutation.isPending],
+    [t, isAdmin, shipMutation.isPending, deliverMutation.isPending, cancelMutation.isPending],
   )
 
   return (

@@ -6,6 +6,7 @@ interface OrdersParams {
   limit?: number
   platform?: string
   status?: string
+  search?: string
 }
 
 export const ordersApi = {
@@ -15,6 +16,7 @@ export const ordersApi = {
     if (params.limit) query.set('limit', String(params.limit))
     if (params.platform) query.set('platform', params.platform)
     if (params.status) query.set('status', params.status)
+    if (params.search) query.set('search', params.search)
     const qs = query.toString()
     return api.get<{ orders: Order[]; count: number }>(`/orders${qs ? `?${qs}` : ''}`)
   },

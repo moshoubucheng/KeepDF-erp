@@ -57,7 +57,10 @@ orders.get('/', async (c) => {
     const distributorId = c.get('distributorId')
     const platform = c.req.query('platform')
     const status = c.req.query('status')
+    const search = c.req.query('search')
     const cursor = c.req.query('cursor')
+    const rawOffset = Number(c.req.query('offset') || 0)
+    const offset = Number.isNaN(rawOffset) ? 0 : Math.max(0, rawOffset)
     const rawLimit = Number(c.req.query('limit') || 50)
     const limit = Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 200))
 
@@ -79,6 +82,10 @@ orders.get('/', async (c) => {
         where += ' AND status = ?'
         baseParams.push(status.toUpperCase())
     }
+    if (search && search.trim()) {
+        where += ' AND (platform_order_id LIKE ? OR CAST(id AS TEXT) = ?)'
+        baseParams.push(`%${search.trim()}%`, search.trim())
+    }
 
     // Cursor-based pagination
     if (cursor) {
@@ -95,15 +102,20 @@ orders.get('/', async (c) => {
                 ? encodeCursor(page[page.length - 1].created_at, page[page.length - 1].id)
                 : undefined
 
-            return c.json({ orders: page, count: page.length, hasMore, ...(nextCursor ? { nextCursor } : {}) })
+            // Total count for cursor mode
+            const totalResult = await c.env.DB.prepare(`SELECT COUNT(*) as total FROM orders ${where}`).bind(...baseParams).first<{ total: number }>()
+
+            return c.json({ orders: page, count: totalResult?.total ?? 0, hasMore, ...(nextCursor ? { nextCursor } : {}) })
         }
     }
 
-    // Offset-based fallback
-    const sql = `SELECT * FROM orders ${where} ORDER BY created_at DESC LIMIT ?`
-    const { results } = await c.env.DB.prepare(sql).bind(...baseParams, limit).all<Order>()
+    // Offset-based pagination with total count
+    const [dataResult, totalResult] = await Promise.all([
+        c.env.DB.prepare(`SELECT * FROM orders ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).bind(...baseParams, limit, offset).all<Order>(),
+        c.env.DB.prepare(`SELECT COUNT(*) as total FROM orders ${where}`).bind(...baseParams).first<{ total: number }>(),
+    ])
 
-    return c.json({ orders: results, count: results.length })
+    return c.json({ orders: dataResult.results, count: totalResult?.total ?? 0 })
 })
 
 /** GET /orders/:id - 订单详情（含 items） */
@@ -278,9 +290,9 @@ orders.patch('/:id/deliver', async (c) => {
         ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
     })
 
-    // Invalidate dashboard cache
+    // Invalidate dashboard cache for order owner (not admin)
     const cache = new CacheService(c.env.KV)
-    cache.invalidate(`dashboard:stats:${c.get('distributorId')}`)
+    cache.invalidate(`dashboard:stats:${order.distributor_id}`)
 
     const updated = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
         .bind(id).first<Order>()
@@ -361,9 +373,9 @@ orders.patch('/:id/cancel', async (c) => {
         ipAddress: c.req.header('cf-connecting-ip') || 'unknown',
     })
 
-    // Invalidate dashboard cache
+    // Invalidate dashboard cache for order owner
     const cache = new CacheService(c.env.KV)
-    cache.invalidate(`dashboard:stats:${c.get('distributorId')}`)
+    cache.invalidate(`dashboard:stats:${order.distributor_id}`)
 
     const updated = await c.env.DB.prepare('SELECT * FROM orders WHERE id = ?')
         .bind(id).first<Order>()

@@ -54,33 +54,33 @@ export class DailyBriefingService {
             topProductResult,
             newCustomersResult,
         ] = await Promise.all([
-            // Yesterday's total sales & order count
+            // Yesterday's total sales & order count (JST = UTC+9)
             this.db.prepare(`
                 SELECT COALESCE(SUM(total_amount), 0) as total, COUNT(*) as cnt
                 FROM orders
-                WHERE date(created_at) = date('now', '-1 day')
+                WHERE date(created_at, '+9 hours') = date('now', '+9 hours', '-1 day')
             `).first<{ total: number; cnt: number }>(),
 
-            // Day before yesterday (for comparison)
+            // Day before yesterday (for comparison, JST)
             this.db.prepare(`
                 SELECT COALESCE(SUM(total_amount), 0) as total
                 FROM orders
-                WHERE date(created_at) = date('now', '-2 days')
+                WHERE date(created_at, '+9 hours') = date('now', '+9 hours', '-2 days')
             `).first<{ total: number }>(),
 
-            // Platform breakdown
+            // Platform breakdown (JST)
             this.db.prepare(`
                 SELECT platform, COALESCE(SUM(total_amount), 0) as total, COUNT(*) as cnt
                 FROM orders
-                WHERE date(created_at) = date('now', '-1 day')
+                WHERE date(created_at, '+9 hours') = date('now', '+9 hours', '-1 day')
                 GROUP BY platform
                 ORDER BY total DESC
             `).all<{ platform: string; total: number; cnt: number }>(),
 
-            // New returns yesterday
+            // New returns yesterday (JST)
             this.db.prepare(`
                 SELECT COUNT(*) as cnt FROM returns
-                WHERE date(created_at) = date('now', '-1 day')
+                WHERE date(created_at, '+9 hours') = date('now', '+9 hours', '-1 day')
             `).first<{ cnt: number }>(),
 
             // Low stock items (< 3 days of stock)
@@ -88,7 +88,7 @@ export class DailyBriefingService {
                 SELECT f.sku, COALESCE(p.name_jp, p.name_cn, p.sku) as name,
                        COALESCE(SUM(wl.qty), 0) as qty,
                        CAST(f.days_of_stock AS INTEGER) as days
-                FROM inventory_forecast f
+                FROM inventory_forecasts f
                 JOIN products p ON p.sku = f.sku
                 LEFT JOIN warehouse_locations wl ON wl.sku = f.sku
                 WHERE f.days_of_stock < 3 AND f.days_of_stock >= 0
@@ -103,22 +103,22 @@ export class DailyBriefingService {
                 WHERE status IN ('DRAFT', 'SUBMITTED')
             `).first<{ cnt: number }>(),
 
-            // Top selling product yesterday
+            // Top selling product yesterday (JST)
             this.db.prepare(`
                 SELECT oi.sku, COALESCE(p.name_jp, p.name_cn, oi.sku) as name, SUM(oi.qty) as qty
                 FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
                 LEFT JOIN products p ON p.sku = oi.sku
-                WHERE date(o.created_at) = date('now', '-1 day')
+                WHERE date(o.created_at, '+9 hours') = date('now', '+9 hours', '-1 day')
                 GROUP BY oi.sku
                 ORDER BY qty DESC
                 LIMIT 1
             `).first<{ sku: string; name: string; qty: number }>(),
 
-            // New customers yesterday
+            // New customers yesterday (JST)
             this.db.prepare(`
                 SELECT COUNT(*) as cnt FROM customers
-                WHERE date(created_at) = date('now', '-1 day')
+                WHERE date(created_at, '+9 hours') = date('now', '+9 hours', '-1 day')
             `).first<{ cnt: number }>(),
         ])
 

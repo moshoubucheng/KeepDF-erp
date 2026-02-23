@@ -131,7 +131,7 @@ describe('Order Lifecycle', () => {
 
     describe('PATCH /api/v1/orders/:id/cancel', () => {
         it('PENDING → CANCELLED returns 200', async () => {
-            // Order 4: PENDING, distributor_id=2
+            // Order 4: PENDING, distributor_id=2 (matches TOKEN_2)
             const res = await SELF.fetch('http://localhost/api/v1/orders/4/cancel', {
                 method: 'PATCH',
                 headers: authHeaders(TOKEN_2),
@@ -200,7 +200,6 @@ describe('Order Lifecycle', () => {
         })
 
         it('non-owner non-admin cannot cancel — returns 403', async () => {
-            // Order 4 belongs to distributor 2, TOKEN_2 is distributor 2
             // Order 2 belongs to distributor 1, try cancel with TOKEN_2 (distributor 2, non-admin)
             const res = await SELF.fetch('http://localhost/api/v1/orders/2/cancel', {
                 method: 'PATCH',

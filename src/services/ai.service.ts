@@ -6,7 +6,7 @@ const ALLOWED_TABLES = [
     'customers', 'warehouse_locations', 'commission_settlements',
     'shipments', 'returns', 'return_items', 'purchase_orders',
     'purchase_order_items', 'wallet_transactions', 'coupons',
-    'price_rules', 'suppliers', 'inventory_forecast',
+    'price_rules', 'suppliers', 'inventory_forecasts',
     'shipment_events', 'exchange_rates',
 ]
 
@@ -59,7 +59,7 @@ price_rules (id, sku TEXT, platform TEXT, base_price INTEGER, sale_price INTEGER
 
 suppliers (id, name TEXT, contact_name TEXT, contact_email TEXT, lead_time_days INTEGER, is_active INTEGER)
 
-inventory_forecast (id, sku TEXT, daily_velocity REAL, weekly_velocity REAL, days_of_stock REAL, reorder_point INTEGER, safety_stock INTEGER, lead_time_days INTEGER, calculated_at TEXT)
+inventory_forecasts (id, sku TEXT, daily_velocity REAL, weekly_velocity REAL, days_of_stock REAL, reorder_point INTEGER, safety_stock INTEGER, lead_time_days INTEGER, calculated_at TEXT)
 
 exchange_rates (id, from_currency TEXT, to_currency TEXT, rate REAL, source TEXT)
 `.trim()
@@ -79,9 +79,9 @@ RULES:
 1. You can ONLY generate SELECT queries. Never INSERT, UPDATE, DELETE, or any data modification.
 2. ${isolation}
 3. All monetary values are stored as integers in JPY (Japanese Yen). Display them as-is (no division needed).
-4. Dates are stored as ISO 8601 TEXT (e.g., '2025-01-15T10:30:00Z'). Use date() or strftime() for date comparisons.
-5. For "this week", use date('now', 'weekday 0', '-6 days') to date('now'). For "this month", use date('now', 'start of month').
-6. For "last month", use date('now', 'start of month', '-1 month') to date('now', 'start of month').
+4. Dates are stored as UTC TEXT. IMPORTANT: All date comparisons must use JST (UTC+9). Always add '+9 hours' modifier: date(created_at, '+9 hours') and date('now', '+9 hours', ...).
+5. For "this week", use date('now', '+9 hours', 'weekday 0', '-6 days') to date('now', '+9 hours'). For "this month", use date('now', '+9 hours', 'start of month').
+6. For "last month", use date('now', '+9 hours', 'start of month', '-1 month') to date('now', '+9 hours', 'start of month').
 7. Always add LIMIT 100 unless the user specifies otherwise.
 8. When counting or aggregating, always use appropriate GROUP BY.
 9. Respond in the SAME LANGUAGE as the user's question.
@@ -94,7 +94,7 @@ OUTPUT FORMAT:
 
 EXAMPLES:
 User: 今月の注文数は？
-{"sql": "SELECT COUNT(*) as order_count FROM orders WHERE created_at >= date('now', 'start of month')", "explanation": "今月の注文数を集計します"}
+{"sql": "SELECT COUNT(*) as order_count FROM orders WHERE date(created_at, '+9 hours') >= date('now', '+9 hours', 'start of month')", "explanation": "今月の注文数を集計します"}
 
 User: 在庫が少ない商品トップ5
 {"sql": "SELECT p.sku, p.name_jp, COALESCE(SUM(wl.qty), 0) as total_stock FROM products p LEFT JOIN warehouse_locations wl ON p.sku = wl.sku GROUP BY p.sku ORDER BY total_stock ASC LIMIT 5", "explanation": "在庫数が最も少ない商品を5件表示します"}
@@ -160,12 +160,21 @@ export class AiService {
         }
 
         // Extract table names from query and verify they're in the whitelist
+        // Catches FROM/JOIN and comma-separated tables (FROM t1, t2, t3)
         const tablePattern = /\b(?:FROM|JOIN)\s+(\w+)/gi
         let match
         while ((match = tablePattern.exec(sql)) !== null) {
             const table = match[1].toLowerCase()
             if (!ALLOWED_TABLES.includes(table)) {
                 return { valid: false, error: `Table "${match[1]}" is not accessible` }
+            }
+        }
+
+        // Block sensitive tables that could appear via comma-joins or other syntax
+        const SENSITIVE_TABLES = ['distributors', 'api_logs', 'push_subscriptions', 'audit_logs']
+        for (const table of SENSITIVE_TABLES) {
+            if (new RegExp(`\\b${table}\\b`, 'i').test(sql)) {
+                return { valid: false, error: `Table "${table}" is not accessible` }
             }
         }
 

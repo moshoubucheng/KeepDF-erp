@@ -50,7 +50,7 @@ describe('Dashboard Controller', () => {
             expect(data.overview.totalOrders).toBe(5)
             expect(data.overview.totalRevenue).toBe(4800)
             expect(data.overview.totalProducts).toBe(6)
-            expect(data.overview.totalDistributors).toBe(3)
+            expect(data.overview.totalDistributors).toBe(4)
             expect(data.overview.lowStockCount).toBe(0)
             expect(data.wallet).toBeUndefined()
         })

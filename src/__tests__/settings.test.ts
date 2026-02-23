@@ -115,7 +115,7 @@ describe('Settings Controller', () => {
             expect(res.status).toBe(200)
             const data = await res.json() as any
             expect(data.counts).toBeTruthy()
-            expect(data.counts['Distributors']).toBe(3)
+            expect(data.counts['Distributors']).toBe(4)
             expect(data.counts['Products']).toBe(6)
             expect(data.counts['Orders']).toBe(5)
         })

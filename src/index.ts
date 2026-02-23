@@ -198,7 +198,7 @@ export default {
 
         const orderId = meta.last_row_id
 
-        // 2. 写入订单明细
+        // 3. 写入订单明细
         if (Array.isArray(payload.items) && payload.items.length > 0) {
           const stmts = payload.items.map((item) =>
             env.DB.prepare(
@@ -208,10 +208,17 @@ export default {
           await env.DB.batch(stmts)
         }
 
-        // 3. 冻结分销商余额
-        if (distributorId) {
+        // 4. 冻结分销商余额（失败则回滚订单，确保原子性）
+        try {
           const walletService = new WalletService(env.DB)
           await walletService.freeze(distributorId, payload.total, String(orderId))
+        } catch (walletErr) {
+          console.error(`[QUEUE] Wallet freeze failed for order ${orderId}, rolling back:`, walletErr)
+          await env.DB.batch([
+            env.DB.prepare('DELETE FROM order_items WHERE order_id = ?').bind(orderId),
+            env.DB.prepare('DELETE FROM orders WHERE id = ?').bind(orderId),
+          ])
+          throw walletErr
         }
 
         message.ack()

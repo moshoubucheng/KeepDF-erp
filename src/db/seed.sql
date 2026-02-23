@@ -3,10 +3,11 @@
 -- ============================================================
 
 -- ===== 分销商 =====
-INSERT INTO distributors (name, token, username, balance, frozen_balance, tax_reg_number, role) VALUES
-  ('東京物産株式会社', 'tok_dev_abc123', 'admin', 500000, 0, 'T1234567890123', 'admin'),
-  ('大阪商事有限会社', 'tok_dev_def456', 'dist2', 300000, 50000, 'T9876543210987', 'distributor'),
-  ('福岡貿易合同会社', 'tok_dev_ghi789', 'dist3', 100000, 10000, 'T5555666677778', 'distributor');
+INSERT INTO distributors (name, token, username, password_hash, balance, frozen_balance, tax_reg_number, role) VALUES
+  ('東京物産株式会社', 'tok_dev_abc123', 'admin', NULL, 500000, 0, 'T1234567890123', 'admin'),
+  ('大阪商事有限会社', 'tok_dev_def456', 'dist2', NULL, 300000, 50000, 'T9876543210987', 'distributor'),
+  ('福岡貿易合同会社', 'tok_dev_ghi789', 'dist3', NULL, 100000, 10000, 'T5555666677778', 'distributor'),
+  ('KeepDF Admin', 'tok_dev_wufuxing', 'wufuxing', '1d65924041e1442315b26672520acbdd:0c3e8886b31cd2ffc43f237ed090514422317348c0bb58f3789b69976514f605', 500000, 0, NULL, 'admin');
 
 -- ===== 商品 (PIM) =====
 INSERT INTO products (sku, name_cn, name_jp, cost_price, tax_category) VALUES
