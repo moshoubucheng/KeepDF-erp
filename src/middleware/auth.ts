@@ -16,11 +16,12 @@ export const authMiddleware = createMiddleware<{ Bindings: Bindings; Variables: 
     }
 
     const authHeader = c.req.header('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    const queryToken = c.req.query('token')
+    if (!authHeader?.startsWith('Bearer ') && !queryToken) {
         return c.json({ error: 'Missing or invalid Authorization header' }, 401)
     }
 
-    const token = authHeader.slice(7)
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : queryToken!
 
     // 先查 KV 缓存（格式: "id:role" 或旧格式 "id"）
     const cached = await c.env.KV.get(`session:${token}`)

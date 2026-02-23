@@ -28,7 +28,7 @@ interface ListParams {
 export const couponsApi = {
   list: (params: ListParams = {}) => {
     const q = new URLSearchParams()
-    if (params.offset) q.set('offset', String(params.offset))
+    if (params.offset != null) q.set('offset', String(params.offset))
     if (params.limit) q.set('limit', String(params.limit))
     if (params.platform) q.set('platform', params.platform)
     if (params.is_active !== undefined) q.set('is_active', String(params.is_active))

@@ -41,7 +41,7 @@ interface ListParams {
 export const pricingApi = {
   list: (params: ListParams = {}) => {
     const q = new URLSearchParams()
-    if (params.offset) q.set('offset', String(params.offset))
+    if (params.offset != null) q.set('offset', String(params.offset))
     if (params.limit) q.set('limit', String(params.limit))
     if (params.sku) q.set('sku', params.sku)
     if (params.platform) q.set('platform', params.platform)
@@ -61,7 +61,7 @@ export const pricingApi = {
 
   history: (params: ListParams = {}) => {
     const q = new URLSearchParams()
-    if (params.offset) q.set('offset', String(params.offset))
+    if (params.offset != null) q.set('offset', String(params.offset))
     if (params.limit) q.set('limit', String(params.limit))
     if (params.sku) q.set('sku', params.sku)
     if (params.platform) q.set('platform', params.platform)

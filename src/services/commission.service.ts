@@ -78,7 +78,7 @@ export class CommissionService {
 
         // Batch pre-fetch: which orders are already settled
         const settledRes = await this.db.prepare(
-            `SELECT DISTINCT order_id FROM commission_settlements WHERE order_id IN (${placeholders}) AND distributor_id = ? AND status = 'SETTLED'`
+            `SELECT DISTINCT order_id FROM commission_settlements WHERE order_id IN (${placeholders}) AND distributor_id = ? AND status IN ('SETTLED', 'PENDING')`
         ).bind(...orderIds, distributorId).all<{ order_id: number }>()
         const settledSet = new Set(settledRes.results.map(r => r.order_id))
 
@@ -152,9 +152,9 @@ export class CommissionService {
                 .bind(orderId).first<Order>()
             if (!order) return
 
-            // 2. Check if already settled
+            // 2. Check if already settled or pending
             const existing = await this.db.prepare(
-                "SELECT id FROM commission_settlements WHERE order_id = ? AND status = 'SETTLED'"
+                "SELECT id FROM commission_settlements WHERE order_id = ? AND status IN ('SETTLED', 'PENDING')"
             ).bind(orderId).first()
             if (existing) return
 
@@ -162,8 +162,35 @@ export class CommissionService {
             const { items, totalCommission } = await this.calculateOrderCommission(orderId, order.platform)
             if (totalCommission === 0) return
 
-            // 4. Create settlement records (INSERT OR IGNORE to prevent duplicates on concurrent calls)
+            // 4. Check distributor balance for deduction
+            const distributor = await this.db.prepare(
+                'SELECT balance FROM distributors WHERE id = ?'
+            ).bind(order.distributor_id).first<{ balance: number }>()
+            const currentBalance = distributor?.balance ?? 0
+
+            if (currentBalance < totalCommission) {
+                console.warn(`Auto-settle skipped for order ${orderId}: insufficient balance (${currentBalance} < ${totalCommission})`)
+                return
+            }
+
+            // 5. Create settlement records + balance deduction + wallet transaction in batch
             const stmts: D1PreparedStatement[] = []
+
+            // Deduct commission from distributor balance
+            stmts.push(
+                this.db.prepare(
+                    'UPDATE distributors SET balance = balance - ? WHERE id = ? AND balance >= ?'
+                ).bind(totalCommission, order.distributor_id, totalCommission)
+            )
+
+            // Record wallet transaction
+            stmts.push(
+                this.db.prepare(
+                    `INSERT INTO wallet_transactions (distributor_id, type, amount, related_order_id, balance_snapshot)
+                     VALUES (?, 'DEDUCT', ?, ?, ?)`
+                ).bind(order.distributor_id, totalCommission, String(orderId), currentBalance - totalCommission)
+            )
+
             for (const item of items) {
                 if (item.commission_amount > 0) {
                     stmts.push(

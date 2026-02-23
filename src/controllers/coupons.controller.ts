@@ -61,8 +61,11 @@ coupons.post('/', async (c) => {
     }
 
     const body = await c.req.json()
-    if (!body.name || !body.type || !body.value || !body.valid_from || !body.valid_to) {
-        return c.json({ error: 'name, type, value, valid_from, and valid_to are required' }, 400)
+    if (!body.name || !body.type || !body.valid_from || !body.valid_to) {
+        return c.json({ error: 'name, type, valid_from, and valid_to are required' }, 400)
+    }
+    if (!body.value && body.type !== 'FREE_SHIPPING') {
+        return c.json({ error: 'value is required for non-FREE_SHIPPING coupons' }, 400)
     }
 
     const service = new CouponService(c.env.DB)

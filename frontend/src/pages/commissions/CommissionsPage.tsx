@@ -184,7 +184,7 @@ export default function CommissionsPage() {
                 <option value="">{t('common.allStatuses', 'All Statuses')}</option>
                 {SETTLEMENT_STATUSES.filter(Boolean).map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {t(`commissions.status_${s.toLowerCase()}`, s)}
                   </option>
                 ))}
               </Select>

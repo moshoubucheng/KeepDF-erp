@@ -13,11 +13,16 @@ function dateQuery(params: DateRange) {
   return qs ? `?${qs}` : ''
 }
 
-function fetchRaw(path: string) {
+async function fetchRaw(path: string) {
   const token = localStorage.getItem('erp_token') || ''
-  return fetch(`/api/v1/financial-reports${path}`, {
+  const r = await fetch(`/api/v1/financial-reports${path}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
+  if (!r.ok) {
+    const body = await r.text().catch(() => '')
+    throw new Error(body || `Request failed: ${r.status}`)
+  }
+  return r
 }
 
 export const financialReportsApi = {

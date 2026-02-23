@@ -75,6 +75,10 @@ wallet.post('/deposit', async (c) => {
 wallet.post('/freeze', async (c) => {
     const body = await c.req.json<{ distributor_id: number; amount: number; order_id: string }>()
 
+    if (!body.distributor_id || !body.amount || body.amount <= 0 || !body.order_id) {
+        return c.json({ error: 'Invalid request: distributor_id, positive amount, and order_id required' }, 400)
+    }
+
     const distributorId = c.get('distributorId')
     if (body.distributor_id !== distributorId) {
         return c.json({ error: 'Forbidden: cannot operate on other distributor wallet' }, 403)

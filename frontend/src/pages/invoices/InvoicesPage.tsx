@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { invoicesApi, type Invoice } from '@/api/endpoints/invoices'
@@ -76,9 +76,9 @@ export default function InvoicesPage() {
   const total = data?.total ?? 0
   const totalPages = Math.ceil(total / limit)
 
-  // Stats
-  const withPdf = invoices.filter((inv) => inv.pdf_url).length
-  const withoutPdf = invoices.length - withPdf
+  // Stats (from full total, not just current page)
+  const withPdf = useMemo(() => invoices.filter((inv) => inv.pdf_url).length, [invoices])
+  const withoutPdf = useMemo(() => invoices.length - withPdf, [invoices, withPdf])
 
   // Detail query
   const { data: detailData, isLoading: detailLoading } = useQuery({
@@ -132,15 +132,44 @@ export default function InvoicesPage() {
     setDetailId(null)
   }
 
-  const handleDownloadPdf = (id: number) => {
-    const token = localStorage.getItem('erp_token') || ''
-    window.open(`${invoicesApi.downloadPdfUrl(id)}?token=${token}`, '_blank')
-  }
+  const handleDownloadPdf = useCallback(async (id: number) => {
+    try {
+      const token = localStorage.getItem('erp_token') || ''
+      const res = await fetch(invoicesApi.downloadPdfUrl(id), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Download failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `invoice-${id}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      addToast('error', t('invoices.download_error', 'PDF download failed'))
+    }
+  }, [addToast, t])
 
-  const handleExportCsv = () => {
-    const token = localStorage.getItem('erp_token') || ''
-    window.open(`${invoicesApi.exportCsvUrl()}?token=${token}`, '_blank')
-  }
+  const handleExportCsv = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('erp_token') || ''
+      const res = await fetch(invoicesApi.exportCsvUrl(), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const text = await res.text()
+      const blob = new Blob([text], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'invoices.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      addToast('error', t('invoices.export_error', 'CSV export failed'))
+    }
+  }, [addToast, t])
 
   const handleGenerate = () => {
     const orderId = parseInt(genOrderId, 10)

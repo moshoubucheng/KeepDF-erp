@@ -18,24 +18,24 @@ export class WalletService {
         return { balance: row.balance, frozen: row.frozen_balance, frozen_balance: row.frozen_balance }
     }
 
-    /** 充值（管理员審核後調用） — atomic balance + amount */
+    /** 充值（管理员審核後調用） — atomic: batch UPDATE + INSERT */
     async deposit(distributorId: number, amount: number): Promise<WalletTransaction> {
-        const result = await this.db.prepare(
-            'UPDATE distributors SET balance = balance + ? WHERE id = ?'
-        ).bind(amount, distributorId).run()
-
-        if (!result.meta.changes) throw new Error('Distributor not found')
-
-        // Read new balance for snapshot
         const row = await this.db.prepare(
             'SELECT balance FROM distributors WHERE id = ?'
         ).bind(distributorId).first<{ balance: number }>()
-        const newBalance = row?.balance ?? 0
+        if (!row) throw new Error('Distributor not found')
 
-        await this.db.prepare(
-            `INSERT INTO wallet_transactions (distributor_id, type, amount, balance_snapshot)
-         VALUES (?, 'DEPOSIT', ?, ?)`
-        ).bind(distributorId, amount, newBalance).run()
+        const newBalance = row.balance + amount
+
+        await this.db.batch([
+            this.db.prepare(
+                'UPDATE distributors SET balance = balance + ? WHERE id = ?'
+            ).bind(amount, distributorId),
+            this.db.prepare(
+                `INSERT INTO wallet_transactions (distributor_id, type, amount, balance_snapshot)
+                 VALUES (?, 'DEPOSIT', ?, ?)`
+            ).bind(distributorId, amount, newBalance),
+        ])
 
         return {
             id: 0,
@@ -48,58 +48,62 @@ export class WalletService {
         }
     }
 
-    /** 冻結金額（訂単作成時調用） — atomic: balance -= amount, frozen += amount WHERE balance >= amount */
+    /** 冻結金額（訂単作成時調用） — atomic: batch UPDATE + INSERT */
     async freeze(distributorId: number, amount: number, orderId: string): Promise<void> {
-        const result = await this.db.prepare(
-            'UPDATE distributors SET balance = balance - ?, frozen_balance = frozen_balance + ? WHERE id = ? AND balance >= ?'
-        ).bind(amount, amount, distributorId, amount).run()
-
-        if (!result.meta.changes) throw new Error('Insufficient balance')
-
         const row = await this.db.prepare(
             'SELECT balance FROM distributors WHERE id = ?'
         ).bind(distributorId).first<{ balance: number }>()
+        if (!row || row.balance < amount) throw new Error('Insufficient balance')
 
-        await this.db.prepare(
-            `INSERT INTO wallet_transactions (distributor_id, type, amount, related_order_id, balance_snapshot)
-         VALUES (?, 'FREEZE', ?, ?, ?)`
-        ).bind(distributorId, amount, orderId, row?.balance ?? 0).run()
+        const newBalance = row.balance - amount
+
+        await this.db.batch([
+            this.db.prepare(
+                'UPDATE distributors SET balance = balance - ?, frozen_balance = frozen_balance + ? WHERE id = ? AND balance >= ?'
+            ).bind(amount, amount, distributorId, amount),
+            this.db.prepare(
+                `INSERT INTO wallet_transactions (distributor_id, type, amount, related_order_id, balance_snapshot)
+                 VALUES (?, 'FREEZE', ?, ?, ?)`
+            ).bind(distributorId, amount, orderId, newBalance),
+        ])
     }
 
-    /** 扣款（発貨確認後調用） — atomic: frozen -= amount WHERE frozen >= amount */
+    /** 扣款（発貨確認後調用） — atomic: batch UPDATE + INSERT */
     async deduct(distributorId: number, amount: number, orderId: string): Promise<void> {
-        const result = await this.db.prepare(
-            'UPDATE distributors SET frozen_balance = frozen_balance - ? WHERE id = ? AND frozen_balance >= ?'
-        ).bind(amount, distributorId, amount).run()
-
-        if (!result.meta.changes) throw new Error('Frozen amount insufficient')
-
         const row = await this.db.prepare(
-            'SELECT balance FROM distributors WHERE id = ?'
-        ).bind(distributorId).first<{ balance: number }>()
+            'SELECT balance, frozen_balance FROM distributors WHERE id = ?'
+        ).bind(distributorId).first<{ balance: number; frozen_balance: number }>()
+        if (!row || row.frozen_balance < amount) throw new Error('Frozen amount insufficient')
 
-        await this.db.prepare(
-            `INSERT INTO wallet_transactions (distributor_id, type, amount, related_order_id, balance_snapshot)
-         VALUES (?, 'DEDUCT', ?, ?, ?)`
-        ).bind(distributorId, amount, orderId, row?.balance ?? 0).run()
+        await this.db.batch([
+            this.db.prepare(
+                'UPDATE distributors SET frozen_balance = frozen_balance - ? WHERE id = ? AND frozen_balance >= ?'
+            ).bind(amount, distributorId, amount),
+            this.db.prepare(
+                `INSERT INTO wallet_transactions (distributor_id, type, amount, related_order_id, balance_snapshot)
+                 VALUES (?, 'DEDUCT', ?, ?, ?)`
+            ).bind(distributorId, amount, orderId, row.balance),
+        ])
     }
 
-    /** 退款 — atomic: balance += amount, frozen -= amount; guard against negative frozen */
+    /** 退款 — atomic: batch UPDATE + INSERT */
     async refund(distributorId: number, amount: number, orderId: string): Promise<void> {
-        const result = await this.db.prepare(
-            'UPDATE distributors SET balance = balance + ?, frozen_balance = MAX(0, frozen_balance - ?) WHERE id = ?'
-        ).bind(amount, amount, distributorId).run()
-
-        if (!result.meta.changes) throw new Error('Distributor not found')
-
         const row = await this.db.prepare(
             'SELECT balance FROM distributors WHERE id = ?'
         ).bind(distributorId).first<{ balance: number }>()
+        if (!row) throw new Error('Distributor not found')
 
-        await this.db.prepare(
-            `INSERT INTO wallet_transactions (distributor_id, type, amount, related_order_id, balance_snapshot)
-         VALUES (?, 'REFUND', ?, ?, ?)`
-        ).bind(distributorId, amount, orderId, row?.balance ?? 0).run()
+        const newBalance = row.balance + amount
+
+        await this.db.batch([
+            this.db.prepare(
+                'UPDATE distributors SET balance = balance + ?, frozen_balance = MAX(0, frozen_balance - ?) WHERE id = ?'
+            ).bind(amount, amount, distributorId),
+            this.db.prepare(
+                `INSERT INTO wallet_transactions (distributor_id, type, amount, related_order_id, balance_snapshot)
+                 VALUES (?, 'REFUND', ?, ?, ?)`
+            ).bind(distributorId, amount, orderId, newBalance),
+        ])
     }
 
     /** 获取交易流水 */

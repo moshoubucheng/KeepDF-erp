@@ -238,11 +238,11 @@ export default function CurrencyPage() {
             <div className="mt-4 p-4 bg-bg-card border border-border rounded-lg">
               <p className="text-sm text-text-secondary">{t('currency.result')}</p>
               <p className="text-2xl font-bold text-accent-purple">
-                {convertResult.toLocaleString(undefined, { maximumFractionDigits: 2 })} {convertTo}
+                {convertResult.toLocaleString(undefined, { maximumFractionDigits: convertTo === 'JPY' ? 0 : 2 })} {convertTo}
               </p>
               <p className="text-sm text-text-muted mt-1">
                 {Number(convertAmount).toLocaleString()} {convertFrom} =&gt;{' '}
-                {convertResult.toLocaleString(undefined, { maximumFractionDigits: 2 })} {convertTo}
+                {convertResult.toLocaleString(undefined, { maximumFractionDigits: convertTo === 'JPY' ? 0 : 2 })} {convertTo}
               </p>
             </div>
           )}

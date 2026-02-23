@@ -216,11 +216,17 @@ export class FinancialReportsService {
             `SELECT SUM(balance) as total_balance, SUM(frozen_balance) as total_frozen FROM distributors${distFilter}`
         ).bind(...distParams).first<any>()
 
-        const inventory = await this.db.prepare(
-            `SELECT SUM(w.qty * p.cost_price) as inventory_value, SUM(w.qty) as total_units
-             FROM warehouse_locations w
-             LEFT JOIN products p ON p.sku = w.sku`
-        ).first<any>()
+        // Inventory is a platform-level asset (warehouse_locations has no distributor_id),
+        // so only admin sees inventory values; non-admin gets 0.
+        let inventory: { inventory_value: number; total_units: number } = { inventory_value: 0, total_units: 0 }
+        if (params.role === 'admin') {
+            const inv = await this.db.prepare(
+                `SELECT SUM(w.qty * p.cost_price) as inventory_value, SUM(w.qty) as total_units
+                 FROM warehouse_locations w
+                 LEFT JOIN products p ON p.sku = w.sku`
+            ).first<any>()
+            inventory = { inventory_value: inv?.inventory_value || 0, total_units: inv?.total_units || 0 }
+        }
 
         // Liabilities: pending refunds
         let refundFilter = ''

@@ -20,29 +20,28 @@ import { cn } from '@/utils/cn'
 
 const depositSchema = z.object({
   amount: z.coerce.number().min(1, 'Amount must be at least 1'),
-  note: z.string().optional(),
 })
 
 type DepositForm = z.infer<typeof depositSchema>
 
-const TX_TYPE_STYLES: Record<string, { label: string; color: string; amountColor: string }> = {
+const TX_TYPE_STYLES: Record<string, { labelKey: string; color: string; amountColor: string }> = {
   DEPOSIT: {
-    label: 'Deposit',
+    labelKey: 'wallet.type_deposit',
     color: 'bg-emerald-500/15 text-emerald-400',
     amountColor: 'text-emerald-400',
   },
   FREEZE: {
-    label: 'Freeze',
+    labelKey: 'wallet.type_freeze',
     color: 'bg-blue-500/15 text-blue-400',
     amountColor: 'text-blue-400',
   },
   DEDUCT: {
-    label: 'Deduct',
+    labelKey: 'wallet.type_deduct',
     color: 'bg-red-500/15 text-red-400',
     amountColor: 'text-red-400',
   },
   REFUND: {
-    label: 'Refund',
+    labelKey: 'wallet.type_refund',
     color: 'bg-amber-500/15 text-amber-400',
     amountColor: 'text-emerald-400',
   },
@@ -88,7 +87,7 @@ export default function WalletPage() {
 
   const depositForm = useForm<DepositForm>({
     resolver: zodResolver(depositSchema),
-    defaultValues: { amount: 0, note: '' },
+    defaultValues: { amount: 0 },
   })
 
   const balance = balanceQuery.data?.balance ?? 0
@@ -109,7 +108,7 @@ export default function WalletPage() {
       header: t('wallet.type', 'Type'),
       render: (row) => {
         const style = TX_TYPE_STYLES[row.type] ?? {
-          label: row.type,
+          labelKey: '',
           color: 'bg-gray-500/15 text-gray-400',
           amountColor: 'text-text-primary',
         }
@@ -120,7 +119,7 @@ export default function WalletPage() {
               style.color,
             )}
           >
-            {style.label}
+            {style.labelKey ? t(style.labelKey) : row.type}
           </span>
         )
       },
@@ -246,12 +245,6 @@ export default function WalletPage() {
             placeholder="10000"
             error={depositForm.formState.errors.amount?.message}
             {...depositForm.register('amount', { valueAsNumber: true })}
-          />
-          <Input
-            label={t('wallet.depositNote', 'Note (optional)')}
-            placeholder={t('wallet.depositNotePlaceholder', 'Reason for deposit...')}
-            error={depositForm.formState.errors.note?.message}
-            {...depositForm.register('note')}
           />
           <div className="flex justify-end gap-3 pt-2">
             <Button

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { pricingApi, type PriceRule, type PriceHistory, type MarginAnalysis } from '@/api/endpoints/pricing';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -41,6 +41,17 @@ export default function PricingPage() {
   const [activeTab, setActiveTab] = useState<TabType>('rules');
   const [platformFilter, setPlatformFilter] = useState('');
   const [skuFilter, setSkuFilter] = useState('');
+  const [debouncedSku, setDebouncedSku] = useState('');
+  const skuDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Debounce SKU filter (300ms)
+  useEffect(() => {
+    skuDebounceRef.current = setTimeout(() => {
+      setDebouncedSku(skuFilter);
+      resetPage();
+    }, 300);
+    return () => clearTimeout(skuDebounceRef.current);
+  }, [skuFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [rules, setRules] = useState<PriceRule[]>([]);
   const [history, setHistory] = useState<PriceHistory[]>([]);
@@ -62,9 +73,9 @@ export default function PricingPage() {
       limit,
     };
     if (platformFilter) params.platform = platformFilter;
-    if (skuFilter) params.sku = skuFilter;
+    if (debouncedSku) params.sku = debouncedSku;
     return params;
-  }, [page, limit, platformFilter, skuFilter]);
+  }, [page, limit, platformFilter, debouncedSku]);
 
   const fetchRules = useCallback(async () => {
     setLoading(true);
@@ -118,9 +129,12 @@ export default function PricingPage() {
   };
 
   const handleFilterChange = (field: 'platform' | 'sku', value: string) => {
-    if (field === 'platform') setPlatformFilter(value);
-    else setSkuFilter(value);
-    resetPage();
+    if (field === 'platform') {
+      setPlatformFilter(value);
+      resetPage();
+    } else {
+      setSkuFilter(value); // debounced via useEffect
+    }
   };
 
   const openCreateRuleModal = () => {
@@ -192,34 +206,34 @@ export default function PricingPage() {
       if (activeTab === 'rules') {
         const res = await pricingApi.list({ ...buildParams(), offset: 0, limit: 10000 });
         const rows = (res.rules || []).map((r) => ({
-          SKU: r.sku,
-          プラットフォーム: r.platform || '',
-          基本価格: r.base_price,
-          セール価格: r.sale_price ?? '',
-          有効開始: r.valid_from || '',
-          ステータス: r.is_active ? 'ACTIVE' : 'INACTIVE',
+          [t('pricing.sku_label', 'SKU')]: r.sku,
+          [t('pricing.platform', 'Platform')]: r.platform || '',
+          [t('pricing.base_price', 'Base Price')]: r.base_price,
+          [t('pricing.sale_price', 'Sale Price')]: r.sale_price ?? '',
+          [t('pricing.valid_from', 'Valid From')]: r.valid_from || '',
+          [t('pricing.status', 'Status')]: r.is_active ? 'ACTIVE' : 'INACTIVE',
         }));
         downloadObjectsCsv(rows, 'pricing-rules.csv');
       } else if (activeTab === 'history') {
         const res = await pricingApi.history({ ...buildParams(), offset: 0, limit: 10000 });
         const rows = (res.history || []).map((h) => ({
-          SKU: h.sku,
-          プラットフォーム: h.platform || '',
-          旧価格: h.old_price,
-          新価格: h.new_price,
-          変更日: h.created_at,
+          [t('pricing.sku_label', 'SKU')]: h.sku,
+          [t('pricing.platform', 'Platform')]: h.platform || '',
+          [t('pricing.old_price', 'Old Price')]: h.old_price,
+          [t('pricing.new_price', 'New Price')]: h.new_price,
+          [t('pricing.change_date', 'Date')]: h.created_at,
         }));
         downloadObjectsCsv(rows, 'pricing-history.csv');
       } else {
         const params = buildParams();
         const res = await pricingApi.margins({ sku: params.sku, platform: params.platform });
         const rows = (res.margins || []).map((m) => ({
-          SKU: m.sku,
-          プラットフォーム: m.platform || '',
-          原価: m.cost_price,
-          基本価格: m.base_price,
-          利益: m.margin,
-          利益率: `${m.margin_percent.toFixed(1)}%`,
+          [t('pricing.sku_label', 'SKU')]: m.sku,
+          [t('pricing.platform', 'Platform')]: m.platform || '',
+          [t('pricing.cost_price', 'Cost')]: m.cost_price,
+          [t('pricing.base_price', 'Base Price')]: m.base_price,
+          [t('pricing.profit', 'Profit')]: m.margin,
+          [t('pricing.margin', 'Margin')]: `${(m.margin_percent ?? 0).toFixed(1)}%`,
         }));
         downloadObjectsCsv(rows, 'pricing-margins.csv');
       }
@@ -346,8 +360,8 @@ export default function PricingPage() {
       key: 'margin_percent',
       header: t('pricing.margin'),
       render: (row) => (
-        <span className={row.margin_percent >= 0 ? 'text-green-500' : 'text-red-500'}>
-          {row.margin_percent.toFixed(1)}%
+        <span className={(row.margin_percent ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}>
+          {(row.margin_percent ?? 0).toFixed(1)}%
         </span>
       ),
     },

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Plus, Ban, CheckCircle, Search } from 'lucide-react'
@@ -121,7 +121,7 @@ export default function CouponsPage() {
     setModalOpen(true)
   }
 
-  function handleEdit(coupon: Coupon) {
+  const handleEdit = useCallback((coupon: Coupon) => {
     setEditingId(coupon.id)
     setForm({
       name: coupon.name,
@@ -135,19 +135,24 @@ export default function CouponsPage() {
       valid_to: coupon.valid_to ? coupon.valid_to.slice(0, 10) : '',
     })
     setModalOpen(true)
-  }
+  }, [])
 
   function handleSubmit() {
+    if (!form.valid_from || !form.valid_to) {
+      addToast('error', t('coupons.validDatesRequired', 'Valid from and valid to dates are required'))
+      return
+    }
+
     const payload: Record<string, unknown> = {
       name: form.name,
       type: form.type,
-      value: Number(form.value),
+      value: form.type === 'FREE_SHIPPING' ? 0 : Number(form.value),
       min_order_amount: Number(form.min_order_amount) || 0,
       max_uses: Number(form.max_uses) || 0,
       per_user_limit: Number(form.per_user_limit) || 0,
       platform: form.platform || null,
-      valid_from: form.valid_from || null,
-      valid_to: form.valid_to || null,
+      valid_from: form.valid_from,
+      valid_to: form.valid_to,
     }
 
     if (editingId) {
@@ -157,11 +162,11 @@ export default function CouponsPage() {
     }
   }
 
-  function handleDeactivate(id: number) {
+  const handleDeactivate = useCallback((id: number) => {
     if (window.confirm(t('coupons.confirmDeactivate', 'Are you sure you want to deactivate this coupon?'))) {
       deactivateMutation.mutate(id)
     }
-  }
+  }, [t, deactivateMutation])
 
   function handleValidate() {
     if (!validateCode.trim() || !validateTotal) return
@@ -271,7 +276,7 @@ export default function CouponsPage() {
         ),
       },
     ],
-    [t, isAdmin, deactivateMutation.isPending],
+    [t, isAdmin, deactivateMutation.isPending, handleEdit, handleDeactivate],
   )
 
   return (
