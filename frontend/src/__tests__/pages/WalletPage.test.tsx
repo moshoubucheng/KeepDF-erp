@@ -43,9 +43,9 @@ describe('WalletPage', () => {
     render(<WalletPage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Deposit')).toBeInTheDocument()
-      expect(screen.getByText('Deduct')).toBeInTheDocument()
-      expect(screen.getByText('Refund')).toBeInTheDocument()
+      expect(screen.getByText('wallet.type_deposit')).toBeInTheDocument()
+      expect(screen.getByText('wallet.type_deduct')).toBeInTheDocument()
+      expect(screen.getByText('wallet.type_refund')).toBeInTheDocument()
     })
   })
 
