@@ -1,5 +1,8 @@
 import { api } from '../client'
 
+// AI requests need longer timeout (Workers AI inference can take 30-60s)
+const AI_TIMEOUT_MS = 60000
+
 export interface AiChatMessage {
   role: 'user' | 'assistant'
   content: string
@@ -34,8 +37,8 @@ export interface AiForecastResponse {
 
 export const aiApi = {
   chat: (message: string, history?: AiChatMessage[]) =>
-    api.post<AiChatResponse>('/ai/chat', { message, history }),
+    api.post<AiChatResponse>('/ai/chat', { message, history }, AI_TIMEOUT_MS),
 
   forecast: () =>
-    api.post<AiForecastResponse>('/ai/forecast'),
+    api.post<AiForecastResponse>('/ai/forecast', undefined, AI_TIMEOUT_MS),
 }

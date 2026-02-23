@@ -20,6 +20,7 @@ async function request<T>(
   path: string,
   options: RequestInit = {},
   rawText = false,
+  timeoutMs = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   const token = useAuthStore.getState().token
   const headers: Record<string, string> = {
@@ -36,7 +37,7 @@ async function request<T>(
 
   // Add timeout via AbortController
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   let res: Response
   try {
@@ -84,8 +85,8 @@ async function request<T>(
 export const api = {
   get: <T>(path: string, rawText = false) => request<T>(path, {}, rawText),
 
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+  post: <T>(path: string, body?: unknown, timeoutMs?: number) =>
+    request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }, false, timeoutMs),
 
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
