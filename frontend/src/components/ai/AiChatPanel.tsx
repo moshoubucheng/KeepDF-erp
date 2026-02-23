@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, Send, ChevronDown, ChevronUp, Bot, User, AlertCircle } from 'lucide-react'
+import { X, Send, Bot, User, AlertCircle } from 'lucide-react'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { aiApi, type AiChatMessage, type AiChatResponse } from '@/api/endpoints/ai'
@@ -11,7 +11,6 @@ interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   data?: { columns: string[]; rows: unknown[][] }
-  sql?: string
   error?: boolean
 }
 
@@ -47,27 +46,6 @@ function DataTable({ columns, rows }: { columns: string[]; rows: unknown[][] }) 
           ))}
         </tbody>
       </table>
-    </div>
-  )
-}
-
-function SqlBlock({ sql, t }: { sql: string; t: (k: string) => string }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div className="mt-2">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition-colors"
-      >
-        {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-        {open ? t('ai.hide_sql') : t('ai.show_sql')}
-      </button>
-      {open && (
-        <pre className="mt-1 rounded-md bg-bg-primary p-2 text-xs text-text-muted overflow-x-auto">
-          {sql}
-        </pre>
-      )}
     </div>
   )
 }
@@ -172,7 +150,6 @@ function ChatContent({ messages, loading, error, onSend, onRetry, t }: {
             )}>
               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
               {msg.data && <DataTable columns={msg.data.columns} rows={msg.data.rows} />}
-              {msg.sql && <SqlBlock sql={msg.sql} t={t} />}
             </div>
           </div>
         ))}
@@ -259,7 +236,6 @@ export function AiChatPanel({ open, onClose }: AiChatPanelProps) {
         role: 'assistant',
         content: res.reply,
         data: res.data,
-        sql: res.sql,
       }
       setMessages((prev) => [...prev, aiMsg])
     } catch (err) {
