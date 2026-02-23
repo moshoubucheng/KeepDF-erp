@@ -20,11 +20,12 @@ test.describe('Currency Page', () => {
     await adminPage.goto('/currency')
     await adminPage.waitForLoadState('networkidle')
 
-    // Currency pairs visible
-    await expect(adminPage.getByText('USD').first()).toBeVisible({ timeout: 10000 })
-    await expect(adminPage.getByText('CNY').first()).toBeVisible()
-    await expect(adminPage.getByText('EUR').first()).toBeVisible()
-    await expect(adminPage.getByText('JPY').first()).toBeVisible()
+    // Currency pairs visible (scope to table to avoid matching hidden <option> elements in converter)
+    const table = adminPage.locator('table')
+    await expect(table.getByText('USD').first()).toBeVisible({ timeout: 10000 })
+    await expect(table.getByText('CNY').first()).toBeVisible()
+    await expect(table.getByText('EUR').first()).toBeVisible()
+    await expect(table.getByText('JPY').first()).toBeVisible()
 
     // Rates visible
     await expect(adminPage.getByText('155.43').first()).toBeVisible()
@@ -47,7 +48,7 @@ test.describe('Currency Page', () => {
     await adminPage.goto('/currency')
     await adminPage.waitForLoadState('networkidle')
 
-    await expect(adminPage.getByText('USD').first()).toBeVisible({ timeout: 10000 })
+    await expect(adminPage.locator('table').getByText('USD').first()).toBeVisible({ timeout: 10000 })
 
     // Click Edit button on first rate
     const editBtns = adminPage.getByRole('button', { name: /edit/i })

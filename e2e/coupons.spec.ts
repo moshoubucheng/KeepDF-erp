@@ -40,7 +40,7 @@ test.describe('Coupons Page', () => {
     await adminPage.goto('/coupons')
     await adminPage.waitForLoadState('networkidle')
 
-    await expect(adminPage.getByRole('heading', { name: /coupons/i }).first()).toBeVisible({ timeout: 10000 })
+    await expect(adminPage.getByRole('heading', { name: /coupon/i }).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('create PERCENTAGE coupon via modal', async ({ adminPage }) => {

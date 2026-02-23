@@ -77,8 +77,8 @@ test.describe('Automation Page', () => {
     const dialog = adminPage.locator('[role="dialog"]')
     await expect(dialog).toBeVisible({ timeout: 5000 })
 
-    // Fill name
-    await dialog.locator('input[type="text"]').first().fill('New Alert Rule')
+    // Fill name (Input component doesn't set explicit type attribute)
+    await dialog.locator('input').first().fill('New Alert Rule')
 
     // Select type
     await dialog.locator('select').first().selectOption('STOCK_ALERT')
