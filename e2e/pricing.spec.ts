@@ -44,9 +44,9 @@ test.describe('Pricing Page', () => {
     await expect(adminPage.getByText('SKU-002').first()).toBeVisible()
     await expect(adminPage.getByText('SKU-003').first()).toBeVisible()
 
-    // Platform badges
-    await expect(adminPage.locator('span.inline-flex', { hasText: 'TIKTOK' }).first()).toBeVisible()
-    await expect(adminPage.locator('span.inline-flex', { hasText: 'TEMU' }).first()).toBeVisible()
+    // Platform text in table cells (plain text, not StatusBadge)
+    await expect(adminPage.locator('table').getByText('TIKTOK').first()).toBeVisible()
+    await expect(adminPage.locator('table').getByText('TEMU').first()).toBeVisible()
 
     // Prices
     await expect(adminPage.getByText(/3,000/).first()).toBeVisible()

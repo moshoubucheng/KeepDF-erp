@@ -101,8 +101,8 @@ test.describe('Invoices Page', () => {
     await adminPage.goto('/invoices')
     await adminPage.waitForLoadState('networkidle')
 
-    // Click Generate button
-    const generateBtn = adminPage.getByRole('button', { name: /generate/i })
+    // Click Generate Invoice button (not "Generate PDF" in table rows)
+    const generateBtn = adminPage.getByRole('button', { name: /generate invoice/i })
     await expect(generateBtn).toBeVisible({ timeout: 10000 })
     await generateBtn.click()
 
@@ -115,7 +115,7 @@ test.describe('Invoices Page', () => {
   })
 
   test('generate invoice submits form', async ({ adminPage }) => {
-    const generateMock = await mockApiMutation(adminPage, '**/api/v1/invoices/generate', 'POST', {
+    const generateMock = await mockApiMutation(adminPage, '**/api/v1/invoices/generate/*', 'POST', {
       success: true,
       invoice: mockInvoice({ id: 4, invoice_number: 'INV-202401-004' }),
     })
@@ -123,7 +123,7 @@ test.describe('Invoices Page', () => {
     await adminPage.goto('/invoices')
     await adminPage.waitForLoadState('networkidle')
 
-    await adminPage.getByRole('button', { name: /generate/i }).click()
+    await adminPage.getByRole('button', { name: /generate invoice/i }).click()
 
     const dialog = adminPage.locator('[role="dialog"]')
     await expect(dialog).toBeVisible({ timeout: 5000 })
@@ -137,7 +137,7 @@ test.describe('Invoices Page', () => {
     }
 
     // Submit
-    await dialog.getByRole('button', { name: /generate|save|create/i }).last().click()
+    await dialog.getByRole('button', { name: /generate invoice|save|create/i }).last().click()
 
     await adminPage.waitForTimeout(500)
     const req = generateMock.getLastRequest()

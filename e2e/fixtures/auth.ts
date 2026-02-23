@@ -24,6 +24,20 @@ async function setupAuth(page: Page, role: 'admin' | 'distributor') {
   const user = role === 'admin' ? ADMIN_USER : DISTRIBUTOR_USER
   const token = `e2e-${role}-token`
 
+  // Catch-all for unmocked API GET requests — return 200 with empty JSON
+  // to prevent 401 responses from the real backend triggering auto-logout.
+  // Registered first so it has lowest priority (Playwright uses LIFO order).
+  await page.route('**/api/v1/**', (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({}),
+      })
+    }
+    return route.fallback()
+  })
+
   // Mock /api/v1/auth/me to return the test user
   await page.route('**/api/v1/auth/me', (route) =>
     route.fulfill({

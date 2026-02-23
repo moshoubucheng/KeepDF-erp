@@ -12,7 +12,7 @@ export async function mockApiGet(page: Page, urlPattern: string, body: unknown) 
         body: JSON.stringify(body),
       })
     }
-    return route.continue()
+    return route.fallback()
   })
 }
 
@@ -48,7 +48,7 @@ export async function mockApiMutation(
         body: JSON.stringify(responseBody ?? { success: true }),
       })
     }
-    return route.continue()
+    return route.fallback()
   })
 
   return {
