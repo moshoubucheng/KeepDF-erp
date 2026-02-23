@@ -142,6 +142,116 @@ export function mockProduct(overrides: Partial<Product & { total_stock: number }
   }
 }
 
+export function mockCoupon(overrides: Partial<{
+  id: number; code: string; name: string; type: string; value: number;
+  min_order_amount: number; usage_limit: number; per_user_limit: number;
+  usage_count: number; platform: string | null; valid_from: string;
+  valid_to: string; is_active: number; created_by: number; created_at: string;
+}> = {}) {
+  return {
+    id: 1,
+    code: 'KDF-TEST0001',
+    name: 'Test Coupon',
+    type: 'PERCENTAGE',
+    value: 10,
+    min_order_amount: 1000,
+    usage_limit: 100,
+    per_user_limit: 1,
+    usage_count: 5,
+    platform: null,
+    valid_from: '2024-01-01',
+    valid_to: '2024-12-31',
+    is_active: 1,
+    created_by: 1,
+    created_at: '2024-01-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+export function mockPriceRule(overrides: Partial<{
+  id: number; sku: string; platform: string; base_price: number;
+  sale_price: number | null; valid_from: string | null; valid_to: string | null;
+  is_active: number; created_at: string; updated_at: string;
+}> = {}) {
+  return {
+    id: 1,
+    sku: 'SKU-001',
+    platform: 'TIKTOK',
+    base_price: 3000,
+    sale_price: null,
+    valid_from: null,
+    valid_to: null,
+    is_active: 1,
+    created_at: '2024-01-15T10:00:00Z',
+    updated_at: '2024-01-15T10:00:00Z',
+    ...overrides,
+  }
+}
+
+export function mockPriceHistory(overrides: Partial<{
+  id: number; sku: string; platform: string; old_price: number;
+  new_price: number; created_at: string;
+}> = {}) {
+  return {
+    id: 1,
+    sku: 'SKU-001',
+    platform: 'TIKTOK',
+    old_price: 2500,
+    new_price: 3000,
+    created_at: '2024-01-15T10:00:00Z',
+    ...overrides,
+  }
+}
+
+export function mockMarginAnalysis(overrides: Partial<{
+  sku: string; platform: string; cost_price: number; base_price: number;
+  margin: number; margin_percent: number;
+}> = {}) {
+  return {
+    sku: 'SKU-001',
+    platform: 'TIKTOK',
+    cost_price: 2000,
+    base_price: 3000,
+    margin: 1000,
+    margin_percent: 33.3,
+    ...overrides,
+  }
+}
+
+export function mockExchangeRate(overrides: Partial<{
+  id: number; from_currency: string; to_currency: string; rate: number;
+  updated_at: string; created_by: number; created_at: string;
+}> = {}) {
+  return {
+    id: 1,
+    from_currency: 'USD',
+    to_currency: 'JPY',
+    rate: 155.43,
+    updated_at: '2024-01-15T10:00:00Z',
+    created_by: 1,
+    created_at: '2024-01-15T10:00:00Z',
+    ...overrides,
+  }
+}
+
+export function mockInvoice(overrides: Partial<{
+  id: number; order_id: number; invoice_number: string; platform: string;
+  total_amount: number; pdf_url: string | null; created_at: string;
+  tax_details: string;
+}> = {}) {
+  return {
+    id: 1,
+    order_id: 101,
+    invoice_number: 'INV-202401-001',
+    platform: 'TIKTOK',
+    total_amount: 5500,
+    pdf_url: null,
+    created_at: '2024-01-15T10:00:00Z',
+    tax_details: '{}',
+    ...overrides,
+  }
+}
+
 export function paginatedResponse<T>(items: T[], total?: number) {
   const t = total ?? items.length
   return {
