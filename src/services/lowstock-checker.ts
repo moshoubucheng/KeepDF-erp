@@ -14,11 +14,12 @@ export class LowStockChecker {
         }
 
         const { results } = await this.db.prepare(`
-            SELECT p.sku, p.name_jp, wl.qty, wl.code
+            SELECT p.sku, p.name_jp, SUM(wl.qty) as total_qty
             FROM warehouse_locations wl
             JOIN products p ON p.sku = wl.sku
-            WHERE wl.qty <= ?
-            ORDER BY wl.qty ASC
+            GROUP BY p.sku, p.name_jp
+            HAVING SUM(wl.qty) <= ?
+            ORDER BY total_qty ASC
         `).bind(threshold).all()
 
         if (results.length === 0) {
@@ -27,7 +28,7 @@ export class LowStockChecker {
 
         const notification = new NotificationService(this.db)
         const productLines = results.map((p: any) =>
-            `${p.name_jp || p.sku} (${p.code}): ${p.qty}個`
+            `${p.name_jp || p.sku}: ${p.total_qty}個`
         ).join('\n')
 
         await notification.send({

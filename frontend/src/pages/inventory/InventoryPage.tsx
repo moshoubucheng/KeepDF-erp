@@ -29,7 +29,7 @@ const productSchema = z.object({
   sku: z.string().min(1, 'SKU is required'),
   name_jp: z.string().optional().default(''),
   name_cn: z.string().optional().default(''),
-  cost_price: z.coerce.number().min(0, 'Cost price must be >= 0'),
+  cost_price: z.coerce.number().positive('Cost price must be > 0'),
   tax_category: z.enum(['standard', 'reduced']),
 })
 
@@ -37,8 +37,8 @@ type ProductFormData = z.infer<typeof productSchema>
 
 const inboundSchema = z.object({
   sku: z.string().min(1, 'SKU is required'),
-  expected_qty: z.coerce.number().int().min(1, 'Quantity must be >= 1'),
-  actual_qty: z.coerce.number().int().min(1, 'Quantity must be >= 1'),
+  expected_qty: z.coerce.number().int().min(0, 'Quantity must be >= 0'),
+  actual_qty: z.coerce.number().int().min(0, 'Quantity must be >= 0'),
   location_code: z.string().min(1, 'Location code is required'),
 })
 
@@ -560,7 +560,7 @@ function InboundModal({ open, onClose, saving, onSubmit }: InboundModalProps) {
         <Input
           label={t('inventory.expectedQty', 'Expected Qty')}
           type="number"
-          min={1}
+          min={0}
           step={1}
           {...register('expected_qty')}
           error={errors.expected_qty?.message}
@@ -568,7 +568,7 @@ function InboundModal({ open, onClose, saving, onSubmit }: InboundModalProps) {
         <Input
           label={t('inventory.actualQty', 'Actual Qty')}
           type="number"
-          min={1}
+          min={0}
           step={1}
           {...register('actual_qty')}
           error={errors.actual_qty?.message}

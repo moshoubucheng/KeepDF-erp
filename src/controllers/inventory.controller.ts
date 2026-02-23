@@ -120,6 +120,20 @@ inventory.post('/inbound', async (c) => {
         return c.json({ error: 'actual_qty must be 0-1,000,000' }, 400)
     }
 
+    // Validate product exists
+    const product = await c.env.DB.prepare('SELECT id FROM products WHERE sku = ?').bind(body.sku).first()
+    if (!product) {
+        return c.json({ error: `Product not found: ${body.sku}` }, 404)
+    }
+
+    // Check if location already holds a different SKU
+    const existingLocation = await c.env.DB.prepare(
+        'SELECT sku FROM warehouse_locations WHERE code = ?'
+    ).bind(body.location_code).first<{ sku: string }>()
+    if (existingLocation && existingLocation.sku !== body.sku) {
+        return c.json({ error: `Location ${body.location_code} already holds SKU ${existingLocation.sku}` }, 409)
+    }
+
     const batch = [
         c.env.DB.prepare(
             'INSERT INTO inbound_records (sku, expected_qty, actual_qty) VALUES (?, ?, ?)'
@@ -337,6 +351,10 @@ inventory.put('/variants/:id', adminOnly, async (c) => {
 
     const body = await c.req.json()
 
+    if (body.stock_qty !== undefined && (typeof body.stock_qty !== 'number' || body.stock_qty < 0)) {
+        return c.json({ error: 'stock_qty must be >= 0' }, 400)
+    }
+
     const updates: string[] = []
     const params: any[] = []
     for (const [key, val] of Object.entries(body)) {
@@ -346,10 +364,6 @@ inventory.put('/variants/:id', adminOnly, async (c) => {
         }
     }
     if (updates.length === 0) return c.json({ error: 'No valid fields to update' }, 400)
-
-    if (body.stock_qty !== undefined && (typeof body.stock_qty !== 'number' || body.stock_qty < 0)) {
-        return c.json({ error: 'stock_qty must be >= 0' }, 400)
-    }
 
     params.push(id)
     await c.env.DB.prepare(`UPDATE product_variants SET ${updates.join(', ')} WHERE id = ?`).bind(...params).run()

@@ -40,7 +40,7 @@ export const stocktakesApi = {
   },
 
   get: (id: number) =>
-    api.get<Stocktake & { items: StocktakeItem[] }>(`/stocktakes/${id}`),
+    api.get<{ stocktake: Stocktake; items: StocktakeItem[] }>(`/stocktakes/${id}`),
 
   create: (notes?: string) =>
     api.post<Stocktake>('/stocktakes', notes ? { notes } : {}),

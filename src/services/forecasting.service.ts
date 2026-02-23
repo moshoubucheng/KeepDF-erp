@@ -65,13 +65,22 @@ export class ForecastingService {
              ORDER BY f.days_of_stock ASC`
         ).all()
 
-        return results.map((r: any) => ({
-            ...r,
-            suggested_qty: Math.max(
-                Math.ceil((r.daily_velocity || 0) * (r.lead_time_days || 7) * 2) - (r.current_stock || 0),
-                0
-            ),
-        }))
+        return results.map((r: any) => {
+            const daysOfStock = r.days_of_stock || 0
+            const dailyVelocity = r.daily_velocity || 0
+            const leadTime = r.lead_time_days || 7
+            const currentStock = r.current_stock || 0
+            const reorderQty = Math.max(Math.ceil(dailyVelocity * leadTime * 2) - currentStock, 0)
+            const urgency = daysOfStock <= 3 ? 'CRITICAL' : daysOfStock <= 7 ? 'HIGH' : daysOfStock <= 14 ? 'MEDIUM' : 'LOW'
+            return {
+                ...r,
+                urgency,
+                days_until_stockout: Math.round(daysOfStock),
+                reorder_qty: reorderQty,
+                predicted_demand: Math.round(dailyVelocity * leadTime),
+                supplier: r.supplier_name || null,
+            }
+        })
     }
 
     async calculate(): Promise<{ calculated: number }> {

@@ -71,7 +71,10 @@ export class StocktakeService {
         }
 
         const countParams = [...params]
-        const sql = `SELECT * FROM stocktakes ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+        const sql = `SELECT s.*,
+                        (SELECT COUNT(*) FROM stocktake_items WHERE stocktake_id = s.id) as total_items,
+                        (SELECT COUNT(*) FROM stocktake_items WHERE stocktake_id = s.id AND actual_qty IS NOT NULL AND COALESCE(actual_qty, 0) != expected_qty) as discrepancy_count
+                     FROM stocktakes s ${where} ORDER BY s.created_at DESC LIMIT ? OFFSET ?`
         params.push(limit, offset)
         const countSql = `SELECT COUNT(*) as total FROM stocktakes ${where}`
 
@@ -84,11 +87,17 @@ export class StocktakeService {
     }
 
     async getDetail(id: number): Promise<any | null> {
-        const stocktake = await this.db.prepare('SELECT * FROM stocktakes WHERE id = ?').bind(id).first()
+        const stocktake = await this.db.prepare(
+            `SELECT s.*,
+                    (SELECT COUNT(*) FROM stocktake_items WHERE stocktake_id = s.id) as total_items,
+                    (SELECT COUNT(*) FROM stocktake_items WHERE stocktake_id = s.id AND actual_qty IS NOT NULL AND COALESCE(actual_qty, 0) != expected_qty) as discrepancy_count
+             FROM stocktakes s WHERE s.id = ?`
+        ).bind(id).first()
         if (!stocktake) return null
 
         const { results: items } = await this.db.prepare(
-            'SELECT * FROM stocktake_items WHERE stocktake_id = ? ORDER BY sku, location_code'
+            `SELECT *, CASE WHEN actual_qty IS NOT NULL THEN actual_qty - expected_qty ELSE NULL END as discrepancy
+             FROM stocktake_items WHERE stocktake_id = ? ORDER BY sku, location_code`
         ).bind(id).all()
 
         return { stocktake, items }
@@ -150,20 +159,20 @@ export class StocktakeService {
             'SELECT * FROM stocktake_items WHERE stocktake_id = ? AND actual_qty IS NOT NULL'
         ).bind(id).all<any>()
 
-        // Adjust warehouse_locations quantities
-        const stmts = items.map(item =>
+        // Adjust warehouse_locations quantities + update status atomically
+        const stmts: D1PreparedStatement[] = items.map(item =>
             this.db.prepare(
                 'UPDATE warehouse_locations SET qty = ? WHERE sku = ? AND code = ?'
             ).bind(item.actual_qty, item.sku, item.location_code)
         )
 
-        if (stmts.length > 0) {
-            await this.db.batch(stmts)
-        }
+        stmts.push(
+            this.db.prepare(
+                'UPDATE stocktakes SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?'
+            ).bind('COMPLETED', id)
+        )
 
-        await this.db.prepare(
-            'UPDATE stocktakes SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?'
-        ).bind('COMPLETED', id).run()
+        await this.db.batch(stmts)
 
         await this.audit.log({
             distributorId, action: 'UPDATE_STOCKTAKE' as any,

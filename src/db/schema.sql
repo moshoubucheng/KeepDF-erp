@@ -33,8 +33,10 @@ CREATE TABLE IF NOT EXISTS products (
   name_jp TEXT,
   cost_price REAL NOT NULL,
   tax_category TEXT DEFAULT 'standard' CHECK(tax_category IN ('standard', 'reduced')),
-  image_url TEXT
+  image_url TEXT,
+  barcode TEXT
 );
+CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
 
 CREATE TABLE IF NOT EXISTS product_variants (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

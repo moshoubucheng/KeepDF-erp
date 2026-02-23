@@ -150,7 +150,7 @@ export default function StocktakesPage() {
     setDetailLoading(true);
     try {
       const res = await stocktakesApi.get(stocktake.id);
-      setDetailStocktake(res);
+      setDetailStocktake(res.stocktake);
       setDetailItems(res.items || []);
     } catch {
       addToast('error', t('stocktakes.detailFetchError'));
