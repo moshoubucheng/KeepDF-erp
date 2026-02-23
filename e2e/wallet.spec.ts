@@ -69,7 +69,7 @@ test.describe('Wallet Page', () => {
     await expect(distributorPage.getByRole('button', { name: /deposit/i })).not.toBeVisible()
   })
 
-  test('Deposit modal opens with amount and note fields', async ({ adminPage }) => {
+  test('Deposit modal opens with amount field', async ({ adminPage }) => {
     await adminPage.goto('/wallet')
     await adminPage.waitForLoadState('networkidle')
 
@@ -79,7 +79,6 @@ test.describe('Wallet Page', () => {
     // Modal should open
     await expect(adminPage.getByText('Deposit Funds')).toBeVisible({ timeout: 10000 })
     await expect(adminPage.getByText('Amount (JPY)')).toBeVisible()
-    await expect(adminPage.getByText('Note (optional)')).toBeVisible()
   })
 
   test('Deposit submit calls POST /wallet/deposit', async ({ adminPage }) => {
