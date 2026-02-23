@@ -120,6 +120,48 @@ skuMappings.delete('/:id', async (c) => {
     return c.json({ success: true })
 })
 
+/** POST /sku-mappings/ai-suggest - AI suggest for single product (admin) */
+skuMappings.post('/ai-suggest', async (c) => {
+    const role = c.get('role')
+    if (role !== 'admin') {
+        return c.json({ error: 'Admin access required' }, 403)
+    }
+
+    const body = await c.req.json<{ local_sku?: string }>()
+    if (!body.local_sku || typeof body.local_sku !== 'string') {
+        return c.json({ error: 'local_sku is required' }, 400)
+    }
+
+    const service = new SkuMappingService(c.env.DB)
+    try {
+        const result = await service.aiSuggestForProduct(c.env.AI, body.local_sku)
+        return c.json({ success: true, ...result })
+    } catch (e: any) {
+        if (e.message?.includes('not found')) {
+            return c.json({ error: e.message }, 404)
+        }
+        console.error('[AI] SKU suggest error:', e.message)
+        return c.json({ error: `AI service error: ${e.message}` }, 503)
+    }
+})
+
+/** POST /sku-mappings/ai-bulk-suggest - AI bulk generate all missing mappings (admin) */
+skuMappings.post('/ai-bulk-suggest', async (c) => {
+    const role = c.get('role')
+    if (role !== 'admin') {
+        return c.json({ error: 'Admin access required' }, 403)
+    }
+
+    const service = new SkuMappingService(c.env.DB)
+    try {
+        const result = await service.aiBulkSuggest(c.env.AI)
+        return c.json({ success: true, ...result })
+    } catch (e: any) {
+        console.error('[AI] SKU bulk suggest error:', e.message)
+        return c.json({ error: `AI service error: ${e.message}` }, 503)
+    }
+})
+
 /** POST /sku-mappings/import - Bulk import (admin) */
 skuMappings.post('/import', async (c) => {
     const role = c.get('role')

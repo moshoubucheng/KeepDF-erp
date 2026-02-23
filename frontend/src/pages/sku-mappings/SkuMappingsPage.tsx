@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { skuMappingsApi, type SkuMapping } from '@/api/endpoints/sku-mappings';
+import { skuMappingsApi, type SkuMapping, type AiSkuSuggestion } from '@/api/endpoints/sku-mappings';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -64,6 +64,16 @@ export default function SkuMappingsPage() {
 
   // Export
   const [exporting, setExporting] = useState(false);
+
+  // AI Suggest
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiSku, setAiSku] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<AiSkuSuggestion[]>([]);
+  const [aiSelected, setAiSelected] = useState<Set<number>>(new Set());
+  const [aiApplying, setAiApplying] = useState(false);
+  const [aiBulkMode, setAiBulkMode] = useState(false);
+  const [aiBulkAnalyzed, setAiBulkAnalyzed] = useState(0);
 
   const fetchMappings = useCallback(async () => {
     setLoading(true);
@@ -200,6 +210,103 @@ export default function SkuMappingsPage() {
       addToast('error', t('skuMappings.exportError'));
     } finally {
       setExporting(false);
+    }
+  };
+
+  // AI Suggest (Plan A)
+  const handleAiSuggest = async () => {
+    if (!aiSku.trim()) return;
+    setAiGenerating(true);
+    setAiSuggestions([]);
+    setAiSelected(new Set());
+    setAiBulkMode(false);
+    try {
+      const res = await skuMappingsApi.aiSuggest(aiSku.trim());
+      setAiSuggestions(res.suggestions || []);
+      setAiSelected(new Set(res.suggestions?.map((_, i) => i) || []));
+    } catch {
+      addToast('error', t('skuMappings.aiSuggestError'));
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // AI Bulk Suggest (Plan C)
+  const handleAiBulkSuggest = async () => {
+    setAiGenerating(true);
+    setAiSuggestions([]);
+    setAiSelected(new Set());
+    setAiBulkMode(true);
+    setAiBulkAnalyzed(0);
+    setShowAiModal(true);
+    setAiSku('');
+    try {
+      const res = await skuMappingsApi.aiBulkSuggest();
+      setAiSuggestions(res.suggestions || []);
+      setAiSelected(new Set(res.suggestions?.map((_, i) => i) || []));
+      setAiBulkAnalyzed(res.productsAnalyzed || 0);
+    } catch {
+      addToast('error', t('skuMappings.aiSuggestError'));
+      setShowAiModal(false);
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Apply AI suggestions
+  const handleAiApply = async () => {
+    const selected = aiSuggestions.filter((_, i) => aiSelected.has(i));
+    if (selected.length === 0) return;
+    setAiApplying(true);
+    let successCount = 0;
+    for (const s of selected) {
+      try {
+        await skuMappingsApi.create({
+          local_sku: s.local_sku,
+          platform: s.platform,
+          platform_sku: s.platform_sku,
+          platform_title: s.platform_title || undefined,
+        });
+        successCount++;
+      } catch {
+        // skip duplicates or errors silently
+      }
+    }
+    setAiApplying(false);
+    if (successCount > 0) {
+      addToast('success', `${t('skuMappings.aiApplySuccess')} (${successCount}/${selected.length})`);
+      setShowAiModal(false);
+      setAiSuggestions([]);
+      fetchMappings();
+    } else {
+      addToast('error', t('skuMappings.aiApplyError'));
+    }
+  };
+
+  const toggleAiSelection = (index: number) => {
+    setAiSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const confidenceColor = (c: string) => {
+    switch (c) {
+      case 'high': return 'text-emerald-400';
+      case 'medium': return 'text-yellow-400';
+      case 'low': return 'text-red-400';
+      default: return 'text-text-muted';
+    }
+  };
+
+  const confidenceLabel = (c: string) => {
+    switch (c) {
+      case 'high': return t('skuMappings.aiConfidenceHigh');
+      case 'medium': return t('skuMappings.aiConfidenceMedium');
+      case 'low': return t('skuMappings.aiConfidenceLow');
+      default: return c;
     }
   };
 
@@ -351,6 +458,21 @@ export default function SkuMappingsPage() {
                   </Button>
                   <Button
                     size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setAiBulkMode(false);
+                      setAiSuggestions([]);
+                      setAiSku('');
+                      setShowAiModal(true);
+                    }}
+                  >
+                    {t('skuMappings.aiSuggest')}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={handleAiBulkSuggest} loading={aiGenerating && aiBulkMode}>
+                    {t('skuMappings.aiBulkSuggest')}
+                  </Button>
+                  <Button
+                    size="sm"
                     variant="primary"
                     onClick={() => {
                       resetForm();
@@ -476,6 +598,131 @@ export default function SkuMappingsPage() {
               {validationResult.errors.length === 0 && validationResult.invalid === 0 && (
                 <p className="text-sm text-emerald-400">{t('skuMappings.allValid')}</p>
               )}
+            </>
+          )}
+        </div>
+      </Modal>
+
+      {/* AI Suggest Modal */}
+      <Modal
+        open={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        title={aiBulkMode ? t('skuMappings.aiBulkTitle') : t('skuMappings.aiSuggestTitle')}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-text-muted">
+            {aiBulkMode ? t('skuMappings.aiBulkDesc') : t('skuMappings.aiSuggestDesc')}
+          </p>
+
+          {/* Single product input (Plan A) */}
+          {!aiBulkMode && (
+            <div className="flex gap-2">
+              <Input
+                label=""
+                type="text"
+                value={aiSku}
+                onChange={(e) => setAiSku(e.target.value)}
+                placeholder={t('skuMappings.aiSuggestInputLabel')}
+                onKeyDown={(e) => e.key === 'Enter' && handleAiSuggest()}
+              />
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={handleAiSuggest}
+                loading={aiGenerating}
+                disabled={!aiSku.trim()}
+              >
+                {t('skuMappings.aiSuggest')}
+              </Button>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {aiGenerating && (
+            <div className="flex items-center gap-2 py-4 justify-center">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent-purple border-t-transparent" />
+              <span className="text-sm text-text-muted">{t('skuMappings.aiGenerating')}</span>
+            </div>
+          )}
+
+          {/* Bulk analyzed count */}
+          {aiBulkMode && !aiGenerating && aiBulkAnalyzed > 0 && (
+            <p className="text-xs text-text-muted">
+              {aiBulkAnalyzed} {t('skuMappings.aiBulkAnalyzed')}
+            </p>
+          )}
+
+          {/* No suggestions */}
+          {!aiGenerating && aiSuggestions.length === 0 && (aiSku || aiBulkMode) && (
+            <p className="text-sm text-text-muted py-2">{t('skuMappings.aiNoSuggestions')}</p>
+          )}
+
+          {/* Suggestions list */}
+          {aiSuggestions.length > 0 && (
+            <>
+              <div className="text-sm text-text-secondary font-medium">
+                {aiSuggestions.length} {t('skuMappings.aiSuggestionCount')}
+              </div>
+              <div className="max-h-[400px] overflow-y-auto space-y-2">
+                {aiSuggestions.map((s, i) => (
+                  <div
+                    key={`${s.local_sku}-${s.platform}-${i}`}
+                    className={`rounded-lg border p-3 cursor-pointer transition-colors ${
+                      aiSelected.has(i)
+                        ? 'border-accent-purple bg-accent-purple/5'
+                        : 'border-border bg-bg-card hover:border-border-hover'
+                    }`}
+                    onClick={() => toggleAiSelection(i)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={aiSelected.has(i)}
+                        onChange={() => toggleAiSelection(i)}
+                        className="rounded border-border bg-bg-card text-accent-purple focus:ring-accent-purple"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-mono text-xs font-medium text-accent-purple">{s.local_sku}</span>
+                          <span className="text-text-muted text-xs">→</span>
+                          <span className="inline-flex items-center rounded-full bg-blue-500/15 px-2 py-0.5 text-xs font-medium text-blue-400">
+                            {s.platform}
+                          </span>
+                          <span className="font-mono text-xs text-text-secondary">{s.platform_sku}</span>
+                        </div>
+                        {s.platform_title && (
+                          <p className="text-xs text-text-muted mt-1 truncate">{s.platform_title}</p>
+                        )}
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className={`text-xs font-medium ${confidenceColor(s.confidence)}`}>
+                            {t('skuMappings.aiConfidence')}: {confidenceLabel(s.confidence)}
+                          </span>
+                          {s.reason && (
+                            <span className="text-xs text-text-muted">{s.reason}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Apply buttons */}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button size="sm" variant="secondary" onClick={() => setShowAiModal(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleAiApply}
+                  loading={aiApplying}
+                  disabled={aiSelected.size === 0}
+                >
+                  {t('skuMappings.aiApplySelected')} ({aiSelected.size})
+                </Button>
+              </div>
             </>
           )}
         </div>

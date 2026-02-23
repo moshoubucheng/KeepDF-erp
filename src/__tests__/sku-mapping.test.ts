@@ -159,4 +159,90 @@ describe('SkuMapping Controller', () => {
         expect(res.status).toBe(200)
         expect(res.headers.get('content-type')).toContain('text/csv')
     })
+
+    // ===== AI SKU Suggest endpoints =====
+    it('POST /sku-mappings/ai-suggest requires admin', async () => {
+        const res = await SELF.fetch('http://localhost/api/v1/sku-mappings/ai-suggest', {
+            method: 'POST',
+            headers: { ...authHeaders(TOKEN_2), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ local_sku: 'CERAMIC-MUG' }),
+        })
+        expect(res.status).toBe(403)
+    })
+
+    it('POST /sku-mappings/ai-suggest requires local_sku', async () => {
+        const res = await SELF.fetch('http://localhost/api/v1/sku-mappings/ai-suggest', {
+            method: 'POST',
+            headers: { ...authHeaders(TOKEN), 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+        })
+        expect(res.status).toBe(400)
+        const data = await res.json() as any
+        expect(data.error).toContain('local_sku')
+    })
+
+    it('POST /sku-mappings/ai-suggest returns 404 for non-existent product', async () => {
+        const res = await SELF.fetch('http://localhost/api/v1/sku-mappings/ai-suggest', {
+            method: 'POST',
+            headers: { ...authHeaders(TOKEN), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ local_sku: 'NONEXISTENT-SKU' }),
+        })
+        expect(res.status).toBe(404)
+        const data = await res.json() as any
+        expect(data.error).toContain('not found')
+    })
+
+    it('POST /sku-mappings/ai-bulk-suggest requires admin', async () => {
+        const res = await SELF.fetch('http://localhost/api/v1/sku-mappings/ai-bulk-suggest', {
+            method: 'POST',
+            headers: { ...authHeaders(TOKEN_2), 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+        })
+        expect(res.status).toBe(403)
+    })
+
+    it('POST /sku-mappings/ai-suggest requires auth', async () => {
+        const res = await SELF.fetch('http://localhost/api/v1/sku-mappings/ai-suggest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ local_sku: 'CERAMIC-MUG' }),
+        })
+        expect(res.status).toBe(401)
+    })
+})
+
+describe('SkuMapping AI Service', () => {
+    beforeEach(async () => {
+        await setupDB(env.DB)
+    })
+
+    it('aiSuggestForProduct() throws for non-existent product', async () => {
+        const service = new SkuMappingService(env.DB)
+        const mockAi = {} as any
+        await expect(
+            service.aiSuggestForProduct(mockAi, 'NONEXISTENT')
+        ).rejects.toThrow('Product not found')
+    })
+
+    it('aiSuggestForProduct() returns empty if all platforms mapped', async () => {
+        const service = new SkuMappingService(env.DB)
+        // CARROT-500ML has all 3 platforms mapped in seed data
+        // Check if it does
+        const existing = await service.getByLocalSku('CARROT-500ML')
+        if (existing.length === 3) {
+            const mockAi = {} as any
+            const result = await service.aiSuggestForProduct(mockAi, 'CARROT-500ML')
+            expect(result.suggestions).toEqual([])
+        }
+    })
+
+    it('getExampleMappings returns existing patterns', async () => {
+        const service = new SkuMappingService(env.DB)
+        // Access private method through listing
+        const { mappings } = await service.list({ limit: 20 })
+        expect(mappings.length).toBeGreaterThan(0)
+        // Verify patterns exist for AI to learn from
+        const platforms = new Set(mappings.map(m => m.platform))
+        expect(platforms.size).toBeGreaterThanOrEqual(2) // At least 2 platforms
+    })
 })

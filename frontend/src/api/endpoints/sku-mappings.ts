@@ -15,6 +15,15 @@ export interface SkuMapping {
   updated_at: string
 }
 
+export interface AiSkuSuggestion {
+  local_sku: string
+  platform: string
+  platform_sku: string
+  platform_title: string
+  confidence: 'high' | 'medium' | 'low'
+  reason: string
+}
+
 interface ListParams {
   offset?: number
   limit?: number
@@ -60,4 +69,10 @@ export const skuMappingsApi = {
       headers: { Authorization: `Bearer ${token}` },
     }).then((r) => r.text())
   },
+
+  aiSuggest: (localSku: string) =>
+    api.post<{ success: boolean; suggestions: AiSkuSuggestion[] }>('/sku-mappings/ai-suggest', { local_sku: localSku }),
+
+  aiBulkSuggest: () =>
+    api.post<{ success: boolean; suggestions: AiSkuSuggestion[]; productsAnalyzed: number }>('/sku-mappings/ai-bulk-suggest', {}),
 }
